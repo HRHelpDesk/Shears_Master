@@ -33,9 +33,10 @@ const getTabIcon = (iosIcon, androidIcon) => {
 const MainNavigator = ({ appConfig }) => {
   const theme = useTheme();
   const { colors } = theme;
-
+console.log('MainNavigator appConfig:', appConfig);
   // ✅ Process all view data dynamically from appConfig
   const viewData = appConfig.mainNavigation.reduce((acc, route) => {
+    console.log('Processing route:', route);
     acc[route.name] = route.views
       ? route.views.map((view) => ({
           displayName: view.displayName || view.name,
@@ -109,6 +110,8 @@ const MainNavigator = ({ appConfig }) => {
               appConfig={appConfig}
               name={route.name}
               viewData={viewData[route.name]}
+              displayName={route.displayName}
+              settings={route.settings || []}
             />
           )}
           options={{

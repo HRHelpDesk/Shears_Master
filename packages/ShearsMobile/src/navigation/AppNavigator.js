@@ -9,6 +9,8 @@ import { CURRENT_APP, CURRENT_WHITE_LABEL } from 'shears-shared/src/config/curre
 import { AppLogos } from '../config/appLogos';
 import { AuthProvider, AuthContext } from '../context/AuthContext';
 import DetailView from '../components/BaseUI/ListItemDetail';
+import SettingsListView from '../components/BaseUI/SettingsListView';
+
 
 const Stack = createNativeStackNavigator();
 const appConfig = getAppConfig(CURRENT_APP, CURRENT_WHITE_LABEL);
@@ -48,6 +50,16 @@ function AppRoutes() {
         }}
         component={DetailView}
       />
+
+      <Stack.Screen
+  name="SettingsPage"
+  component={SettingsListView}
+  options={{
+   
+    gestureEnabled: true,
+
+  }}
+/>
       </>
       )}
     </Stack.Navigator>

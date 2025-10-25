@@ -129,6 +129,7 @@ export const getRecordById = async (id, token) => {
 
 // --- UPDATE a record by ID
 export const updateRecord = async (id, updates, token) => {
+  console.log('Updating record ID:', id, 'with updates:', updates);
   try {
     if (!token) {
       throw new Error('No authentication token found');

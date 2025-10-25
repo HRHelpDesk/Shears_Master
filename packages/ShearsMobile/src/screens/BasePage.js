@@ -18,7 +18,7 @@ const FallbackComponent = () => (
   </View>
 );
 
-export default function BasePage({ appConfig, name, viewData = [] }) {
+export default function BasePage({ appConfig, name, viewData = [], displayName, settings = [] }) {
   const isFocused = useIsFocused();
   const theme = useTheme();
   const { token, user } = useContext(AuthContext);
@@ -90,6 +90,7 @@ export default function BasePage({ appConfig, name, viewData = [] }) {
     appConfig,
     refreshing,
     onRefresh: () => fetchRecords(true),
+    
   };
 
   if (loading) {
@@ -112,7 +113,12 @@ export default function BasePage({ appConfig, name, viewData = [] }) {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <PageHeader title={name} appConfig={appConfig} />
+      <PageHeader 
+  title={displayName} 
+  appConfig={appConfig} 
+  settings={settings || null}
+/>
+
       {activeViews.length > 1 ? (
         <TabBar
           views={activeViews}

@@ -1,3 +1,5 @@
+import { ProductFields } from './product-fields.js';
+
 export const Fields = [
   {
     field: 'firstName',
@@ -198,23 +200,23 @@ export const Fields = [
 },
 
 {
-  field: 'description',
-  type: 'string',
-  label: 'Description',
-  displayInList: false,
-  required: false,
-  validations: {
-    maxLength: 500,
+    field: 'description',
+    type: 'string',
+    label: 'Description',
+    displayInList: false,
+    required: false,
+    validations: {
+      maxLength: 500,
+    },
+    display: {
+      placeholder: 'Enter description',
+      order: 3,
+    },
+    input: 'textarea',
+    inputConfig: {
+      rows: 4,
+    },
   },
-  display: {
-    placeholder: 'Enter service description',
-    order: 7,
-  },
-  input: 'textarea', // Multiline input
-  inputConfig: {
-    rows: 4,
-  },
-},
 
 {
   field: 'price',
@@ -285,7 +287,7 @@ export const Fields = [
   },
   input: 'text', // Standard text input like serviceName
 },
-
+...ProductFields
 
 
  

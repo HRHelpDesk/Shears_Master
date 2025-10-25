@@ -1,10 +1,11 @@
 // app-data.js
 import { CalendarList, CalendarMonthView, CalendarRoute } from './view-schema/calendar-view.js';
 import { ContactView } from './view-schema/contacts-view.js';
+import { ProfileView } from './view-schema/profile-view.js';
 import { ServicesList } from './view-schema/services-view.js';
 import { shearWhitelabels } from './whitelabels/shear.js';
 import { splashWhitelabels } from './whitelabels/splash.js';
-
+import { shearSettings } from './settings.js';
 export const AppData = [
   {
     appName: 'shear',
@@ -15,7 +16,7 @@ export const AppData = [
 
       {
         name: 'Calendar',
-        displayName: 'Schedule',
+        displayName: 'Appoinments',
         icon: { ios: 'calendar', android: 'calendar-today', web: 'fa fa-calendar-alt' },
         fields: [],
         views: [CalendarMonthView, CalendarList],
@@ -65,7 +66,8 @@ export const AppData = [
         name: 'Profile',
         displayName: 'Profile',
         icon: { ios: 'person.crop.circle', android: 'account-circle', web: 'fa fa-user-circle' },
-        views: [],
+        settings: [shearSettings],
+        views: [ProfileView],
         fields: [],
       },
       {

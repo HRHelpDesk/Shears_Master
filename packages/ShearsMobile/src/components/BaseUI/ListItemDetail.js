@@ -17,7 +17,7 @@ import PlainTextInput from '../SmartInputs/PlainTextInput';
 import AddNestedItemButton from '../UI/AddNestedItemButton';
 import { AuthContext } from '../../context/AuthContext';
 import { mapFields } from 'shears-shared/src/config/fieldMapper';
-import { createRecord } from 'shears-shared/src/Services/Authentication';
+import { createRecord, updateRecord } from 'shears-shared/src/Services/Authentication';
 import { sub } from 'date-fns';
 
 export default function ListItemDetail({ route, navigation }) {
@@ -236,16 +236,33 @@ const handleRemoveNestedItem = (field, index) => {
   });
 };
 
- const handleSave = async () => {
+const handleSave = async () => {
   console.log('💾 Saving formValues:', JSON.stringify(formValues, null, 2));
-  // ... validation logic ...
+
   if (!token) {
     Alert.alert('Authentication Error', 'Please log in to save data.');
     return;
   }
+
   try {
-  await createRecord(formValues, name.toLowerCase(), token, user.subscriberId, user.userId);
-    console.log('💾 Saved successfully:', formValues);
+    if (mode === 'edit' && item._id) {
+      console.log('📝 Edit mode detected for item ID:', item._id);
+      // --- UPDATE existing record
+      console.log(formValues)
+      const updated = await updateRecord(item._id, formValues, token);
+      console.log('💾 Updated successfully:', updated);
+    } else {
+      // --- CREATE new record
+      const created = await createRecord(
+        formValues,
+        name.toLowerCase(),
+        token,
+        user.subscriberId,
+        user.userId
+      );
+      console.log('💾 Created successfully:', created);
+    }
+
     setMode('read');
     navigation.goBack();
   } catch (error) {
@@ -253,6 +270,7 @@ const handleRemoveNestedItem = (field, index) => {
     Alert.alert('Error', error.message || 'Failed to save item. Please try again.');
   }
 };
+
 
   const handleDelete = () => {
     console.log('🗑 Delete:', formValues);
