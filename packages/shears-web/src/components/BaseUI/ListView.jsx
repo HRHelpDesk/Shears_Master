@@ -31,13 +31,6 @@ const TableContainerStyled = styled(Paper)(({ theme }) => ({
   position: 'relative',
 }));
 
-const HeaderBox = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: theme.spacing(2),
-}));
-
 const SearchField = styled(TextField)(({ theme }) => ({
   width: '100%',
   maxWidth: '100%', // allow full width
@@ -46,7 +39,7 @@ const SearchField = styled(TextField)(({ theme }) => ({
   },
 }));
 
-export default function ListView({ data, fields, name = 'Item', appConfig }) {
+export default function ListView({ data, fields, name = 'Item', appConfig, refreshing, onRefresh }) {
   const [search, setSearch] = useState('');
   const [sortField, setSortField] = useState(null);
   const [sortOrder, setSortOrder] = useState('asc');
@@ -61,7 +54,7 @@ export default function ListView({ data, fields, name = 'Item', appConfig }) {
     ) || {};
 
   const mappedFields = mapFields(fields?.length ? fields : matchedRoute.fields || []);
-  const resolvedData = data?.length ? data : matchedRoute.data || [];
+  const resolvedData = Array.isArray(data) ? data : []; // Use data directly, no fallback
 
   // ✅ Only include fields marked for display in the list
   const displayFields = useMemo(
@@ -82,17 +75,29 @@ export default function ListView({ data, fields, name = 'Item', appConfig }) {
     if (!Array.isArray(resolvedData)) return [];
 
     let filtered = resolvedData.filter((item) =>
-      displayFields.some((field) =>
-        String(item[field.field] ?? '').toLowerCase().includes(search.toLowerCase())
-      )
+      displayFields.some((field) => {
+        const value = item.fieldsData?.[field.field] ?? '';
+        // Handle array fields (e.g., email, phone) and scalar fields (e.g., firstName)
+        const searchValue = Array.isArray(value)
+          ? value.map((v) => v.value || '').join(' ').toLowerCase()
+          : String(value).toLowerCase();
+        return searchValue.includes(search.toLowerCase());
+      })
     );
 
     if (sortField) {
       filtered.sort((a, b) => {
-        const aValue = String(a[sortField] ?? '').toLowerCase();
-        const bValue = String(b[sortField] ?? '').toLowerCase();
-        if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
-        if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+        const aValue = a.fieldsData?.[sortField] ?? '';
+        const bValue = b.fieldsData?.[sortField] ?? '';
+        // Handle array fields for sorting
+        const aSortValue = Array.isArray(aValue)
+          ? aValue.map((v) => v.value || '').join(' ').toLowerCase()
+          : String(aValue).toLowerCase();
+        const bSortValue = Array.isArray(bValue)
+          ? bValue.map((v) => v.value || '').join(' ').toLowerCase()
+          : String(bValue).toLowerCase();
+        if (aSortValue < bSortValue) return sortOrder === 'asc' ? -1 : 1;
+        if (aSortValue > bSortValue) return sortOrder === 'asc' ? 1 : -1;
         return 0;
       });
     }
@@ -115,47 +120,47 @@ export default function ListView({ data, fields, name = 'Item', appConfig }) {
   return (
     <TableContainerStyled>
       {/* Header */}
- <Grid
-  container
-  spacing={2}
-  alignItems="center"
-  justifyContent="space-between"
-  sx={{ mb: 2 }}
->
-  <Grid item xs={12} sm={8} md={9}>
-    <SearchField
-      fullWidth
-      size="small"
-      variant="outlined"
-      placeholder={`Search ${name}...`}
-      value={search}
-      onChange={(e) => setSearch(e.target.value)}
-      InputProps={{
-        startAdornment: (
-          <InputAdornment position="start">
-            <SearchIcon />
-          </InputAdornment>
-        ),
-      }}
-    />
-  </Grid>
+      <Grid
+        container
+        spacing={2}
+        alignItems="center"
+        justifyContent="space-between"
+        sx={{ mb: 2 }}
+      >
+        <Grid item xs={12} sm={8} md={9}>
+          <SearchField
+            fullWidth
+            size="small"
+            variant="outlined"
+            placeholder={`Search ${name}...`}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Grid>
 
-  <Grid item xs={12} sm={4} md="auto">
-    <Button
-      fullWidth
-      variant="contained"
-      startIcon={<AddIcon />}
-      onClick={handleAddClick}
-      sx={{
-        height: '40px',
-        whiteSpace: 'nowrap',
-      }}
-    >
-      Add {singularize(name)}
-    </Button>
-  </Grid>
-</Grid>
-
+        <Grid item xs={12} sm={4} md="auto">
+          <Button
+            fullWidth
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleAddClick}
+            disabled={refreshing} // Disable during refresh
+            sx={{
+              height: '40px',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Add {singularize(name)}
+          </Button>
+        </Grid>
+      </Grid>
 
       {/* Table */}
       <TableContainer sx={{ maxHeight: 600 }}>
@@ -180,8 +185,8 @@ export default function ListView({ data, fields, name = 'Item', appConfig }) {
           <TableBody>
             {filteredData.map((item, index) => {
               const initials =
-                item.firstName && item.lastName
-                  ? `${item.firstName[0]}${item.lastName[0]}`
+                item.fieldsData?.firstName && item.fieldsData?.lastName
+                  ? `${item.fieldsData.firstName[0]}${item.fieldsData.lastName[0]}`
                   : '?';
               return (
                 <TableRow
@@ -194,12 +199,10 @@ export default function ListView({ data, fields, name = 'Item', appConfig }) {
                     <Avatar src={item.avatar}>{!item.avatar && initials}</Avatar>
                   </TableCell>
                   {displayFields.map((field) => {
-                    const value = item[field.field];
+                    const value = item.fieldsData?.[field.field] ?? '';
                     const displayValue = Array.isArray(value)
-                      ? value.map((v) => v.value || v).join(', ')
-                      : typeof value === 'object' && value !== null
-                      ? Object.values(value).join(', ')
-                      : value;
+                      ? value.map((v) => v.value || '').filter(Boolean).join(', ')
+                      : String(value);
                     return <TableCell key={field.field}>{displayValue}</TableCell>;
                   })}
                 </TableRow>

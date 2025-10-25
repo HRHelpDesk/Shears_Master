@@ -1,5 +1,5 @@
 // src/components/ItemDrawer.jsx
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useContext } from 'react';
 import {
   Drawer,
   Box,
@@ -23,6 +23,8 @@ import {
 import { styled } from '@mui/material/styles';
 import { humanizeFieldName } from 'shears-shared/src/utils/stringHelpers';
 import { mapFields } from 'shears-shared/src/config/fieldMapper';
+import { AuthContext } from '../../context/AuthContext';
+import { createRecord } from 'shears-shared/src/Services/Authentication';
 
 const DrawerPaper = styled(Paper)(({ theme, primaryColor, secondaryColor }) => ({
   width: 420,
@@ -49,7 +51,7 @@ export default function ItemDrawer({
   const [mode, setMode] = useState(initialMode);
   const [formValues, setFormValues] = useState({});
   const isReadOnly = mode === 'read';
-
+const {user,token} = useContext(AuthContext)
   const primaryColor = appConfig?.themeColors?.primary || '#1976d2';
   const secondaryColor = appConfig?.themeColors?.secondary || '#ffffff';
 
@@ -58,6 +60,7 @@ export default function ItemDrawer({
 
   // ✅ Initialize or reset form values safely
   useEffect(() => {
+    console.log("appConfig in ItemDrawer:", appConfig);
     setMode(initialMode);
 
     if (initialMode === 'add') {
@@ -69,7 +72,7 @@ export default function ItemDrawer({
       });
       setFormValues(initialized);
     } else if (item) {
-      setFormValues(item);
+      setFormValues(item.fieldsData);
     }
   }, [open, initialMode, item, mergedFields]);
 
@@ -98,8 +101,25 @@ export default function ItemDrawer({
   };
 
   const handleAdd = async () => {
-    console.log('🟢 Add new record:', formValues);
-    onClose();
+    const newRecord = {
+      recordType: name.toLowerCase(),
+      fieldsData: formValues,
+    };
+    console.log('💾 Saving new record:', JSON.stringify(newRecord, null, 2));
+
+    if (!token) {
+      alert('Authentication Error: Please log in to save data.');
+      return;
+    }
+
+    try {
+      await createRecord(formValues, appConfig.defaultRoute.toLowerCase(), token, user.subscriberId, user.userId);
+      console.log('💾 Saved successfully:', JSON.stringify(newRecord, null, 2));
+      onClose();
+    } catch (error) {
+      console.error('Save failed:', error);
+      alert(error.message || 'Failed to save item. Please try again.');
+    }
   };
 
   const handleEdit = async () => {

@@ -1,17 +1,23 @@
 // src/screens/BasePage.js
-import React, { useState, lazy, Suspense, useEffect } from 'react';
+import React, { useState, lazy, Suspense, useEffect, useContext, useCallback } from 'react';
 import { Box, Typography, CircularProgress } from '@mui/material';
 import TabBar from '../components/UI/TabBar';
 import { dummyUsers } from 'shears-shared/src/AppData/dummy-data/dummydata';
 import { mapFields } from 'shears-shared/src/config/fieldMapper';
 import { dummyServices } from 'shears-shared/src/AppData/dummy-data/dummyServices';
-
+import { AuthContext } from '../context/AuthContext';
+import { getRecords } from 'shears-shared/src/Services/Authentication';
 export default function BasePage({ appConfig, name, viewData = [] }) {
   const route = appConfig.mainNavigation.find((r) => r.name === name);
   const views = route?.views || [];
   const [activeTab, setActiveTab] = useState(0);
-  const [ViewComponent, setViewComponent] = useState(() => FallbackComponent);
+  const [data, setData] = useState([]); // Added data state
+  const [loading, setLoading] = useState(true); // Loading state
+  const [refreshing, setRefreshing] = useState(false); // Added refreshing state
+  const [error, setError] = useState(null); // Added error state    
 
+  const [ViewComponent, setViewComponent] = useState(() => FallbackComponent);
+ const {user, token} = useContext(AuthContext);
   const activeView = views[activeTab] || null;
 
   function FallbackComponent() {
@@ -48,6 +54,46 @@ export default function BasePage({ appConfig, name, viewData = [] }) {
     console.groupEnd();
   }, [name, viewData, views, activeView]);
 
+  const fetchRecords = useCallback(
+    async (isRefresh = false) => {
+      console.log(user)
+      if (!token || !user?.subscriberId) {
+        alert('Authentication required');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        if (isRefresh) setRefreshing(true);
+        else setLoading(true);
+
+        const response = await getRecords({
+          recordType: name.toLowerCase(),
+          token,
+          subscriberId: user.subscriberId,
+          userId: user.userId,
+        });
+
+        console.log('Fetched records:', response);
+
+        setData(response || []);
+        setError(null);
+      } catch (err) {
+        console.error('Failed to load records:', err);
+        setError(err.message || 'Failed to load data');
+      } finally {
+        if (isRefresh) setRefreshing(false);
+        else setLoading(false);
+      }
+    },
+    [token, user, name]
+  );
+
+  // Initial fetch on mount
+  useEffect(() => {
+    fetchRecords(false);
+  }, [fetchRecords]);
+
   // Dynamic import of component
   useEffect(() => {
     if (activeView?.component) {
@@ -67,7 +113,9 @@ console.log(dummyServices)
   const dynamicProps = {
     name: route?.displayName || name,
     fields: mappedFields,
-    data:name === 'Contacts' ? dummyUsers : dummyServices,
+    refreshing, // Added for refresh state
+    onRefresh: () => fetchRecords(true), // Added for manual refresh
+    data,
     appConfig,
   };
 
