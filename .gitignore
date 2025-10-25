@@ -1,3 +1,4 @@
+# Yarn
 .yarn/*
 !.yarn/patches
 !.yarn/plugins
@@ -5,17 +6,59 @@
 !.yarn/sdks
 !.yarn/versions
 
-# Whether you use PnP or not, the node_modules folder is often used to store
-# build artifacts that should be gitignored
+# Node modules
 node_modules/
 shears-api/node_modules/
 packages/shears-web/node_modules/
 packages/ShearsMobile/node_modules/
 packages/shears-shared/node_modules/
 
-# Swap the comments on the following lines if you wish to use zero-installs
-# In that case, don't forget to run `yarn config set enableGlobalCache false`!
-# Documentation here: https://yarnpkg.com/features/caching#zero-installs
+# Monorepo-wide JavaScript/Node artifacts
+.DS_Store
+npm-debug.log
+yarn-error.log
+.expo/
+.metro/
+coverage/
 
+# React Native specifics for ShearsMobile
+packages/ShearsMobile/build/
+packages/ShearsMobile/ios/build/
+packages/ShearsMobile/ios/Pods/
+packages/ShearsMobile/ios/Podfile.lock
+packages/ShearsMobile/ios/*.pbxuser
+!packages/ShearsMobile/ios/default.pbxuser
+packages/ShearsMobile/ios/*.mode1v3
+!packages/ShearsMobile/ios/default.mode1v3
+packages/ShearsMobile/ios/*.mode2v3
+!packages/ShearsMobile/ios/default.mode2v3
+packages/ShearsMobile/ios/*.perspectivev3
+!packages/ShearsMobile/ios/default.perspectivev3
+packages/ShearsMobile/ios/xcuserdata/
+packages/ShearsMobile/ios/*.xccheckout
+packages/ShearsMobile/ios/*.moved-aside
+packages/ShearsMobile/ios/DerivedData/
+packages/ShearsMobile/ios/*.hmap
+packages/ShearsMobile/ios/*.ipa
+packages/ShearsMobile/ios/*.xcuserstate
+packages/ShearsMobile/ios/**/.xcode.env.local
+packages/ShearsMobile/android/build/
+packages/ShearsMobile/android/app/build/
+packages/ShearsMobile/android/.gradle/
+packages/ShearsMobile/android/local.properties
+packages/ShearsMobile/android/*.iml
+packages/ShearsMobile/android/*.hprof
+packages/ShearsMobile/android/.cxx/
+packages/ShearsMobile/android/*.keystore
+!packages/ShearsMobile/android/debug.keystore
+packages/ShearsMobile/android/.kotlin/
+packages/ShearsMobile/*.jsbundle
+packages/ShearsMobile/**/fastlane/report.xml
+packages/ShearsMobile/**/fastlane/Preview.html
+packages/ShearsMobile/**/fastlane/screenshots/
+packages/ShearsMobile/**/fastlane/test_output/
+packages/ShearsMobile/.metro-health-check*
+
+# Yarn zero-installs
 #!.yarn/cache
 .pnp.*
