@@ -99,15 +99,19 @@ router.get('/:id', authenticate, async (req, res) => {
 
 // --- UPDATE a record by ID
 router.put('/:id', authenticate, async (req, res) => {
+  console.log('updates', req.body);
   try {
     const DataRecord = getDataRecordModel(req.db);
     const updates = req.body;
+
     const updatedRecord = await DataRecord.findOneAndUpdate(
-      { _id: req.params.id, subscriberId: req.userId },
-      updates,
+      { _id: req.params.id },
+      { $set: { fieldsData: updates } }, // <-- replace fieldsData
       { new: true, runValidators: true }
     );
+
     if (!updatedRecord) return res.status(404).json({ error: 'Record not found' });
+    console.log('Updated Record:', updatedRecord);
     res.json(updatedRecord);
   } catch (err) {
     console.error('Error updating record:', err);
@@ -115,13 +119,15 @@ router.put('/:id', authenticate, async (req, res) => {
   }
 });
 
+
+
 // --- DELETE a record by ID
 router.delete('/:id', authenticate, async (req, res) => {
   try {
     const DataRecord = getDataRecordModel(req.db);
     const deletedRecord = await DataRecord.findOneAndDelete({
       _id: req.params.id,
-      subscriberId: req.userId,
+      
     });
     if (!deletedRecord) return res.status(404).json({ error: 'Record not found' });
     res.json({ message: 'Record deleted successfully' });

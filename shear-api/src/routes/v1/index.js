@@ -4,6 +4,10 @@ const authRouter = require('./auth');
 const dataRecordsRouter = require('./dataRecords');
 const { connections, connectDB } = require('../../config/db');
 
+
+router.use(express.json());
+router.use(express.urlencoded({ extended: true }));
+
 console.log('🧭 v1 router loaded');
 
 // Middleware: attach existing DB connection
