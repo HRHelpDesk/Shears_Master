@@ -1,0 +1,18 @@
+current directory: /Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/vendor/bundle/ruby/3.4.0/gems/nkf-0.2.0/ext/nkf
+/opt/homebrew/opt/ruby/bin/ruby extconf.rb
+creating Makefile
+
+current directory: /Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/vendor/bundle/ruby/3.4.0/gems/nkf-0.2.0/ext/nkf
+make DESTDIR\= sitearchdir\=./.gem.20251018-3721-lzu2ep sitelibdir\=./.gem.20251018-3721-lzu2ep clean
+
+current directory: /Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/vendor/bundle/ruby/3.4.0/gems/nkf-0.2.0/ext/nkf
+make DESTDIR\= sitearchdir\=./.gem.20251018-3721-lzu2ep sitelibdir\=./.gem.20251018-3721-lzu2ep
+compiling nkf.c
+linking shared-object nkf.bundle
+
+current directory: /Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/vendor/bundle/ruby/3.4.0/gems/nkf-0.2.0/ext/nkf
+make DESTDIR\= sitearchdir\=./.gem.20251018-3721-lzu2ep sitelibdir\=./.gem.20251018-3721-lzu2ep install
+/usr/bin/install -c -m 0755 nkf.bundle ./.gem.20251018-3721-lzu2ep
+
+current directory: /Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/vendor/bundle/ruby/3.4.0/gems/nkf-0.2.0/ext/nkf
+make DESTDIR\= sitearchdir\=./.gem.20251018-3721-lzu2ep sitelibdir\=./.gem.20251018-3721-lzu2ep clean

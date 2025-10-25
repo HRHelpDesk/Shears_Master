@@ -1,0 +1,9 @@
+/Users/masonmerrell/Documents/CurentProjects/Shears_Master/node_modules/@react-native-async-storage/async-storage/android/build/generated/source/codegen/jni/CMakeLists.txt
+/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/@react-native-community/datetimepicker/android/build/generated/source/codegen/jni/CMakeLists.txt
+/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/react-native-bottom-tabs/android/build/generated/source/codegen/jni/CMakeLists.txt
+/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/react-native-gesture-handler/android/build/generated/source/codegen/jni/CMakeLists.txt
+/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/react-native-pager-view/android/build/generated/source/codegen/jni/CMakeLists.txt
+/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/react-native-safe-area-context/android/src/main/jni/CMakeLists.txt
+/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/react-native-screens/android/src/main/jni/CMakeLists.txt
+/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/react-native-vector-icons/android/build/generated/source/codegen/jni/CMakeLists.txt
+/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/react-native/ReactAndroid/cmake-utils/default-app-setup/CMakeLists.txt
