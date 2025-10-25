@@ -7,7 +7,11 @@
 
 # Whether you use PnP or not, the node_modules folder is often used to store
 # build artifacts that should be gitignored
-node_modules
+node_modules/
+shears-api/node_modules/
+packages/shears-web/node_modules/
+packages/ShearsMobile/node_modules/
+packages/shears-shared/node_modules/
 
 # Swap the comments on the following lines if you wish to use zero-installs
 # In that case, don't forget to run `yarn config set enableGlobalCache false`!

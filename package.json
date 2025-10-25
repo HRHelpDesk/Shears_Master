@@ -1,4 +1,37 @@
 {
-  "name": "Shears_Master",
-  "packageManager": "yarn@4.9.2"
+  "name": "shears-master",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "web": "yarn workspace shears-web start",
+    "mobile:android": "yarn workspace ShearsMobile android",
+    "mobile:ios": "yarn workspace ShearsMobile ios",
+    "shared:build": "yarn workspace shears-shared build"
+  },
+  "workspaces": {
+    "packages": [
+      "packages/*"
+    ],
+    "nohoist": [
+  "**/react",
+  "**/react/**",
+  "**/react-dom",
+  "**/react-dom/**",
+  "**/react-native",
+  "**/react-native/**",
+  "**/@react-native-community/**",
+  "**/@react-native-community/**",
+  "**/react-native-vector-icons",
+  "**/react-native-vector-icons/**",
+  "**/metro",
+  "**/metro/**"
+]
+
+  },
+  "resolutions": {
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "react-native": "0.82.0",
+    "react-native-safe-area-context": "5.6.1"
+  }
 }
