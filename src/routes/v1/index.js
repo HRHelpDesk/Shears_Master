@@ -1,42 +1,34 @@
-// src/routes/v1/index.js
 const express = require('express');
 const router = express.Router();
 const authRouter = require('./auth');
 const dataRecordsRouter = require('./dataRecords');
-const { connectDB } = require('../../config/db');
-
+const { connections, connectDB } = require('../../config/db');
 
 console.log('🧭 v1 router loaded');
 
-// ✅ Middleware: attach database connection based on x-app-name header
+// Middleware: attach existing DB connection
 router.use(async (req, res, next) => {
   const appName = 'shears';
   console.log('🌐 Incoming request:', req.method, req.originalUrl, 'App name:', appName);
 
   try {
-    req.db = await connectDB(appName);
+    if (!connections[appName]) {
+      console.log(`🔄 No cached connection for ${appName}, connecting...`);
+      await connectDB(appName);
+    }
+    req.db = connections[appName];
     next();
   } catch (err) {
     console.error('DB connection error:', err.message);
-    res.status(403).json({ error: 'Invalid app name' });
+    res.status(500).json({ error: 'Database connection failed' });
   }
 });
 
-
-// Test route
-router.get('/', (req, res) => {
-  console.log('GET /v1/ hit');
-  res.json({ message: 'Welcome to API v1!' });
-});
-
 router.get('/health', (req, res) => {
-  console.log('GET /v1/health hit');
-  res.json({ status: 'API v1 is healthy' });
+  res.json({ status: 'API v1 healthy', dbConnected: !!req.db });
 });
 
-// Mount /auth routes
 router.use('/auth', authRouter);
-
 router.use('/data-records', dataRecordsRouter);
 
 module.exports = router;
