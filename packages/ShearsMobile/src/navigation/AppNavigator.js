@@ -51,15 +51,18 @@ function AppRoutes() {
         component={DetailView}
       />
 
-      <Stack.Screen
+    <Stack.Screen
   name="SettingsPage"
   component={SettingsListView}
   options={{
-   
-    gestureEnabled: true,
-
+    title: 'Settings',
+    gestureEnabled: true, // allows swipe down to close on iOS
+    headerShown: false,   // optional: hide the default header for a cleaner modal
+    presentation: 'modal', // key option to make it modal
+    animation: 'slide_from_bottom', // optional smooth slide-in animation
   }}
 />
+
       </>
       )}
     </Stack.Navigator>

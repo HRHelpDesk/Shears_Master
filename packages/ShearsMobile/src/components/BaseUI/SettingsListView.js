@@ -3,7 +3,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { FlatList, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Divider, useTheme } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { LiquidGlassView } from 'react-native-liquid-swipe'; // or your LiquidGlass import
+import { LiquidGlassView } from '@callstack/liquid-glass';
 
 const SettingsListView = () => {
   const theme = useTheme();
@@ -19,7 +19,35 @@ const SettingsListView = () => {
   }, [flattenedSettings]);
 
   const renderItem = ({ item }) => (
-  <View style={styles.headerRow}>
+    <TouchableOpacity
+      style={[styles.itemContainer, { backgroundColor: colors.surface }]}
+      onPress={() =>
+        navigation.navigate('ListItemDetail', {
+          name: item.name,
+          appConfig: item,
+        })
+      }
+    >
+      <View style={styles.row}>
+        {item.icon?.android && (
+          <Icon
+            name={item.icon.android}
+            size={24}
+            color={colors.onSurfaceVariant || colors.textSecondary}
+            style={styles.icon}
+          />
+        )}
+        <Text style={[styles.title, { color: colors.onSurface }]}>
+          {item.displayName || item.name}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Header row with title and LiquidGlass close button */}
+      <View style={styles.headerRow}>
   <Text style={[styles.pageTitle, { color: colors.primary }]}>Settings</Text>
   
   <TouchableOpacity
@@ -37,24 +65,6 @@ const SettingsListView = () => {
   </TouchableOpacity>
 </View>
 
-  );
-
-  return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header row with title and LiquidGlass close button */}
-      <View style={styles.headerRow}>
-        <Text style={[styles.pageTitle, { color: colors.primary }]}>Settings</Text>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
-          <LiquidGlassView
-            style={[styles.glassButton, { backgroundColor: colors.surface }]}
-            tintColor="rgba(255,255,255,0.1)"
-            effect="clear"
-            interactive
-          >
-            <Icon name="close" size={28} color={colors.primary} />
-          </LiquidGlassView>
-        </TouchableOpacity>
-      </View>
 
       <FlatList
         data={flattenedSettings}
@@ -68,7 +78,7 @@ const SettingsListView = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, paddingTop: 10 },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -78,22 +88,22 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   pageTitle: { fontSize: 22, fontWeight: 'bold' },
-   editButton: { position: 'absolute', top: 50, right: 20, zIndex: 2 },
+   editButton: { position: 'absolute', top: 0, right: 10, zIndex: 2 },
   editButtonGlass: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 6,
     paddingVertical: 6,
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
   glassButton: {
-    width: 36,
-    height: 36,
+    width: 20,
+    height: 20,
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  listContainer: { padding: 0 },
+  listContainer: { padding: 0, marginTop: 25 },
   itemContainer: { paddingVertical: 14, paddingHorizontal: 16 },
   row: { flexDirection: 'row', alignItems: 'center' },
   icon: { marginRight: 12 },
