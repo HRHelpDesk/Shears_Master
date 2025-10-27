@@ -9,8 +9,7 @@ import { CURRENT_APP, CURRENT_WHITE_LABEL } from 'shears-shared/src/config/curre
 import { AppLogos } from '../config/appLogos';
 import { AuthProvider, AuthContext } from '../context/AuthContext';
 import DetailView from '../components/BaseUI/ListItemDetail';
-import SettingsListView from '../components/BaseUI/SettingsListView';
-
+import SettingsStack from './SettingsNavigator';
 
 const Stack = createNativeStackNavigator();
 const appConfig = getAppConfig(CURRENT_APP, CURRENT_WHITE_LABEL);
@@ -51,17 +50,16 @@ function AppRoutes() {
         component={DetailView}
       />
 
-    <Stack.Screen
-  name="SettingsPage"
-  component={SettingsListView}
+
+<Stack.Screen
+  name="Settings"
+  component={SettingsStack}
   options={{
-    title: 'Settings',
-    gestureEnabled: true, // allows swipe down to close on iOS
-    headerShown: false,   // optional: hide the default header for a cleaner modal
-    presentation: 'modal', // key option to make it modal
-    animation: 'slide_from_bottom', // optional smooth slide-in animation
+    gestureEnabled: true,
+    presentation: 'modal',
   }}
 />
+
 
       </>
       )}

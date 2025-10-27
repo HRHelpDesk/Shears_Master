@@ -6,7 +6,7 @@ import { useTheme } from 'react-native-paper';
 import { AuthContext } from '../../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 
-export default function PageHeader({ title, settings }) {
+export default function PageHeader({ title, settings, appConfig }) {
   const theme = useTheme();
   const navigation = useNavigation();
   const { logout } = useContext(AuthContext);
@@ -25,12 +25,12 @@ console.log('PageHeader settings:', settings);
         />
       </View>
 
-      {settings ? (
+      {settings.length > 0 ? (
         <Appbar.Action
           icon="cog-outline"
           color={theme.colors.onPrimary}
           onPress={() =>
-            navigation.navigate('SettingsPage', { settings })
+            navigation.navigate('Settings', { settings, appConfig })
           }
           accessibilityLabel="Settings"
         />

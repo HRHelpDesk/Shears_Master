@@ -1,5 +1,5 @@
 // ListView.js
-import React, { useState, useMemo, useContext } from 'react';
+import React, { useState, useMemo, useContext, useEffect } from 'react';
 import {
   View,
   Text,
@@ -33,6 +33,11 @@ export default function ListView({
   const [localData, setLocalData] = useState(data);
   const { token, user } = useContext(AuthContext);
   // Keep local data in sync if props.data changes
+  useEffect(() => {
+    console.log('ListView fiields:', fields);
+    console.log('ListView appConfig:', appConfig);
+    
+  },[])
   React.useEffect(() => setLocalData(data), [data]);
 
   const normalizedData = useMemo(() => {
@@ -280,6 +285,8 @@ export default function ListView({
             name,
             appConfig,
             mode: 'add',
+            settingFields: fields,
+
           })
         }
       />

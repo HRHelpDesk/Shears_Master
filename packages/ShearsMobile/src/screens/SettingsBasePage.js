@@ -1,9 +1,8 @@
-// BasePage.js
+// src/components/BaseUI/SettingsBasePage.js
 import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, KeyboardAvoidingView } from 'react-native';
-import { useTheme } from 'react-native-paper';
+import { useTheme, Divider } from 'react-native-paper';
 import { useIsFocused } from '@react-navigation/native';
-import TabBar from '../components/UI/TabBar';
 import PageHeader from '../components/UI/PageHeader';
 import COMPONENTS from '../config/component-mapping/ComponentMap';
 import { mapFields } from 'shears-shared/src/config/fieldMapper';
@@ -13,26 +12,22 @@ import { AuthContext } from '../context/AuthContext';
 const FallbackComponent = () => (
   <View style={styles.fallback}>
     <Text style={{ fontSize: 16, color: '#888', textAlign: 'center' }}>
-      ⚠️ Component not found. Check your component mapping.
+      ⚠️ Component not found. Check your mapping.
     </Text>
   </View>
 );
 
-export default function BasePage({ appConfig, name, viewData = [], displayName, settings = [] }) {
-  const isFocused = useIsFocused();
+export default function SettingsBasePage({ route }) {
   const theme = useTheme();
+  const isFocused = useIsFocused();
   const { token, user } = useContext(AuthContext);
 
-  const route = appConfig.mainNavigation.find((r) => r.name === name);
-  const views = route?.views || [];
+  const { item, appConfig } = route.params || {};
+  const name = item?.name;
+  const displayName = item?.displayName || name;
+  const views = item?.views || [];
 
-  const [activeTab, setActiveTab] = useState(0);
-  const [data, setData] = useState([]);
-  const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  // Map view components safely
+  // Map available views (just like BasePage)
   const activeViews = views.map((view) => {
     const Component = COMPONENTS[view.mobileComponent];
     if (!Component) {
@@ -41,18 +36,19 @@ export default function BasePage({ appConfig, name, viewData = [], displayName, 
     return { ...view, component: Component || FallbackComponent };
   });
 
-  const activeView = activeViews[activeTab] || null;
-  const fieldsFromConfig = activeView?.fields || viewData[activeTab]?.fields || [];
-  const mappedFields = mapFields(fieldsFromConfig);
+  const [activeTab, setActiveTab] = useState(0);
+  const [data, setData] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  /**
-   * ✅ Fetch records
-   * - `isRefresh = true` → only updates list (no page reload)
-   * - `isRefresh = false` → used for initial load
-   */
+  const activeView = activeViews[activeTab] || null;
+  const fieldsFromConfig = item?.fields || [];
+  const mappedFields = mapFields(fieldsFromConfig);
+console.log("SettingsBasePage mappedFields:", mappedFields);
   const fetchRecords = useCallback(
     async (isRefresh = false) => {
-      if (!token || !user?.subscriberId) return;
+      if (!token || !user?.subscriberId || !name) return;
 
       try {
         if (isRefresh) setRefreshing(true);
@@ -78,19 +74,17 @@ export default function BasePage({ appConfig, name, viewData = [], displayName, 
     [token, user, name]
   );
 
-  // 🔄 Auto-fetch when screen comes into focus
   useEffect(() => {
     if (isFocused) fetchRecords(false);
   }, [isFocused, fetchRecords]);
 
   const dynamicProps = {
-    name: activeView?.displayName || name,
+    name,
     fields: mappedFields,
     data,
     appConfig,
     refreshing,
     onRefresh: () => fetchRecords(true),
-    
   };
 
   if (loading) {
@@ -112,12 +106,11 @@ export default function BasePage({ appConfig, name, viewData = [], displayName, 
   const ActiveComponent = activeViews[activeTab]?.component || FallbackComponent;
 
   return (
-    <KeyboardAvoidingView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <PageHeader 
-  title={displayName} 
-  appConfig={appConfig} 
-  settings={settings || null}
-/>
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
+      <PageHeader title={displayName} appConfig={appConfig} settings={[]} />
+      <Divider />
 
       {activeViews.length > 1 ? (
         <TabBar
@@ -134,7 +127,7 @@ export default function BasePage({ appConfig, name, viewData = [], displayName, 
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, borderTopWidth: 0.5 },
+  container: { flex: 1 },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   fallback: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
 });

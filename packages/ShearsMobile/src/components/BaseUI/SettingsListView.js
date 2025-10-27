@@ -5,13 +5,12 @@ import { Divider, useTheme } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { LiquidGlassView } from '@callstack/liquid-glass';
 
-const SettingsListView = () => {
+const SettingsListView = ({settings, appConfig}) => {
   const theme = useTheme();
   const colors = theme.colors;
   const route = useRoute();
   const navigation = useNavigation();
 
-  const { settings = [] } = route.params || {};
   const flattenedSettings = Array.isArray(settings[0]) ? settings.flat() : settings;
 
   useEffect(() => {
@@ -22,11 +21,11 @@ const SettingsListView = () => {
     <TouchableOpacity
       style={[styles.itemContainer, { backgroundColor: colors.surface }]}
       onPress={() =>
-        navigation.navigate('ListItemDetail', {
-          name: item.name,
-          appConfig: item,
-        })
-      }
+  navigation.navigate('SettingsBasePage', {
+    item,
+    appConfig,
+  })
+}
     >
       <View style={styles.row}>
         {item.icon?.android && (
