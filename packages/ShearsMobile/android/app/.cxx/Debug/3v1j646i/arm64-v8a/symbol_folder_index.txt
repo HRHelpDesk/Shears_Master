@@ -1,0 +1,1 @@
+/Users/masonmerrell/Desktop/Shears_Master/packages/ShearsMobile/android/app/build/intermediates/cxx/Debug/3v1j646i/obj/arm64-v8a

@@ -1,6 +1,6 @@
 // BasePage.js
 import React, { useState, useEffect, useContext, useCallback } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, KeyboardAvoidingView } from 'react-native';
 import { useTheme } from 'react-native-paper';
 import { useIsFocused } from '@react-navigation/native';
 import TabBar from '../components/UI/TabBar';
@@ -18,13 +18,14 @@ const FallbackComponent = () => (
   </View>
 );
 
-export default function BasePage({ appConfig, name, viewData = [] }) {
+export default function BasePage({ appConfig, name, viewData = [], displayName, settings = [] }) {
   const isFocused = useIsFocused();
   const theme = useTheme();
   const { token, user } = useContext(AuthContext);
 
   const route = appConfig.mainNavigation.find((r) => r.name === name);
   const views = route?.views || [];
+const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   const [activeTab, setActiveTab] = useState(0);
   const [data, setData] = useState([]);
@@ -51,37 +52,52 @@ export default function BasePage({ appConfig, name, viewData = [] }) {
    * - `isRefresh = false` → used for initial load
    */
   const fetchRecords = useCallback(
-    async (isRefresh = false) => {
-      if (!token || !user?.subscriberId) return;
+  async (isRefresh = false) => {
+    if (!token || !user?.subscriberId) return;
 
-      try {
-        if (isRefresh) setRefreshing(true);
-        else setLoading(true);
-
-        const response = await getRecords({
-          recordType: name.toLowerCase(),
-          token,
-          subscriberId: user.subscriberId,
-          userId: user.userId,
-        });
-
-        setData(response || []);
-        setError(null);
-      } catch (err) {
-        console.error('Failed to load records:', err);
-        setError(err.message || 'Failed to load data');
-      } finally {
-        if (isRefresh) setRefreshing(false);
-        else setLoading(false);
+    try {
+      if (isRefresh) {
+        // Pull-to-refresh or soft refresh (no spinner)
+        setRefreshing(true);
+      } else {
+        // Initial load (spinner)
+        setLoading(true);
       }
-    },
-    [token, user, name]
-  );
+
+      const response = await getRecords({
+        recordType: name.toLowerCase(),
+        token,
+        subscriberId: user.subscriberId,
+        userId: user.userId,
+      });
+
+      setData(response || []);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to load records:', err);
+      setError(err.message || 'Failed to load data');
+    } finally {
+      if (isRefresh) setRefreshing(false);
+      else setLoading(false);
+    }
+  },
+  [token, user, name]
+);
+
 
   // 🔄 Auto-fetch when screen comes into focus
-  useEffect(() => {
-    if (isFocused) fetchRecords(false);
-  }, [isFocused, fetchRecords]);
+useEffect(() => {
+  if (!hasLoadedOnce) {
+    fetchRecords(false);
+    setHasLoadedOnce(true);
+  }
+}, [fetchRecords]);
+
+useEffect(() => {
+  if (isFocused && hasLoadedOnce) {
+    fetchRecords(true); // soft refresh
+  }
+}, [isFocused, hasLoadedOnce, fetchRecords]);
 
   const dynamicProps = {
     name: activeView?.displayName || name,
@@ -90,6 +106,7 @@ export default function BasePage({ appConfig, name, viewData = [] }) {
     appConfig,
     refreshing,
     onRefresh: () => fetchRecords(true),
+    
   };
 
   if (loading) {
@@ -111,8 +128,13 @@ export default function BasePage({ appConfig, name, viewData = [] }) {
   const ActiveComponent = activeViews[activeTab]?.component || FallbackComponent;
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <PageHeader title={name} appConfig={appConfig} />
+    <KeyboardAvoidingView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <PageHeader 
+  title={displayName} 
+  appConfig={appConfig} 
+  settings={settings || null}
+/>
+
       {activeViews.length > 1 ? (
         <TabBar
           views={activeViews}
@@ -123,7 +145,7 @@ export default function BasePage({ appConfig, name, viewData = [] }) {
       ) : (
         <ActiveComponent {...dynamicProps} />
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

@@ -1,10 +1,12 @@
 // app-data.js
 import { CalendarList, CalendarMonthView, CalendarRoute } from './view-schema/calendar-view.js';
 import { ContactView } from './view-schema/contacts-view.js';
+import { ProfileView } from './view-schema/profile-view.js';
+import { InventoryList } from './view-schema/inventory-view.js';
 import { ServicesList } from './view-schema/services-view.js';
 import { shearWhitelabels } from './whitelabels/shear.js';
 import { splashWhitelabels } from './whitelabels/splash.js';
-
+import { shearSettings } from './settings.js';
 export const AppData = [
   {
     appName: 'shear',
@@ -15,9 +17,77 @@ export const AppData = [
 
       {
         name: 'Calendar',
-        displayName: 'Schedule',
+        displayName: 'Appoinments',
         icon: { ios: 'calendar', android: 'calendar-today', web: 'fa fa-calendar-alt' },
-        fields: [],
+        fields: [
+              {
+                field: 'linkField', // reference the generic base field
+                override: {
+                  field: 'contact',        // actual key in the formValues
+                  label: 'Client',         // custom label for this usage
+                  inputConfig: {
+                    recordType: 'contacts', // optional override
+                    searchField: 'firstName',
+                  },
+                  display: { order: 1 },
+                },
+              },
+              {
+                field: 'linkField',
+                override: {
+                  field: 'service',
+                  label: 'Service',
+                  inputConfig: {
+                    recordType: 'services',
+                    searchField: 'serviceName',
+                  },
+                  display: { order: 2 },
+                },
+              },
+               {
+                field: 'duration',
+                override: {
+                  required: true,
+                  display: { order: 3 },
+                  arrayConfig: { minItems: 1 },
+                },
+              },
+              {
+                field: 'date',
+                override: {
+                  required: true,
+                  display: { order: 4 },
+                  arrayConfig: { minItems: 1 },
+                },
+              },
+              {
+                field: 'time',
+                override: {
+                  required: true,
+                  display: { order: 5 },
+                  arrayConfig: { minItems: 1 },
+                },
+              },
+              {
+                field: 'notes', // reference the generic notes field
+                override: {
+                  field: 'appointmentNotes',
+                  label: 'Appointment Notes',
+                  display: { order: 6 },
+                },
+              },
+              // Client Notes
+              {
+                field: 'notes', // reference the same generic notes field
+                override: {
+                  field: 'clientNotes',
+                  label: 'Client Notes',
+                  display: { order: 7 },
+                },
+              },
+
+            ],
+
         views: [CalendarMonthView, CalendarList],
       },
       {
@@ -65,56 +135,21 @@ export const AppData = [
         name: 'Profile',
         displayName: 'Profile',
         icon: { ios: 'person.crop.circle', android: 'account-circle', web: 'fa fa-user-circle' },
-        views: [],
+
+        views: [ProfileView],
         fields: [],
       },
-      {
-  name: 'Services',
-  displayName: 'Services',
-  icon: { ios: 'scissors', android: 'content-cut', web: 'fa fa-cut' },
-  views: [ServicesList],
-  fields: [
-    {
-      field: 'serviceName',
-      override: {
-        required: true,
-        display: { order: 1 },
-      },
-    },
-    {
-      field: 'description',
-      override: {
-        required: false,
-        display: { order: 2 },
-      },
-    },
-    {
-      field: 'price',
-      override: {
-        required: true,
-        display: { order: 3 },
-      },
-    },
-    {
-      field: 'duration',
-      override: {
-        required: true,
-        display: { order: 4 },
-        arrayConfig: { minItems: 1 },
-      },
-    },
-    {
-      field: 'category',
-      override: {
-        required: true,
-        display: { order: 5 },
-      },
-    },
-  ],
-},
+      
     ],
     defaultRoute: 'Contacts',
-    subNavigation: ['checklist', 'profile', 'settings', 'help'],
+    subNavigation: [{
+        name: 'Inventory',
+        displayName: 'Inventory',
+        icon: { ios: 'cube.box.fill', android: 'truck', web: 'fa fa-user-circle' },
+        views: [InventoryList],
+        fields: [],
+      }],
+    settings: [shearSettings],
   },
   {
     appName: 'splash',
@@ -173,6 +208,7 @@ export const AppData = [
       },
     ],
     defaultRoute: 'Dashboard',
-    subNavigation: ['routes', 'checklist', 'profile', 'settings', 'help'],
+
+    subNavigation: [],
   },
 ];

@@ -6,8 +6,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
+  KeyboardAvoidingView,
 } from 'react-native';
-import { Avatar, useTheme } from 'react-native-paper';
+import { Avatar, Portal, useTheme } from 'react-native-paper';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { LiquidGlassView, isLiquidGlassSupported } from '@callstack/liquid-glass';
@@ -17,12 +18,12 @@ import PlainTextInput from '../SmartInputs/PlainTextInput';
 import AddNestedItemButton from '../UI/AddNestedItemButton';
 import { AuthContext } from '../../context/AuthContext';
 import { mapFields } from 'shears-shared/src/config/fieldMapper';
-import { createRecord } from 'shears-shared/src/Services/Authentication';
+import { createRecord, updateRecord } from 'shears-shared/src/Services/Authentication';
 import { sub } from 'date-fns';
 
 export default function ListItemDetail({ route, navigation }) {
   const {token, user} = useContext(AuthContext);
-  const { item = {}, appConfig, name, mode: initialMode = 'read' } = route.params; // Default to 'read' if mode not provided
+  const { item = {}, appConfig, name, mode: initialMode = 'read', settingFields } = route.params; // Default to 'read' if mode not provided
   const theme = useTheme();
   const primaryColor = appConfig?.themeColors?.primary || theme.colors.primary;
   const secondaryColor = appConfig?.themeColors?.secondary || theme.colors.background;
@@ -30,43 +31,30 @@ export default function ListItemDetail({ route, navigation }) {
   const [mode, setMode] = useState(initialMode); // Initialize mode from route.params
   const [formValues, setFormValues] = useState({});
   const [mappedFields, setMappedFields] = useState([]);
+  console.log('🔎 Found fields:', settingFields);
 
  useEffect(() => {
-  console.log('🔄 useEffect triggered in ListItemDetail', {
-    item,
-    appConfig,
-    name,
-    initialMode,
-    user
-  });
+  console.log('🔄 ListItemDetail init', { item, appConfig, name, settingFields });
 
-  const currentRoute = appConfig?.mainNavigation.find(
-    (r) => r.name === name || r.displayName === name
-  );
-  console.log('🔎 Found route:', currentRoute);
+  // --- Step 1: Resolve route fields from mainNavigation ---
+  const currentRoute =
+    appConfig?.mainNavigation?.find(
+      (r) => r.name === name || r.displayName === name
+    ) || null;
 
   let fields = [];
+    console.log("data:", item)
 
   if (currentRoute?.fields?.length) {
+    // Priority 1: Use route fields
     fields = mapFields(currentRoute.fields);
-    fields = fields.map((f) => {
-      if (f.type.toLowerCase() === 'array' && !f.arrayConfig) {
-        const sourceField = currentRoute.fields.find((cf) => cf.field === f.field);
-        if (sourceField?.arrayConfig) {
-          return { ...f, arrayConfig: sourceField.arrayConfig };
-        } else {
-          return {
-            ...f,
-            arrayConfig: {
-              object: [{ field: 'value', type: 'string', label: f.label || f.field }],
-            },
-          };
-        }
-      }
-      return f;
-    });
-    console.log('📋 Mapped fields from appConfig:', fields);
+    console.log('📋 Using fields from mainNavigation route:', fields);
+  } else if (settingFields?.length) {
+    // Priority 2: Use fields passed via Settings page
+    fields = mapFields(settingFields);
+    console.log('📋 Using fields from settingFields:', fields);
   } else if (Object.keys(item).length > 0) {
+    // Priority 3: Derive fields from item data
     fields = Object.keys(item)
       .filter((k) => !['avatar', 'firstName', 'lastName'].includes(k))
       .map((k) => {
@@ -102,73 +90,37 @@ export default function ListItemDetail({ route, navigation }) {
               : undefined,
         };
       });
-    console.log('📋 Mapped fields from item:', fields);
+    console.log('📋 Derived fields from item data:', fields);
   } else {
-    fields = currentRoute?.fields
-      ? mapFields(currentRoute.fields)
-      : [
-          { field: 'name', type: 'string', label: 'Name', displayInList: true },
-          { field: 'description', type: 'string', label: 'Description', displayInList: true },
-        ];
+    // Priority 4: fallback fields
+    fields = [
+      { field: 'name', type: 'string', label: 'Name', displayInList: true },
+      { field: 'description', type: 'string', label: 'Description', displayInList: true },
+    ];
     console.log('📋 Using fallback fields:', fields);
   }
 
-  console.log('🔍 Final field definitions:', JSON.stringify(fields, null, 2));
+  // --- Step 2: Save mapped fields ---
   setMappedFields(fields);
 
-  // Initialize form values
-const initialFormValues = initialMode === 'add' 
-  ? {} 
-  : { ...(item.fieldsdata || item) };
-
-  console.log('📋 Initial form values before processing:', initialFormValues);
-
-  fields.forEach((field) => {
-    if (initialMode === 'add') {
-      if (field.type.toLowerCase() === 'array') {
-        initialFormValues[field.field] = []; // Initialize as empty array
-      } else if (field.type === 'object' && field.objectConfig) {
-        initialFormValues[field.field] = {};
-        field.objectConfig.forEach((subField) => {
-          initialFormValues[field.field][subField.field] = subField.defaultValue ?? '';
-        });
-      } else {
-        initialFormValues[field.field] = field.defaultValue ?? '';
-      }
+  // --- Step 3: Initialize formValues with item data ---
+  const initialValues = {};
+  fields.forEach((f) => {
+    if (f.type === 'array') {
+      initialValues[f.field] = Array.isArray(item[f.field]) ? item[f.field] : [];
+    } else if (f.type === 'object') {
+      initialValues[f.field] = typeof item[f.field] === 'object' && item[f.field] !== null
+        ? item[f.field]
+        : {};
     } else {
-      // Edit mode fallback
-      if (field.type.toLowerCase() === 'array' && !initialFormValues[field.field]) {
-        initialFormValues[field.field] = [];
-      } else if (field.type === 'object' && !initialFormValues[field.field]) {
-        initialFormValues[field.field] = {};
-      }
+      initialValues[f.field] = item[f.field] ?? '';
     }
   });
+  setFormValues(initialValues);
 
-  // Prepopulate array fields in add mode
-  if (initialMode === 'add') {
-    fields.forEach((field) => {
-      if (field.type.toLowerCase() === 'array' && field.arrayConfig?.object?.length) {
-        const minItems = field.arrayConfig.minItems || 0;
-        if (minItems > 0 && !Array.isArray(initialFormValues[field.field])) {
-          initialFormValues[field.field] = [];
-          console.log(`📋 Corrected ${field.field} to empty array`);
-        }
-        if (minItems > 0 && initialFormValues[field.field].length === 0) {
-          const newItem = {};
-          field.arrayConfig.object.forEach((subField) => {
-            newItem[subField.field] = subField.defaultValue ?? '';
-          });
-          initialFormValues[field.field] = [newItem];
-          console.log(`📋 Prepopulated array field ${field.field}:`, initialFormValues[field.field]);
-        }
-      }
-    });
-  }
+  console.log('🔍 Initialized formValues:', initialValues);
+}, [appConfig, name, item, settingFields]);
 
-  console.log('📋 Final form values:', JSON.stringify(initialFormValues, null, 2));
-  setFormValues(initialFormValues);
-}, [appConfig, name, item, initialMode]);
 
 
 
@@ -236,16 +188,33 @@ const handleRemoveNestedItem = (field, index) => {
   });
 };
 
- const handleSave = async () => {
+const handleSave = async () => {
   console.log('💾 Saving formValues:', JSON.stringify(formValues, null, 2));
-  // ... validation logic ...
+
   if (!token) {
     Alert.alert('Authentication Error', 'Please log in to save data.');
     return;
   }
+
   try {
-  await createRecord(formValues, name.toLowerCase(), token, user.subscriberId, user.userId);
-    console.log('💾 Saved successfully:', formValues);
+    if (mode === 'edit' && item._id) {
+      console.log('📝 Edit mode detected for item ID:', item._id);
+      // --- UPDATE existing record
+      console.log(formValues)
+      const updated = await updateRecord(item._id, formValues, token);
+      console.log('💾 Updated successfully:', updated);
+    } else {
+      // --- CREATE new record
+      const created = await createRecord(
+        formValues,
+        name.toLowerCase(),
+        token,
+        user.subscriberId,
+        user.userId
+      );
+      console.log('💾 Created successfully:', created);
+    }
+
     setMode('read');
     navigation.goBack();
   } catch (error) {
@@ -253,6 +222,7 @@ const handleRemoveNestedItem = (field, index) => {
     Alert.alert('Error', error.message || 'Failed to save item. Please try again.');
   }
 };
+
 
   const handleDelete = () => {
     console.log('🗑 Delete:', formValues);
@@ -368,24 +338,16 @@ const handleRemoveNestedItem = (field, index) => {
       ) : (
         <InputComponent
           value={value?.toString() || ''}
-         onChangeText={(val) => {
-  if (parentFieldKey && index !== undefined) {
-    // Nested array field
-    handleNestedChange(parentFieldKey, index, fieldKey, val);
-  } else if (parentFieldKey) {
-    // Nested object field
-    handleObjectChange(parentFieldKey, fieldKey, val);
-  } else {
-    // Top-level field
-    handleInputChange(fieldKey, val);
-  }
-}}
+          onChangeText={(val) => {
+            if (parentFieldKey && index !== undefined) handleNestedChange(parentFieldKey, index, fieldKey, val);
+            else if (parentFieldKey) handleObjectChange(parentFieldKey, fieldKey, val);
+            else handleInputChange(fieldKey, val);
+          }}
+           recordTypeName={def.recordTypeName}  // <-- pass it here
+
           placeholder={def.display?.placeholder || `Enter ${def.label}`}
-          style={styles.paperInput}
-          theme={{ colors: { primary: theme.colors.primary, text: theme.colors.onSurface } }}
           label={def.label}
-          options={def.inputConfig?.options || []}
-          {...(def.inputConfig || {})}
+          {...def.inputConfig}
         />
       )}
     </LiquidGlassView>
@@ -394,6 +356,7 @@ const handleRemoveNestedItem = (field, index) => {
 
 
   return (
+    <Portal.Host>
     <LinearGradient colors={[withOpacity(primaryColor, 0.6), withOpacity(secondaryColor, 0.6)]} style={styles.gradient}>
       {/* Back Button */}
       <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
@@ -422,7 +385,7 @@ const handleRemoveNestedItem = (field, index) => {
           )}
         </LiquidGlassView>
       </TouchableOpacity>
-
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1, width: '100%', }}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Avatar */}
         <View style={styles.avatarContainer}>
@@ -449,7 +412,9 @@ const handleRemoveNestedItem = (field, index) => {
           renderFieldRecursive(field.field, formValues[field.field], field)
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
     </LinearGradient>
+    </Portal.Host>
   );
 }
 

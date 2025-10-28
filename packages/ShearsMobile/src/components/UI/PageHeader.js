@@ -1,11 +1,15 @@
 // src/components/UI/PageHeader.js
-import React from 'react';
+import React, { useContext } from 'react';
 import { Appbar } from 'react-native-paper';
 import { View, StyleSheet } from 'react-native';
 import { useTheme } from 'react-native-paper';
+import { AuthContext } from '../../context/AuthContext';
+import { useNavigation, DrawerActions } from '@react-navigation/native';
 
 export default function PageHeader({ title }) {
   const theme = useTheme();
+  const navigation = useNavigation();
+  const { logout } = useContext(AuthContext);
 
   return (
     <Appbar.Header
@@ -14,11 +18,17 @@ export default function PageHeader({ title }) {
       style={[styles.header, { backgroundColor: theme.colors.primary }]}
     >
       <View style={styles.titleContainer}>
-        <Appbar.Content 
-          title={title} 
-          titleStyle={[styles.title, { color: theme.colors.onPrimary }]} 
+        <Appbar.Content
+          title={title}
+          titleStyle={[styles.title, { color: theme.colors.onPrimary }]}
         />
       </View>
+
+      <Appbar.Action
+        icon="menu"
+        color={theme.colors.onPrimary}
+        onPress={() => navigation.dispatch(DrawerActions.toggleDrawer())}
+      />
     </Appbar.Header>
   );
 }

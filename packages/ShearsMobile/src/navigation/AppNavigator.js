@@ -1,14 +1,15 @@
+// src/navigation/AppRoutes.js
 import React, { useContext } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { NavigationContainer } from '@react-navigation/native';
 import LoginScreen from '../screens/auth/LoginScreen';
-import MainNavigator from './MainNavigator';
 import SplashScreen from '../screens/SplashScreen';
+import DetailView from '../components/BaseUI/ListItemDetail';
+import { AuthContext, AuthProvider } from '../context/AuthContext';
+import RootDrawer from './RootDrawer';
 import { getAppConfig } from 'shears-shared/src/config/getAppConfig';
 import { CURRENT_APP, CURRENT_WHITE_LABEL } from 'shears-shared/src/config/currentapp';
 import { AppLogos } from '../config/appLogos';
-import { AuthProvider, AuthContext } from '../context/AuthContext';
-import DetailView from '../components/BaseUI/ListItemDetail';
 
 const Stack = createNativeStackNavigator();
 const appConfig = getAppConfig(CURRENT_APP, CURRENT_WHITE_LABEL);
@@ -17,38 +18,32 @@ const logo = AppLogos[CURRENT_APP][CURRENT_WHITE_LABEL];
 function AppRoutes() {
   const { isLoggedIn, loading } = useContext(AuthContext);
 
-  if (loading) {
-    // While auth state is loading, show Splash
-    return <SplashScreen appConfig={appConfig} logo={logo} />;
-  }
+  if (loading) return <SplashScreen appConfig={appConfig} logo={logo} />;
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-   
       {!isLoggedIn ? (
-        <Stack.Screen
-          name="Login"
-          children={() => <LoginScreen appConfig={appConfig} logo={logo} />}
-        />
+        <Stack.Screen name="Login">
+          {() => <LoginScreen appConfig={appConfig} logo={logo} />}
+        </Stack.Screen>
       ) : (
         <>
-        <Stack.Screen
-          name="Main"
-          children={() => <MainNavigator appConfig={appConfig} />}
-        />
-        <Stack.Screen
-        name="ListItemDetail"
-        options={{ 
-          title: 'Item Details',
-    presentation: 'modal', // or 'formSheet' for a centered, smaller modal on iOS
-    headerShown: false, // Optional: Hide the default header for a cleaner modal look
-    gestureEnabled: true, // Allow swipe-down to dismiss on iOS
-    animation: 'slide_from_bottom', // Optional: Smooth slide-in animation
-  
-        }}
-        component={DetailView}
-      />
-      </>
+          <Stack.Screen name="RootDrawer">
+            {() => <RootDrawer appConfig={appConfig} />}
+          </Stack.Screen>
+
+          <Stack.Screen
+            name="ListItemDetail"
+            component={DetailView}
+            options={{
+              title: 'Item Details',
+              presentation: 'modal',
+              headerShown: false,
+              gestureEnabled: true,
+              animation: 'slide_from_bottom',
+            }}
+          />
+        </>
       )}
     </Stack.Navigator>
   );

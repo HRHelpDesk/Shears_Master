@@ -1,5 +1,5 @@
 // ListView.js
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useContext, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,15 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
+  Alert,
 } from 'react-native';
 import { Avatar, useTheme, FAB } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
+import { Swipeable } from 'react-native-gesture-handler';
 import { singularize } from 'shears-shared/src/utils/stringHelpers';
 import { mapFields } from 'shears-shared/src/config/fieldMapper';
+import { deleteRecord } from 'shears-shared/src/Services/Authentication';
+import { AuthContext } from '../../context/AuthContext';
 
 export default function ListView({
   data = [],
@@ -21,22 +25,29 @@ export default function ListView({
   appConfig,
   type = 'alphabetical',
   onRefresh,
-  refreshing = false, // 👈 controlled by BasePage
+  refreshing = false,
 }) {
   const theme = useTheme();
   const navigation = useNavigation();
   const [search, setSearch] = useState('');
+  const [localData, setLocalData] = useState(data);
+  const { token, user } = useContext(AuthContext);
+  // Keep local data in sync if props.data changes
+  useEffect(() => {
+    console.log('ListView fiields:', fields);
+    console.log('ListView appConfig:', appConfig);
+    
+  },[])
+  React.useEffect(() => setLocalData(data), [data]);
 
-  // ✅ Normalize data for display
   const normalizedData = useMemo(() => {
-    return data.map((item) =>
+    return localData.map((item) =>
       item.fieldsData
         ? { ...item.fieldsData, _id: item._id, recordType: item.recordType, subscriberId: item.subscriberId }
         : item
     );
-  }, [data]);
+  }, [localData]);
 
-  // ✅ Map visible fields
   const displayFields = useMemo(() => {
     let appFields = [];
     if (fields?.length) appFields = fields;
@@ -58,7 +69,6 @@ export default function ListView({
     if (onRefresh) await onRefresh();
   };
 
-  // ✅ Apply search filtering
   const filteredData = useMemo(() => {
     return normalizedData.filter((item) =>
       keys.some((field) => {
@@ -72,7 +82,6 @@ export default function ListView({
     );
   }, [normalizedData, search, keys]);
 
-  // ✅ Group by first letter
   const sections = useMemo(() => {
     if (!keys.length) return [{ title: '', data: filteredData }];
     const grouped = {};
@@ -88,7 +97,46 @@ export default function ListView({
       .map((key) => ({ title: key, data: grouped[key] }));
   }, [filteredData, keys]);
 
-  // ✅ Render list item
+  // Swipe delete
+  const handleDelete = (id) => {
+    console.log(id)
+    Alert.alert(
+      'Delete record?',
+      'Are you sure you want to delete this record?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteRecord(id, token);
+              setLocalData((prev) => prev.filter((item) => item._id !== id));
+            } catch (err) {
+              console.error('Failed to delete record:', err);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const renderRightActions = (item) => (
+    <TouchableOpacity
+      style={{
+        backgroundColor: 'red',
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: 80,
+        borderRadius: 12,
+        marginBottom: 8,
+      }}
+      onPress={() => handleDelete(item._id)}
+    >
+      <Text style={{ color: 'white', fontWeight: 'bold' }}>Delete</Text>
+    </TouchableOpacity>
+  );
+
   const renderItem = ({ item }) => {
     const nameFields = Object.keys(item).filter((k) => k.toLowerCase().includes('name'));
     let primaryText = nameFields.map((k) => item[k]).filter(Boolean).join(' ');
@@ -146,43 +194,44 @@ export default function ListView({
         .toUpperCase() || '?');
 
     return (
-      <TouchableOpacity
-        style={[
-          styles.card,
-          {
-            backgroundColor: theme.colors.surface,
-            shadowColor: theme.colors.onSurface,
-          },
-        ]}
-        onPress={() =>
-          navigation.navigate('ListItemDetail', { item, name, appConfig })
-        }
-      >
-        {item.avatar ? (
-          <Avatar.Image size={48} source={{ uri: item.avatar }} />
-        ) : (
-          <Avatar.Text
-            size={48}
-            label={initials}
-            style={{ backgroundColor: theme.colors.primary }}
-            color={theme.colors.onPrimary}
-          />
-        )}
-        <View style={styles.textContainer}>
-          <Text style={[styles.name, { color: theme.colors.onSurface }]}>
-            {primaryText}
-          </Text>
-          {!!subText && (
-            <Text style={[styles.subText, { color: theme.colors.onSurfaceVariant }]}>
-              {subText}
-            </Text>
+      <Swipeable renderRightActions={() => renderRightActions(item)}>
+        <TouchableOpacity
+          style={[
+            styles.card,
+            {
+              backgroundColor: theme.colors.surface,
+              shadowColor: theme.colors.onSurface,
+            },
+          ]}
+          onPress={() =>
+            navigation.navigate('ListItemDetail', { item, name, appConfig })
+          }
+        >
+          {item.avatar ? (
+            <Avatar.Image size={48} source={{ uri: item.avatar }} />
+          ) : (
+            <Avatar.Text
+              size={48}
+              label={initials}
+              style={{ backgroundColor: theme.colors.primary }}
+              color={theme.colors.onPrimary}
+            />
           )}
-        </View>
-      </TouchableOpacity>
+          <View style={styles.textContainer}>
+            <Text style={[styles.name, { color: theme.colors.onSurface }]}>
+              {primaryText}
+            </Text>
+            {!!subText && (
+              <Text style={[styles.subText, { color: theme.colors.onSurfaceVariant }]}>
+                {subText}
+              </Text>
+            )}
+          </View>
+        </TouchableOpacity>
+      </Swipeable>
     );
   };
 
-  // ✅ Render section header
   const renderSectionHeader = ({ section: { title } }) => (
     <View style={[styles.sectionHeader, { backgroundColor: theme.colors.background }]}>
       <Text style={[styles.sectionHeaderText, { color: theme.colors.primary }]}>
@@ -236,6 +285,8 @@ export default function ListView({
             name,
             appConfig,
             mode: 'add',
+            settingFields: fields,
+
           })
         }
       />

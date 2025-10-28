@@ -1,0 +1,4 @@
+/Users/masonmerrell/Desktop/Shears_Master/packages/ShearsMobile/android/app/.cxx/Debug/3v1j646i/x86/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir
+/Users/masonmerrell/Desktop/Shears_Master/packages/ShearsMobile/android/app/.cxx/Debug/3v1j646i/x86/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir
+/Users/masonmerrell/Desktop/Shears_Master/packages/ShearsMobile/android/app/.cxx/Debug/3v1j646i/x86/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/edit_cache.dir
+/Users/masonmerrell/Desktop/Shears_Master/packages/ShearsMobile/android/app/.cxx/Debug/3v1j646i/x86/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/rebuild_cache.dir

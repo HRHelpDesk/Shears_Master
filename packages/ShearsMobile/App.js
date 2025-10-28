@@ -8,6 +8,7 @@ import { getAppConfig } from 'shears-shared/src/config/getAppConfig';
 import { CURRENT_APP, CURRENT_WHITE_LABEL } from 'shears-shared/src/config/currentapp';
 import { createTheme } from './src/theme/createTheme';
 
+
 const appConfig = getAppConfig(CURRENT_APP, CURRENT_WHITE_LABEL);
 
 export default function App() {
