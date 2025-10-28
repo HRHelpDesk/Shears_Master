@@ -5,13 +5,12 @@ import { Divider, useTheme } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { LiquidGlassView } from '@callstack/liquid-glass';
 
-const SettingsListView = ({settings, appConfig}) => {
+const SettingsListView = ({appConfig}) => {
   const theme = useTheme();
   const colors = theme.colors;
-  const route = useRoute();
   const navigation = useNavigation();
-
-  const flattenedSettings = Array.isArray(settings[0]) ? settings.flat() : settings;
+console.log('SettingsListView route.params:', appConfig);
+  const flattenedSettings = Array.isArray(appConfig.settings[0]) ? appConfig.settings.flat() : appConfig.settings;
 
   useEffect(() => {
     console.log('🛠️ SettingsListView mounted with items:', flattenedSettings);
@@ -77,7 +76,7 @@ const SettingsListView = ({settings, appConfig}) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: 10 },
+  container: { flex: 1, paddingTop: 60 },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',

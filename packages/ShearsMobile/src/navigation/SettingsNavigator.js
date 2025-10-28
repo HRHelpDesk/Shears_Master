@@ -6,21 +6,20 @@ import SettingsBasePage from '../screens/SettingsBasePage';
 
 const Stack = createNativeStackNavigator();
 
-export default function SettingsStack({ route }) {
-      const { settings, appConfig } = route.params || { settings: [], appConfig: {} };
-console.log('SettingsStack settings:', settings);
+export default function SettingsStack({ appConfig }) {
+
 console.log('SettingsStack appConfig:', appConfig);
     
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        presentation: 'modal',
-        animation: 'slide_from_bottom',
+        presentation:'modal'
+       
       }}
     >
       <Stack.Screen name="SettingsList"
-      children={()=> <SettingsListView settings={settings}/>}
+      children={()=> <SettingsListView appConfig={appConfig}/>}
       />
       
   <Stack.Screen name="SettingsBasePage" component={SettingsBasePage} />

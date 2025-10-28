@@ -269,6 +269,36 @@ export const Fields = [
   input: 'object', // renders like a grouped field inline
 },
 
+{
+  field: 'time',
+  type: 'object', // change from 'Array' to 'object'
+  label: 'Time',
+  displayInList: true,
+  required: true,
+  objectConfig: [ // renamed from arrayConfig to objectConfig for clarity
+    {
+      field: 'startTime',
+      type: 'number',
+      label: 'Start Time',
+      validations: { min: 0, max: 23 },
+      input: 'time',
+      inputConfig: { step: 1, min: 0, max: 23 },
+    },
+    {
+      field: 'endTime',
+      type: 'number',
+      label: 'End Time',
+      validations: { min: 0, max: 59 },
+      input: 'time',
+      inputConfig: { step: 5, min: 0, max: 59 },
+    },
+  ],
+  display: {
+    order: 9,
+  },
+  input: 'object', // renders like a grouped field inline
+},
+
 
 {
   field: 'category',
@@ -287,6 +317,59 @@ export const Fields = [
   },
   input: 'text', // Standard text input like serviceName
 },
+
+ {
+    field: 'linkField', // generic placeholder key
+    type: 'object',
+    label: 'Link',       // default label
+    input: 'linkSelect', // tells the form renderer to use SmartDialogLinkSelectInput
+    inputConfig: {
+      recordType: 'contacts', // default record type
+    },
+    display: {
+      placeholder: 'Select a record',
+      order: 1,
+    },
+  },
+{
+    field: 'date',
+    type: 'string',
+    label: 'Date',
+    displayInList: true,
+    required: true,
+    validations: {
+      minLength: 2,
+      maxLength: 50,
+      pattern: /^[A-Za-z\s-]+$/, // Letters, spaces, hyphens
+    },
+    display: {
+      placeholder: 'Enter first name',
+      order: 1,
+    },
+    input: 'date', // Maps to a standard text input component
+  },
+
+  {
+    field: 'notes',
+    type: 'string',
+    label: 'Notes',
+    displayInList: false,
+    required: false,
+    validations: {
+      maxLength: 500,
+    },
+    display: {
+      placeholder: 'Enter Note',
+      order: 3,
+    },
+    input: 'textarea',
+    inputConfig: {
+      rows: 4,
+    },
+  },
+
+
+
 ...ProductFields
 
 

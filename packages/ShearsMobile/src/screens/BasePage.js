@@ -25,6 +25,7 @@ export default function BasePage({ appConfig, name, viewData = [], displayName, 
 
   const route = appConfig.mainNavigation.find((r) => r.name === name);
   const views = route?.views || [];
+const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   const [activeTab, setActiveTab] = useState(0);
   const [data, setData] = useState([]);
@@ -51,37 +52,52 @@ export default function BasePage({ appConfig, name, viewData = [], displayName, 
    * - `isRefresh = false` → used for initial load
    */
   const fetchRecords = useCallback(
-    async (isRefresh = false) => {
-      if (!token || !user?.subscriberId) return;
+  async (isRefresh = false) => {
+    if (!token || !user?.subscriberId) return;
 
-      try {
-        if (isRefresh) setRefreshing(true);
-        else setLoading(true);
-
-        const response = await getRecords({
-          recordType: name.toLowerCase(),
-          token,
-          subscriberId: user.subscriberId,
-          userId: user.userId,
-        });
-
-        setData(response || []);
-        setError(null);
-      } catch (err) {
-        console.error('Failed to load records:', err);
-        setError(err.message || 'Failed to load data');
-      } finally {
-        if (isRefresh) setRefreshing(false);
-        else setLoading(false);
+    try {
+      if (isRefresh) {
+        // Pull-to-refresh or soft refresh (no spinner)
+        setRefreshing(true);
+      } else {
+        // Initial load (spinner)
+        setLoading(true);
       }
-    },
-    [token, user, name]
-  );
+
+      const response = await getRecords({
+        recordType: name.toLowerCase(),
+        token,
+        subscriberId: user.subscriberId,
+        userId: user.userId,
+      });
+
+      setData(response || []);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to load records:', err);
+      setError(err.message || 'Failed to load data');
+    } finally {
+      if (isRefresh) setRefreshing(false);
+      else setLoading(false);
+    }
+  },
+  [token, user, name]
+);
+
 
   // 🔄 Auto-fetch when screen comes into focus
-  useEffect(() => {
-    if (isFocused) fetchRecords(false);
-  }, [isFocused, fetchRecords]);
+useEffect(() => {
+  if (!hasLoadedOnce) {
+    fetchRecords(false);
+    setHasLoadedOnce(true);
+  }
+}, [fetchRecords]);
+
+useEffect(() => {
+  if (isFocused && hasLoadedOnce) {
+    fetchRecords(true); // soft refresh
+  }
+}, [isFocused, hasLoadedOnce, fetchRecords]);
 
   const dynamicProps = {
     name: activeView?.displayName || name,

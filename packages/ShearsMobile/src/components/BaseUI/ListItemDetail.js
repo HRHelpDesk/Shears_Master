@@ -8,7 +8,7 @@ import {
   Alert,
   KeyboardAvoidingView,
 } from 'react-native';
-import { Avatar, useTheme } from 'react-native-paper';
+import { Avatar, Portal, useTheme } from 'react-native-paper';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { LiquidGlassView, isLiquidGlassSupported } from '@callstack/liquid-glass';
@@ -338,24 +338,16 @@ const handleSave = async () => {
       ) : (
         <InputComponent
           value={value?.toString() || ''}
-         onChangeText={(val) => {
-  if (parentFieldKey && index !== undefined) {
-    // Nested array field
-    handleNestedChange(parentFieldKey, index, fieldKey, val);
-  } else if (parentFieldKey) {
-    // Nested object field
-    handleObjectChange(parentFieldKey, fieldKey, val);
-  } else {
-    // Top-level field
-    handleInputChange(fieldKey, val);
-  }
-}}
+          onChangeText={(val) => {
+            if (parentFieldKey && index !== undefined) handleNestedChange(parentFieldKey, index, fieldKey, val);
+            else if (parentFieldKey) handleObjectChange(parentFieldKey, fieldKey, val);
+            else handleInputChange(fieldKey, val);
+          }}
+           recordTypeName={def.recordTypeName}  // <-- pass it here
+
           placeholder={def.display?.placeholder || `Enter ${def.label}`}
-          style={styles.paperInput}
-          theme={{ colors: { primary: theme.colors.primary, text: theme.colors.onSurface } }}
           label={def.label}
-          options={def.inputConfig?.options || []}
-          {...(def.inputConfig || {})}
+          {...def.inputConfig}
         />
       )}
     </LiquidGlassView>
@@ -364,6 +356,7 @@ const handleSave = async () => {
 
 
   return (
+    <Portal.Host>
     <LinearGradient colors={[withOpacity(primaryColor, 0.6), withOpacity(secondaryColor, 0.6)]} style={styles.gradient}>
       {/* Back Button */}
       <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
@@ -421,6 +414,7 @@ const handleSave = async () => {
       </ScrollView>
       </KeyboardAvoidingView>
     </LinearGradient>
+    </Portal.Host>
   );
 }
 

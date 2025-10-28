@@ -6,62 +6,34 @@ import { Fields } from "../AppData/fields/fields";
  * @returns {Array} - The merged and normalized field definitions
  */
 export function mapFields(appFields = []) {
-  console.log('Input appFields:', JSON.stringify(appFields, null, 2));
-
-  // Map base Fields for lookup
   const fieldMap = Object.fromEntries(Fields.map(f => [f.field, f]));
 
   return appFields.map(appField => {
     const baseField = fieldMap[appField.field];
-    if (!baseField) {
-      console.warn(`Unknown field: ${appField.field}`);
-      return appField;
-    }
+    if (!baseField) return appField;
 
-    // Merge arrayConfig if exists
+    // Merge arrayConfig or objectConfig (existing logic)
     const mergedArrayConfig = baseField.arrayConfig
-      ? {
-          ...baseField.arrayConfig,
-          ...(appField.override?.arrayConfig || {}),
-          object: appField.override?.arrayConfig?.object || baseField.arrayConfig?.object,
-        }
+      ? { ...baseField.arrayConfig, ...(appField.override?.arrayConfig || {}), object: appField.override?.arrayConfig?.object || baseField.arrayConfig?.object }
       : undefined;
 
-    // If the field is an object (non-array), define objectConfig from keys
-    let objectConfig;
-    if (!mergedArrayConfig && typeof baseField.defaultValue === 'object' && baseField.defaultValue !== null) {
-      objectConfig = Object.keys(baseField.defaultValue).map(k => {
-        const sub = baseField.defaultValue[k];
-        return {
-          field: k,
-          label: k.charAt(0).toUpperCase() + k.slice(1), // fallback label
-          type: typeof sub,
-          input: 'text',
-          defaultValue: sub ?? '',
-        };
-      });
-    } else if (!mergedArrayConfig && baseField.type === 'object' && baseField.objectConfig) {
-      objectConfig = baseField.objectConfig;
-    }
+    let objectConfig = !mergedArrayConfig && baseField.type === 'object' ? baseField.objectConfig : undefined;
 
-    // Merge base field with overrides
     return {
       ...baseField,
       ...appField.override,
       arrayConfig: mergedArrayConfig,
-      objectConfig: objectConfig || baseField.objectConfig, // for object fields
-      display: {
-        ...baseField.display,
-        ...(appField.override?.display || {}),
-      },
-      validations: {
-        ...baseField.validations,
-        ...(appField.override?.validations || {}),
-        pattern: appField.override?.validations?.pattern || baseField.validations?.pattern,
-      },
+      objectConfig: objectConfig,
+      display: { ...baseField.display, ...(appField.override?.display || {}) },
+      validations: { ...baseField.validations, ...(appField.override?.validations || {}), pattern: appField.override?.validations?.pattern || baseField.validations?.pattern },
+      inputConfig: { ...baseField.inputConfig, ...(appField.override?.inputConfig || {}) },
+            recordTypeName: appField.override?.inputConfig?.recordType || baseField.inputConfig?.recordType || 'contacts',
+
+      field: appField.override?.field || baseField.field, // <-- important for changing key
     };
   });
 }
+
 
 /**
  * Returns the correct input component for a given field definition

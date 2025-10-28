@@ -4,14 +4,13 @@ import { Appbar } from 'react-native-paper';
 import { View, StyleSheet } from 'react-native';
 import { useTheme } from 'react-native-paper';
 import { AuthContext } from '../../context/AuthContext';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, DrawerActions } from '@react-navigation/native';
 
-export default function PageHeader({ title, settings, appConfig }) {
+export default function PageHeader({ title }) {
   const theme = useTheme();
   const navigation = useNavigation();
   const { logout } = useContext(AuthContext);
-console.log('PageHeader title:', title);
-console.log('PageHeader settings:', settings);
+
   return (
     <Appbar.Header
       statusBarHeight={30}
@@ -25,23 +24,11 @@ console.log('PageHeader settings:', settings);
         />
       </View>
 
-      {settings.length > 0 ? (
-        <Appbar.Action
-          icon="cog-outline"
-          color={theme.colors.onPrimary}
-          onPress={() =>
-            navigation.navigate('Settings', { settings, appConfig })
-          }
-          accessibilityLabel="Settings"
-        />
-      ) : (
-        <Appbar.Action
-          icon="logout"
-          color={theme.colors.onPrimary}
-          onPress={logout}
-          accessibilityLabel="Logout"
-        />
-      )}
+      <Appbar.Action
+        icon="menu"
+        color={theme.colors.onPrimary}
+        onPress={() => navigation.dispatch(DrawerActions.toggleDrawer())}
+      />
     </Appbar.Header>
   );
 }
