@@ -1,40 +1,62 @@
-import React, { useState } from 'react';
+// TimePickerInput.js
+import React, { useState, useEffect } from 'react';
 import { View, TouchableOpacity, Text, Platform } from 'react-native';
 import { Dialog, Portal, Button } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function TimePickerInput({ label, value, onChangeText }) {
-  const defaultTime = new Date();
-  defaultTime.setHours(0, 0, 0, 0);
+  // Helper: "13:45" → Date (today at that time)
+  const parseTime = (timeString) => {
+    const [h, m] = timeString.split(':').map(Number);
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    return d;
+  };
+
+  // Helper: Date → "13:45" (24-hour string for storage)
+  const formatTo24 = (date) => {
+    const h = date.getHours().toString().padStart(2, '0');
+    const m = date.getMinutes().toString().padStart(2, '0');
+    return `${h}:${m}`;
+  };
+
+  // Helper: Date → "1:45 PM" (12-hour display)
+  const formatTo12 = (date) => {
+    let h = date.getHours();
+    const m = date.getMinutes().toString().padStart(2, '0');
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12; // 0 → 12
+    return `${h}:${m} ${ampm}`;
+  };
 
   const [visible, setVisible] = useState(false);
-  const [tempTime, setTempTime] = useState(value ? parseTime(value) : defaultTime);
+  const [tempTime, setTempTime] = useState(
+    value ? parseTime(value) : new Date()
+  );
 
-  function parseTime(timeString) {
-    // Expecting "HH:MM" format
-    const [hours, minutes] = timeString.split(':').map(Number);
-    const date = new Date();
-    date.setHours(hours, minutes, 0, 0);
-    return date;
-  }
+  // Keep picker in sync when value changes (edit mode)
+  useEffect(() => {
+    if (value) {
+      setTempTime(parseTime(value));
+    }
+  }, [value]);
 
   const handleConfirm = () => {
-    // Format to "HH:MM" 24-hour string
-    const hours = tempTime.getHours().toString().padStart(2, '0');
-    const minutes = tempTime.getMinutes().toString().padStart(2, '0');
-    onChangeText(`${hours}:${minutes}`);
+    onChangeText(formatTo24(tempTime)); // Save as 24-hour string
     setVisible(false);
   };
 
   const handleCancel = () => {
-    setTempTime(value ? parseTime(value) : defaultTime);
+    setTempTime(value ? parseTime(value) : new Date());
     setVisible(false);
   };
 
-  const displayValue = value || '12:00 AM';
+  // What shows on the button
+  const displayValue = value ? formatTo12(parseTime(value)) : '12:00 AM';
 
   return (
     <View style={{ marginVertical: 6 }}>
+      {/* Trigger Button */}
       <TouchableOpacity
         style={{
           paddingVertical: 10,
@@ -44,25 +66,30 @@ export default function TimePickerInput({ label, value, onChangeText }) {
         }}
         onPress={() => setVisible(true)}
       >
-        <Text style={{ color: value ? 'black' : '#888', fontSize: 16 }}>{displayValue}</Text>
+        <Text style={{ color: value ? 'black' : '#888', fontSize: 16 }}>
+          {displayValue}
+        </Text>
       </TouchableOpacity>
 
+      {/* Dialog with Picker */}
       <Portal>
         <Dialog visible={visible} onDismiss={handleCancel} style={{ borderRadius: 8 }}>
           <Dialog.Title>Select {label}</Dialog.Title>
+
           <Dialog.Content>
             <DateTimePicker
               value={tempTime}
               mode="time"
               display={Platform.OS === 'ios' ? 'spinner' : 'clock'}
-              is24Hour={false}
+              is24Hour={false}           // 12-hour mode on both iOS & Android
               minuteInterval={5}
-              onChange={(event, selectedTime) => {
-                if (selectedTime) setTempTime(selectedTime);
+              onChange={(event, selected) => {
+                if (selected) setTempTime(selected);
               }}
               style={{ width: '100%' }}
             />
           </Dialog.Content>
+
           <Dialog.Actions>
             <Button onPress={handleCancel}>Cancel</Button>
             <Button onPress={handleConfirm}>OK</Button>

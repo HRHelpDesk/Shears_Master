@@ -1,20 +1,20 @@
-import React, { useState, useMemo } from 'react';
+// src/components/CalendarView.js
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Dimensions,
-  PanResponder,
   Animated,
-  ScrollView,
+  PanResponder,
 } from 'react-native';
-import { IconButton, useTheme, Surface } from 'react-native-paper';
+import { IconButton, useTheme, Surface, FAB } from 'react-native-paper';
+import { useNavigation } from '@react-navigation/native';
 import {
   format,
   startOfMonth,
   endOfMonth,
-  eachDayOfInterval,
   addMonths,
   subMonths,
   isToday,
@@ -27,8 +27,9 @@ import {
 
 const WINDOW_WIDTH = Dimensions.get('window').width;
 
-export default function CalendarView({ events = [] }) {
+export default function CalendarView({ data = [], appConfig }) {
   const theme = useTheme();
+  const navigation = useNavigation();
   const [containerWidth, setContainerWidth] = useState(WINDOW_WIDTH - 20);
   const [currentDate, setCurrentDate] = useState(new Date());
   const translateX = useMemo(() => new Animated.Value(0), []);
@@ -55,8 +56,16 @@ export default function CalendarView({ events = [] }) {
   const days = useMemo(() => generateMonthDays(currentDate), [currentDate]);
   const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-  const hasEvent = (day) =>
-    events.some((event) => isSameDay(new Date(event.date), day));
+  const getEventsForDay = useCallback(
+    (day) => {
+      return data.filter((event) =>
+        event.fieldsData?.date && isSameDay(new Date(event.fieldsData.date), day)
+      );
+    },
+    [data]
+  );
+
+  const hasEvent = (day) => getEventsForDay(day).length > 0;
 
   const handlePrevMonth = () => animateMonthChange(subMonths(currentDate, 1), 1);
   const handleNextMonth = () => animateMonthChange(addMonths(currentDate, 1), -1);
@@ -89,6 +98,21 @@ export default function CalendarView({ events = [] }) {
     [currentDate, containerWidth]
   );
 
+  // Navigate to list screen
+  const openDayList = (day) => {
+
+    const dayEvents = getEventsForDay(day);
+    console.log("day events", dayEvents);
+    if (dayEvents.length === 0) return;
+
+    navigation.navigate('CalendarListView', {
+      selectedDate: day,
+      data: dayEvents,
+      appConfig,
+      header: true,
+    });
+  };
+
   return (
     <Surface
       style={[styles.surface, { backgroundColor: theme.colors.surface }]}
@@ -109,13 +133,9 @@ export default function CalendarView({ events = [] }) {
         {weekdays.map((day) => (
           <Text
             key={day}
-            numberOfLines={1}
             style={[
               styles.weekdayText,
-              {
-                width: daySize,
-                color: theme.colors.onSurfaceVariant,
-              },
+              { width: daySize, color: theme.colors.onSurfaceVariant },
             ]}
           >
             {day}
@@ -123,7 +143,7 @@ export default function CalendarView({ events = [] }) {
         ))}
       </View>
 
-      {/* Animated month grid */}
+      {/* Grid */}
       <Animated.View
         style={[
           styles.grid,
@@ -136,15 +156,15 @@ export default function CalendarView({ events = [] }) {
       >
         {days.map((day) => {
           const today = isToday(day);
-          const selectedMonth = isSameMonth(day, currentDate);
-          const event = hasEvent(day);
+          const inMonth = isSameMonth(day, currentDate);
+          const eventCount = getEventsForDay(day).length;
 
           return (
             <TouchableOpacity
               key={day.toISOString()}
               style={[styles.dayCell, { width: daySize, height: daySize }]}
-              onPress={() => setCurrentDate(day)}
-              activeOpacity={0.7}
+              onPress={() => openDayList(day)}
+              activeOpacity={eventCount > 0 ? 0.7 : 1}
             >
               <View
                 style={[
@@ -163,7 +183,7 @@ export default function CalendarView({ events = [] }) {
                     {
                       color: today
                         ? theme.colors.onPrimary
-                        : selectedMonth
+                        : inMonth
                         ? theme.colors.onSurface
                         : theme.colors.onSurfaceVariant,
                       fontWeight: today ? '700' : '400',
@@ -174,27 +194,54 @@ export default function CalendarView({ events = [] }) {
                 </Text>
               </View>
 
-              {event && (
+              {/* Event Dots */}
+              {eventCount > 0 && (
                 <View style={styles.eventContainer}>
-                  <View
-                    style={[
-                      styles.eventDot,
-                      { backgroundColor: theme.colors.primary },
-                    ]}
-                  />
+                  {[...Array(Math.min(eventCount, 3))].map((_, i) => (
+                    <View
+                      key={i}
+                      style={[
+                        styles.eventDot,
+                        { backgroundColor: theme.colors.primary },
+                      ]}
+                    />
+                  ))}
+                  {eventCount > 3 && (
+                    <Text
+                      style={{
+                        fontSize: 10,
+                        color: theme.colors.primary,
+                        marginLeft: 2,
+                      }}
+                    >
+                      +{eventCount - 3}
+                    </Text>
+                  )}
                 </View>
               )}
             </TouchableOpacity>
           );
         })}
       </Animated.View>
+       <FAB
+        icon="plus"
+        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
+        color={theme.colors.onPrimary}
+        onPress={() =>
+          navigation.navigate('ListItemDetail', {
+            item: {},
+            name: 'Calendar',
+            appConfig,
+            mode: 'add',
+          })
+        }
+      />
     </Surface>
   );
 }
 
 const styles = StyleSheet.create({
   surface: {
-  
     paddingVertical: 8,
     elevation: 2,
     flex: 1,
@@ -238,6 +285,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   eventContainer: {
+    flexDirection: 'row',
     marginTop: 4,
     height: 8,
     alignItems: 'center',
@@ -247,5 +295,13 @@ const styles = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: 2.5,
+    marginHorizontal: 1,
   },
+    fab: {
+      position: 'absolute',
+      right: 20,
+      bottom: Platform.OS === 'ios' ? 100 : 20,
+      borderRadius: 30,
+      elevation: 5,
+    },
 });

@@ -18,7 +18,7 @@ export default function BasePage({ appConfig, name, viewData = [] }) {
 
   const [ViewComponent, setViewComponent] = useState(() => FallbackComponent);
  const {user, token} = useContext(AuthContext);
-  const activeView = views[activeTab] || null;
+  const activeView = viewData[activeTab] || null;
 
   function FallbackComponent() {
     return (
@@ -45,14 +45,9 @@ export default function BasePage({ appConfig, name, viewData = [] }) {
 
   // 🔍 Debug logs
   useEffect(() => {
-    console.group(`🧭 BasePage: ${name}`);
-    console.log("Route:", route);
-    console.log("ViewData:", viewData);
-    console.log("Views:", views);
-    console.log("Active View:", activeView);
-    console.log("dummy data", dummyServices)
-    console.groupEnd();
-  }, [name, viewData, views, activeView]);
+  console.log("Active View")
+  console.log(activeView)
+  }, []);
 
   const fetchRecords = useCallback(
     async (isRefresh = false) => {
@@ -96,6 +91,8 @@ export default function BasePage({ appConfig, name, viewData = [] }) {
 
   // Dynamic import of component
   useEffect(() => {
+     console.log("viewData Component")
+    console.log(activeView.component)
     if (activeView?.component) {
       import(`../components/${activeView.component}`)
         .then((mod) => setViewComponent(() => mod.default))
@@ -106,21 +103,21 @@ export default function BasePage({ appConfig, name, viewData = [] }) {
   }, [activeView]);
 
   // 🔹 Map fields through fieldMapper
-  const fieldsFromConfig = activeView?.fields || viewData[activeTab]?.fields || [];
-  const mappedFields = mapFields(fieldsFromConfig);
+  
 
-console.log(dummyServices)
+
   const dynamicProps = {
-    name: route?.displayName || name,
-    fields: mappedFields,
+    name: activeView?.displayName || name,
+    fields: mapFields(activeView.fields),
     refreshing, // Added for refresh state
     onRefresh: () => fetchRecords(true), // Added for manual refresh
-    data,
+    data: data,
     appConfig,
   };
 
   return (
     <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
+    
       {views.length > 0 && (
         <TabBar views={views} activeTab={activeTab} onTabChange={setActiveTab} />
       )}

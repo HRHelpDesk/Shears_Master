@@ -20,6 +20,7 @@ import { styled } from '@mui/material/styles';
 import { humanizeFieldName, singularize } from 'shears-shared/src/utils/stringHelpers';
 import { mapFields } from 'shears-shared/src/config/fieldMapper';
 import ItemDrawer from './ItemDrawer';
+import ListItemDetail from './ListItemDetail';
 
 const TableContainerStyled = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(2),
@@ -118,110 +119,129 @@ export default function ListView({ data, fields, name = 'Item', appConfig, refre
   };
 
   return (
-    <TableContainerStyled>
-      {/* Header */}
-      <Grid
-        container
-        spacing={2}
-        alignItems="center"
-        justifyContent="space-between"
-        sx={{ mb: 2 }}
-      >
-        <Grid item xs={12} sm={8} md={9}>
-          <SearchField
-            fullWidth
-            size="small"
-            variant="outlined"
-            placeholder={`Search ${name}...`}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-          />
-        </Grid>
+   <TableContainerStyled
+  sx={{
+    display: 'flex',
+    flexDirection: 'column',
+    height: 'calc(100vh - 200px)', // adjust if needed for header space
+    overflow: 'hidden', // prevent double scroll
+  }}
+>
+  {/* Header Section */}
+  {/* Header Section */}
+<Grid container spacing={2} alignItems="center" justifyContent="space-between" sx={{ mb: 2, flexShrink: 0 }}>
+  <Grid size={{ xs: 12, sm: 8, md: 9 }}>
+    <SearchField
+      fullWidth
+      size="small"
+      variant="outlined"
+      placeholder={`Search ${name}...`}
+      value={search}
+      onChange={(e) => setSearch(e.target.value)}
+      InputProps={{
+        startAdornment: (
+          <InputAdornment position="start">
+            <SearchIcon />
+          </InputAdornment>
+        ),
+      }}
+    />
+  </Grid>
 
-        <Grid item xs={12} sm={4} md="auto">
-          <Button
-            fullWidth
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleAddClick}
-            disabled={refreshing} // Disable during refresh
-            sx={{
-              height: '40px',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            Add {singularize(name)}
-          </Button>
-        </Grid>
-      </Grid>
+  <Grid size={{ xs: 12, sm: 4, md: 'auto' }}>
+    <Button
+      fullWidth
+      variant="contained"
+      startIcon={<AddIcon />}
+      onClick={handleAddClick}
+      disabled={refreshing}
+      sx={{ height: '40px', whiteSpace: 'nowrap' }}
+    >
+      Add {singularize(name)}
+    </Button>
+  </Grid>
+</Grid>
 
-      {/* Table */}
-      <TableContainer sx={{ maxHeight: 600 }}>
-        <Table stickyHeader>
-          <TableHead>
-            <TableRow>
-              <TableCell></TableCell>
-              {displayFields.map((field) => (
-                <TableCell key={field.field}>
-                  <TableSortLabel
-                    active={sortField === field.field}
-                    direction={sortField === field.field ? sortOrder : 'asc'}
-                    onClick={() => handleSort(field.field)}
-                  >
-                    <b>{humanizeFieldName(field.label || field.field)}</b>
-                  </TableSortLabel>
-                </TableCell>
-              ))}
+
+  {/* Scrollable Table Section */}
+  <Box sx={{ flex: 1, overflowY: 'auto' }}>
+    <Table stickyHeader>
+      <TableHead>
+        <TableRow>
+          <TableCell></TableCell>
+          {displayFields.map((field) => (
+            <TableCell key={field.field}>
+              <TableSortLabel
+                active={sortField === field.field}
+                direction={sortField === field.field ? sortOrder : 'asc'}
+                onClick={() => handleSort(field.field)}
+              >
+                <b>{humanizeFieldName(field.label || field.field)}</b>
+              </TableSortLabel>
+            </TableCell>
+          ))}
+        </TableRow>
+      </TableHead>
+
+      <TableBody>
+        {filteredData.map((item, index) => {
+          const initials =
+            item.fieldsData?.firstName && item.fieldsData?.lastName
+              ? `${item.fieldsData.firstName[0]}${item.fieldsData.lastName[0]}`
+              : '?';
+
+          return (
+            <TableRow
+              key={index}
+              hover
+              sx={{ cursor: 'pointer' }}
+              onClick={() => handleRowClick(item)}
+            >
+              <TableCell>
+                <Avatar src={item.avatar}>{!item.avatar && initials}</Avatar>
+              </TableCell>
+              {displayFields.map((field) => {
+                const value = item.fieldsData?.[field.field] ?? '';
+                const displayValue = Array.isArray(value)
+                  ? value.map((v) => v.value || '').filter(Boolean).join(', ')
+                  : String(value);
+                return <TableCell key={field.field}>{displayValue}</TableCell>;
+              })}
             </TableRow>
-          </TableHead>
+          );
+        })}
+      </TableBody>
+    </Table>
+  </Box>
 
-          <TableBody>
-            {filteredData.map((item, index) => {
-              const initials =
-                item.fieldsData?.firstName && item.fieldsData?.lastName
-                  ? `${item.fieldsData.firstName[0]}${item.fieldsData.lastName[0]}`
-                  : '?';
-              return (
-                <TableRow
-                  key={index}
-                  hover
-                  sx={{ cursor: 'pointer' }}
-                  onClick={() => handleRowClick(item)}
-                >
-                  <TableCell>
-                    <Avatar src={item.avatar}>{!item.avatar && initials}</Avatar>
-                  </TableCell>
-                  {displayFields.map((field) => {
-                    const value = item.fieldsData?.[field.field] ?? '';
-                    const displayValue = Array.isArray(value)
-                      ? value.map((v) => v.value || '').filter(Boolean).join(', ')
-                      : String(value);
-                    return <TableCell key={field.field}>{displayValue}</TableCell>;
-                  })}
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </TableContainer>
+  {/* Drawer */}
+  { drawerOpen && (
 
-      {/* Drawer */}
-      <ItemDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        mode={drawerMode}
-        item={selectedItem}
-        fields={mappedFields}
-        appConfig={appConfig}
-        name={singularize(name)}
-      />
-    </TableContainerStyled>
+    <ListItemDetail
+    open={drawerOpen} 
+    onClose={() => {
+    setDrawerOpen(false);
+    if (onRefresh) onRefresh(); // ✅ Refresh list data when modal closes
+  }}
+    item={selectedItem}
+    appConfig={appConfig}
+    fields={fields}
+    mode={drawerMode}
+    name={name}
+    />
+    
+  // <ItemDrawer
+  //   open={drawerOpen}
+  //   onClose={() => setDrawerOpen(false)}
+  //   mode={drawerMode}
+  //   item={selectedItem}
+  //   fields={mappedFields}
+  //   appConfig={appConfig}
+  //   name={singularize(name)}
+  // />
+
+  )}
+</TableContainerStyled>
+
   );
 }

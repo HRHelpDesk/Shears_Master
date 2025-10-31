@@ -1,6 +1,6 @@
 // packages/web/src/navigation/MainNavigator.js
-import React, { useState } from 'react';
-import { Link, Routes, Route, Navigate, useLocation } from 'react-router';
+import React, { useEffect, useState } from 'react';
+import { Link, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router';
 import BasePage from '../screens/BasePage';
 import {
   Drawer,
@@ -16,6 +16,7 @@ import {
   Tooltip,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import SettingsDrawer from '../components/BaseUI/SettingsDrawer';
 
 const drawerWidth = 250;
 const collapsedWidth = 72;
@@ -36,41 +37,60 @@ const DrawerContainer = styled(Drawer)(({ theme }) => ({
   },
 }));
 
-// Precompute viewData
+ 
 
 
 
 export default function MainNavigator({ appConfig, logo }) {
-  const location = useLocation();
+    const location = useLocation();
+  const navigate = useNavigate();
   const { primary, secondary } = appConfig.themeColors;
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [dynamicSetting, setDynamicSetting] = useState(null); // 👈 active settings item
 
   const [open, setOpen] = useState(true);
   const toggleDrawer = () => setOpen((prev) => !prev);
+useEffect(()=>{console.log(appConfig)},[])
+ const normalizeViewData = (routes) =>
+  routes.reduce((acc, route) => {
+    const fields = route.fields || [];
+    const views = route.views?.length
+      ? route.views.map((view) => ({
+          ...view,
+          displayName: view.displayName || view.name,
+          component: view.component || null,
+          fields, // 👈 always attach parent fields
+          data: view.data || [],
+          icon: route.icon || {},
+        }))
+      : [
+          {
+            displayName: route.displayName || route.name,
+            component: route.component || null,
+            fields,
+            data: route.data || [],
+            icon: route.icon || {},
+          },
+        ];
+    acc[route.name] = views;
+    return acc;
+  }, {});
 
-  const viewData = appConfig.mainNavigation.reduce((acc, route) => {
-  // If the route has views, map each view by index or name
-  if (route.views) {
-    acc[route.name] = route.views.map((view) => ({
-      displayName: view.displayName || view.name,
-      component: view.component,
-      fields: view.fields || [],
-      data: view.data || [],
-      icon: route.icon, // optional
-    }));
-  } else {
-    // If no views, just put route-level info
-    acc[route.name] = [
-      {
-        displayName: route.name,
-        component: route.component || null,
-        fields: route.fields || [],
-        data: route.data || [],
-        icon: route.icon,
-      },
-    ];
-  }
-  return acc;
-}, {});
+// Build normalized objects for main navigation and settings
+const mainViewData = normalizeViewData(appConfig.mainNavigation);
+const settingsViewData = normalizeViewData(appConfig.settings.flat());
+console.log("settingsViewData")
+
+console.log(settingsViewData)
+ // 👇 when a Settings item is clicked
+  const handleSelectSetting = (item) => {
+    console.log("handleItem")
+    console.log(item)
+    setDynamicSetting(item);              // store the selected item
+    navigate(`/settings/${item.name}`);   // route to dynamic BasePage
+    setDrawerOpen(false);                 // close drawer
+  };
+
 
   return (
     <Box sx={{ display: 'flex', height: '100vh' }}>
@@ -96,7 +116,7 @@ export default function MainNavigator({ appConfig, logo }) {
           </Box>
           <Box>
             <Tooltip title="Settings">
-              <IconButton color="inherit">
+              <IconButton onClick={()=> setDrawerOpen(true)} color="inherit">
                 <i className="fa fa-cog" />
               </IconButton>
             </Tooltip>
@@ -212,19 +232,60 @@ export default function MainNavigator({ appConfig, logo }) {
         }}
       >
         <Routes>
-          {appConfig.mainNavigation.map((route) => (
-            <Route
-              key={route.name}
-              path={`/${route.name.toLowerCase()}`}
-              element={<BasePage appConfig={appConfig} name={route.name} viewData={viewData[route.name]} />}
-            />
-          ))}
-          <Route
-            path="*"
-            element={<Navigate to={`/${appConfig.defaultRoute.toLowerCase()}`} />}
+  {appConfig.mainNavigation.map((route) => (
+    <Route
+      key={route.name}
+      path={`/${route.name.toLowerCase()}`}
+      element={
+        <BasePage
+          appConfig={appConfig}
+          name={route.name}
+          viewData={mainViewData[route.name]}
+        />
+      }
+    />
+  ))}
+
+  <Route
+    path="/settings/:name"
+    element={
+      (() => {
+        const routeName = location.pathname.split('/').pop();
+           console.log("routeName")
+         console.log(routeName)
+        const settingData = settingsViewData[routeName] || [];
+        console.log("settingData")
+         console.log(settingData)
+
+        if (!settingData.length) {
+          return <Navigate to={`/${appConfig.defaultRoute.toLowerCase()}`} />;
+        }
+
+        return (
+          <BasePage
+            appConfig={appConfig}
+            name={routeName}
+            viewData={settingData}
           />
-        </Routes>
-      </Box>
+        );
+      })()
+    }
+  />
+
+  <Route
+    path="*"
+    element={<Navigate to={`/${appConfig.defaultRoute.toLowerCase()}`} />}
+  />
+</Routes>
+
+        {/* Settings Drawer */}
+        {drawerOpen && (
+          <SettingsDrawer
+            onClose={() => setDrawerOpen(false)}
+            settings={appConfig.settings}
+            onSelectSetting={handleSelectSetting}
+          />
+        )}      </Box>
     </Box>
   );
 }

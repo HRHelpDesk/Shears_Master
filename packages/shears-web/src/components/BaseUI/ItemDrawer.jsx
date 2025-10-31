@@ -1,4 +1,3 @@
-// src/components/ItemDrawer.jsx
 import React, { useState, useEffect, useMemo, useContext } from 'react';
 import {
   Drawer,
@@ -6,12 +5,12 @@ import {
   Typography,
   IconButton,
   Button,
-  TextField,
   Avatar,
   Paper,
   Divider,
   MenuItem,
   Grid,
+  TextField,
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -25,7 +24,12 @@ import { humanizeFieldName } from 'shears-shared/src/utils/stringHelpers';
 import { mapFields } from 'shears-shared/src/config/fieldMapper';
 import { AuthContext } from '../../context/AuthContext';
 import { createRecord } from 'shears-shared/src/Services/Authentication';
+import PlainTextInput from './SmartInputs/PlainTextInput';
+import { FieldMap } from '../../config/component-mapping/FieldMap';
 
+/* ------------------------------------------------------------------
+   Styled Drawer
+------------------------------------------------------------------ */
 const DrawerPaper = styled(Paper)(({ theme, primaryColor, secondaryColor }) => ({
   width: 420,
   height: '100vh',
@@ -39,6 +43,9 @@ const DrawerPaper = styled(Paper)(({ theme, primaryColor, secondaryColor }) => (
   overflow: 'auto',
 }));
 
+/* ------------------------------------------------------------------
+   Component
+------------------------------------------------------------------ */
 export default function ItemDrawer({
   open,
   onClose,
@@ -51,16 +58,19 @@ export default function ItemDrawer({
   const [mode, setMode] = useState(initialMode);
   const [formValues, setFormValues] = useState({});
   const isReadOnly = mode === 'read';
-const {user,token} = useContext(AuthContext)
+  const { user, token } = useContext(AuthContext);
+
   const primaryColor = appConfig?.themeColors?.primary || '#1976d2';
   const secondaryColor = appConfig?.themeColors?.secondary || '#ffffff';
 
-  // ✅ Memoize mergedFields to prevent re-renders causing infinite loop
+  /* ------------------------------------------------------------------
+     Setup
+  ------------------------------------------------------------------ */
+  console.log(fields)
   const mergedFields = useMemo(() => mapFields(fields), [fields]);
+  console.log('Merged Fields:', mergedFields);  
 
-  // ✅ Initialize or reset form values safely
   useEffect(() => {
-    console.log("appConfig in ItemDrawer:", appConfig);
     setMode(initialMode);
 
     if (initialMode === 'add') {
@@ -76,7 +86,9 @@ const {user,token} = useContext(AuthContext)
     }
   }, [open, initialMode, item, mergedFields]);
 
-  // --- Handlers ---
+  /* ------------------------------------------------------------------
+     Handlers
+  ------------------------------------------------------------------ */
   const handleInputChange = (field, value) =>
     setFormValues((prev) => ({ ...prev, [field]: value }));
 
@@ -105,16 +117,16 @@ const {user,token} = useContext(AuthContext)
       recordType: name.toLowerCase(),
       fieldsData: formValues,
     };
-    console.log('💾 Saving new record:', JSON.stringify(newRecord, null, 2));
-
-    if (!token) {
-      alert('Authentication Error: Please log in to save data.');
-      return;
-    }
+    if (!token) return alert('Authentication Error: Please log in to save data.');
 
     try {
-      await createRecord(formValues, appConfig.defaultRoute.toLowerCase(), token, user.subscriberId, user.userId);
-      console.log('💾 Saved successfully:', JSON.stringify(newRecord, null, 2));
+      await createRecord(
+        formValues,
+        appConfig.defaultRoute.toLowerCase(),
+        token,
+        user.subscriberId,
+        user.userId
+      );
       onClose();
     } catch (error) {
       console.error('Save failed:', error);
@@ -122,14 +134,10 @@ const {user,token} = useContext(AuthContext)
     }
   };
 
-  const handleEdit = async () => {
-    console.log('🟡 Save changes:', formValues);
-    setMode('read');
-  };
+  const handleEdit = async () => setMode('read');
 
   const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this record?')) {
-      console.log('🔴 Delete record:', item);
       onClose();
     }
   };
@@ -139,127 +147,126 @@ const {user,token} = useContext(AuthContext)
       ? `${formValues.firstName[0]}${formValues.lastName[0]}`
       : '?';
 
-  // --- Render Array Section (Grid Layout) ---
- const renderArraySection = (fieldKey, values = []) => {
-  const fieldDef = mergedFields.find((f) => f.field === fieldKey);
-
-  const handleRemoveNestedItem = (index) => {
-    setFormValues((prev) => {
-      const updated = [...(prev[fieldKey] || [])];
-      updated.splice(index, 1);
-      return { ...prev, [fieldKey]: updated };
-    });
+  /* ------------------------------------------------------------------
+     Render Helpers
+  ------------------------------------------------------------------ */
+  const renderInputField = (field, value, onChange) => {
+    const InputComponent = FieldMap[field.input] || PlainTextInput;
+    return (
+      <InputComponent
+        key={field.field}
+        label={humanizeFieldName(field.label || field.field)}
+        value={value}
+        onChangeText={(newValue) => onChange(field.field, newValue)}
+        multiline={field.input === 'textarea'}
+        placeholder={field.display?.placeholder || ''}
+        recordTypeName={field.linkedRecordType || ''}
+      />
+    );
   };
 
-  return (
-    <Paper
-      key={fieldKey}
-      elevation={2}
-      sx={{
-        p: 2,
-        mb: 2,
-        borderRadius: 2,
-        background: (theme) =>
-          theme.palette.mode === 'dark'
-            ? theme.palette.background.paper
-            : '#f9f9f9',
-      }}
-    >
-      <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-        {humanizeFieldName(fieldKey)}
-      </Typography>
-      <Divider sx={{ mb: 1 }} />
+  const renderArraySection = (fieldKey, values = []) => {
+    const fieldDef = mergedFields.find((f) => f.field === fieldKey);
 
-      {values.length === 0 && isReadOnly ? (
-        <Typography variant="body2" color="text.secondary">
-          None
+    const handleRemoveNestedItem = (index) => {
+      setFormValues((prev) => {
+        const updated = [...(prev[fieldKey] || [])];
+        updated.splice(index, 1);
+        return { ...prev, [fieldKey]: updated };
+      });
+    };
+
+    return (
+      <Paper
+        key={fieldKey}
+        elevation={2}
+        sx={{
+          p: 2,
+          mb: 2,
+          borderRadius: 2,
+          background: (theme) =>
+            theme.palette.mode === 'dark'
+              ? theme.palette.background.paper
+              : '#f9f9f9',
+        }}
+      >
+        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+          {humanizeFieldName(fieldKey)}
         </Typography>
-      ) : (
-        values.map((entry, idx) => (
-          <Paper
-            key={idx}
-            elevation={0}
-            sx={{
-              p: 1,
-              mb: 2,
-              borderRadius: 2,
-              background: '#ffffff22',
-              position: 'relative',
-            }}
+        <Divider sx={{ mb: 1 }} />
+
+        {values.length === 0 && isReadOnly ? (
+          <Typography variant="body2" color="text.secondary">
+            None
+          </Typography>
+        ) : (
+          values.map((entry, idx) => (
+            <Paper
+              key={idx}
+              elevation={0}
+              sx={{
+                p: 1,
+                mb: 2,
+                borderRadius: 2,
+                background: '#ffffff22',
+                position: 'relative',
+              }}
+            >
+              {!isReadOnly && (
+                <IconButton
+                  size="small"
+                  color="error"
+                  onClick={() => handleRemoveNestedItem(idx)}
+                  sx={{ position: 'absolute', top: 4, right: 4 }}
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              )}
+
+              <Grid container spacing={2}>
+                {fieldDef.arrayConfig?.object?.map((sub) => (
+                  <Grid item xs={12} sm={6} key={sub.field}>
+                    {isReadOnly ? (
+                      <Typography variant="body2">
+                        <strong>{sub.label || sub.field}:</strong>{' '}
+                        {entry[sub.field] || '(empty)'}
+                      </Typography>
+                    ) : (
+                      renderInputField(sub, entry[sub.field], (key, val) =>
+                        handleNestedChange(fieldKey, idx, sub.field, val)
+                      )
+                    )}
+                  </Grid>
+                ))}
+              </Grid>
+            </Paper>
+          ))
+        )}
+
+        {!isReadOnly && (
+          <Button
+            startIcon={<AddIcon />}
+            onClick={() => handleAddNestedItem(fieldKey)}
+            size="small"
+            sx={{ mt: 1 }}
           >
-            {!isReadOnly && (
-              <IconButton
-                size="small"
-                color="error"
-                onClick={() => handleRemoveNestedItem(idx)}
-                sx={{ position: 'absolute', top: 4, right: 4 }}
-              >
-                <DeleteIcon fontSize="small" />
-              </IconButton>
-            )}
+            Add {humanizeFieldName(fieldKey)}
+          </Button>
+        )}
+      </Paper>
+    );
+  };
 
-            <Grid container spacing={2}>
-              {fieldDef.arrayConfig?.object?.map((sub) => (
-                <Grid item xs={12} sm={6} key={sub.field}>
-                  {isReadOnly ? (
-                    <Typography variant="body2">
-                      <strong>{sub.label || sub.field}:</strong>{' '}
-                      {entry[sub.field] || '(empty)'}
-                    </Typography>
-                  ) : sub.input === 'select' ? (
-                    <TextField
-                      select
-                      fullWidth
-                      size="small"
-                      label={sub.label || sub.field}
-                      value={entry[sub.field] || sub.defaultValue || ''}
-                      onChange={(e) =>
-                        handleNestedChange(fieldKey, idx, sub.field, e.target.value)
-                      }
-                    >
-                      {sub.inputConfig?.options?.map((opt) => (
-                        <MenuItem key={opt} value={opt}>
-                          {opt}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  ) : (
-                    <TextField
-                      fullWidth
-                      size="small"
-                      label={sub.label || sub.field}
-                      value={entry[sub.field] || ''}
-                      onChange={(e) =>
-                        handleNestedChange(fieldKey, idx, sub.field, e.target.value)
-                      }
-                    />
-                  )}
-                </Grid>
-              ))}
-            </Grid>
-          </Paper>
-        ))
-      )}
-
-      {!isReadOnly && (
-        <Button
-          startIcon={<AddIcon />}
-          onClick={() => handleAddNestedItem(fieldKey)}
-          size="small"
-          sx={{ mt: 1 }}
-        >
-          Add {humanizeFieldName(fieldKey)}
-        </Button>
-      )}
-    </Paper>
-  );
-};
-
-
-  // --- JSX ---
+  /* ------------------------------------------------------------------
+     Render
+  ------------------------------------------------------------------ */
   return (
     <Drawer anchor="right" open={open} onClose={onClose}>
-      <DrawerPaper elevation={3} primaryColor={primaryColor} secondaryColor={secondaryColor}>
+      <DrawerPaper
+        elevation={3}
+        primaryColor={primaryColor}
+        secondaryColor={secondaryColor}
+      >
         {/* Close Button */}
         <Box sx={{ position: 'absolute', top: 16, right: 16 }}>
           <IconButton onClick={onClose}>
@@ -301,123 +308,117 @@ const {user,token} = useContext(AuthContext)
         <Divider sx={{ my: 2 }} />
 
         {/* Fields */}
-<Box
-  sx={{
-    flex: 1,
-    overflowY: 'auto',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 3,
-    px: 0.5,
-  }}
->
-  {mergedFields.map((field) => {
-    const value = formValues[field.field];
-    const displayLabel = humanizeFieldName(field.label || field.field);
-    const type = field.type?.toLowerCase();
-
-    // --- Arrays (like email, phone) ---
-    if (type === 'array')
-      return renderArraySection(field.field, Array.isArray(value) ? value : []);
-
-    // --- Objects (like address) ---
-    if (type === 'object') {
-      const objectValues =
-        typeof value === 'object' && value !== null ? value : {};
-      return (
-        <Paper
-          key={field.field}
-          elevation={0}
+        <Box
           sx={{
-            p: 2,
-            borderRadius: 2,
-            background: (theme) =>
-              theme.palette.mode === 'dark'
-                ? theme.palette.background.paper
-                : '#f7f7f7',
+            flex: 1,
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 3,
+            px: 0.5,
           }}
         >
-          <Typography
-            variant="subtitle1"
-            fontWeight="bold"
-            gutterBottom
-            sx={{ mb: 1 }}
-          >
-            {displayLabel}
-          </Typography>
-          <Grid container spacing={2}>
-            {field.properties?.map((subField) => (
-              <Grid item xs={12} sm={6} md={4} key={subField.field}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  label={subField.label || subField.field}
-                  value={objectValues[subField.field] || ''}
-                  onChange={(e) =>
-                    setFormValues((prev) => ({
-                      ...prev,
-                      [field.field]: {
-                        ...objectValues,
-                        [subField.field]: e.target.value,
-                      },
-                    }))
-                  }
-                  disabled={isReadOnly}
-                />
-              </Grid>
-            ))}
-          </Grid>
-        </Paper>
-      );
-    }
+          {mergedFields.map((field) => {
+            const value = formValues[field.field];
+            const type = field.type?.toLowerCase();
 
-    // --- Primitive Fields (like first name, birth date, etc.) ---
-    return (
-      <Box
-        key={field.field}
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: '160px 1fr',
-          alignItems: 'center',
-          gap: 2,
-          background: (theme) =>
-            theme.palette.mode === 'dark'
-              ? theme.palette.background.paper
-              : '#f5f5f5',
-          p: 2,
-          borderRadius: 2,
-        }}
-      >
-        <Typography
-          variant="body1"
-          fontWeight="500"
-          sx={{ color: 'text.secondary' }}
-        >
-          {displayLabel}
-        </Typography>
-        {isReadOnly ? (
-          <Typography variant="body2" color="text.primary">
-            {value || '(empty)'}
-          </Typography>
-        ) : (
-          <TextField
-            fullWidth
-            size="small"
-            type={field.input === 'date' ? 'date' : 'text'}
-            placeholder={field.display?.placeholder || ''}
-            value={value || ''}
-            onChange={(e) => handleInputChange(field.field, e.target.value)}
-          />
-        )}
-      </Box>
-    );
-  })}
-</Box>
+            if (type === 'array')
+              return renderArraySection(
+                field.field,
+                Array.isArray(value) ? value : []
+              );
 
+            if (type === 'object') {
+              const objectValues =
+                typeof value === 'object' && value !== null ? value : {};
+              return (
+                <Paper
+                  key={field.field}
+                  elevation={0}
+                  sx={{
+                    p: 2,
+                    borderRadius: 2,
+                    background: (theme) =>
+                      theme.palette.mode === 'dark'
+                        ? theme.palette.background.paper
+                        : '#f7f7f7',
+                  }}
+                >
+                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                    {humanizeFieldName(field.label || field.field)}
+                  </Typography>
+                  <Grid container spacing={2}>
+                    {field.properties?.map((subField) => (
+                      <Grid item xs={12} sm={6} md={4} key={subField.field}>
+                        {isReadOnly ? (
+                          <Typography variant="body2">
+                            <strong>{subField.label || subField.field}:</strong>{' '}
+                            {objectValues[subField.field] || '(empty)'}
+                          </Typography>
+                        ) : (
+                          renderInputField(
+                            subField,
+                            objectValues[subField.field],
+                            (key, val) =>
+                              setFormValues((prev) => ({
+                                ...prev,
+                                [field.field]: {
+                                  ...objectValues,
+                                  [subField.field]: val,
+                                },
+                              }))
+                          )
+                        )}
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Paper>
+              );
+            }
+
+            // --- Default primitives ---
+            return (
+              <Box
+                key={field.field}
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: '160px 1fr',
+                  alignItems: 'center',
+                  gap: 2,
+                  background: (theme) =>
+                    theme.palette.mode === 'dark'
+                      ? theme.palette.background.paper
+                      : '#f5f5f5',
+                  p: 2,
+                  borderRadius: 2,
+                }}
+              >
+                <Typography
+                  variant="body1"
+                  fontWeight="500"
+                  sx={{ color: 'text.secondary' }}
+                >
+                  {humanizeFieldName(field.label || field.field)}
+                </Typography>
+                {isReadOnly ? (
+                  <Typography variant="body2" color="text.primary">
+                    {value || '(empty)'}
+                  </Typography>
+                ) : (
+                  renderInputField(field, value, handleInputChange)
+                )}
+              </Box>
+            );
+          })}
+        </Box>
 
         {/* Footer */}
         {mode === 'add' && (
-          <Button variant="contained" sx={{ mt: 3, bgcolor: primaryColor }} onClick={handleAdd}>
+          <Button
+            variant="contained"
+            sx={{ mt: 3, bgcolor: primaryColor }}
+            onClick={handleAdd}
+          >
             Add {name}
           </Button>
         )}

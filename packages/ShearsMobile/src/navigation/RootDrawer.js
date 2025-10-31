@@ -1,17 +1,18 @@
 // src/navigation/RootDrawer.js
-import React from 'react';
+import React, { useContext } from 'react';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import MainNavigator from './MainNavigator';
 import SettingsStack from './SettingsNavigator';
 import { Icon } from 'react-native-paper';
 import { useTheme } from 'react-native-paper';
 import BasePage from '../screens/BasePage';
+import { AuthContext } from '../context/AuthContext';
 
 const Drawer = createDrawerNavigator();
 
 export default function RootDrawer({ appConfig }) {
     const theme = useTheme();
-
+    const {logout} = useContext(AuthContext);
   return (
     <Drawer.Navigator
       screenOptions={{
@@ -67,6 +68,30 @@ export default function RootDrawer({ appConfig }) {
       >
         {() => <SettingsStack appConfig={appConfig} />}
       </Drawer.Screen>
+
+        <Drawer.Screen
+        name="Logout"
+        component={() => null} // No screen to render
+        listeners={{
+          // Handle tap on drawer item
+          focus: () => {
+            logout();
+            // Close drawer after click (optional)
+            // You might need to use navigation.dispatch(DrawerActions.closeDrawer())
+          },
+        }}
+        options={{
+          drawerLabel: 'Logout',
+          drawerIcon: ({ color, size }) => (
+            <Icon source="logout" color={color} size={size} />
+          ),
+          // Red tint when active (though it won't stay active)
+          drawerActiveTintColor: theme.colors.error,
+          drawerItemStyle: { marginTop: 20 }, // Optional: spacing from other items
+          // Prevent navigation (optional, safer)
+          unmountOnBlur: true,
+        }}
+      />
     </Drawer.Navigator>
   );
 }

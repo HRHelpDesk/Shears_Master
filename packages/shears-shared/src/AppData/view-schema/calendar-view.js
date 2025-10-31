@@ -9,9 +9,9 @@ export const CalendarMonthView = {
 export const CalendarList = {
     parent:'Calendar',
     name: 'CalendarList',
-    displayName: 'Today',
-    component: 'BaseUI/ListView',
-    mobileComponent: 'ListView',
+    displayName: 'Upcoming',
+    component: 'calendar/CalendarListView',
+    mobileComponent: 'CalendarListView',
     
 }
 

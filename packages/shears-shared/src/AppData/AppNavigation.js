@@ -25,6 +25,7 @@ export const AppData = [
                 override: {
                   field: 'contact',        // actual key in the formValues
                   label: 'Client',         // custom label for this usage
+                  type: 'object', // optional explicit
                   inputConfig: {
                     recordType: 'contacts', // optional override
                     searchField: 'firstName',
@@ -37,6 +38,8 @@ export const AppData = [
                 override: {
                   field: 'service',
                   label: 'Service',
+                  type: 'array', // optional explicit
+
                   inputConfig: {
                     recordType: 'services',
                     searchField: 'serviceName',
@@ -95,8 +98,40 @@ export const AppData = [
         displayName: 'Clients',
         icon: { ios: 'person.2.fill', android: 'contacts', web: 'fa fa-address-book' },
         fields: [
-          { field: 'firstName' },
-          { field: 'lastName' },
+          {
+              field: 'name', // refers to base field in SharedNameFields
+              override: {
+                field: 'firstName', // ← This changes the actual output key
+                label: 'First Name',
+                display: { placeholder: 'Enter first name', order: 1 },
+                required: true,
+                validations: {
+                  minLength: 2,
+                  maxLength: 50,
+                },
+              },
+            },
+            {
+              field: 'name', // same base field!
+              override: {
+                field: 'lastName', // ← This becomes the real field name
+                label: 'Last Name',
+                display: { placeholder: 'Enter last name', order: 2 },
+                required: true,
+                validations: {
+                  minLength: 2,
+                  maxLength: 50,
+                },
+              },
+            },
+            {
+            field: 'phone',
+            override: {
+              required: true, // Require at least one phone number
+              display: { order: 3 },
+              arrayConfig: { minItems: 1 }, // Enforce at least one phone
+            },
+          },
           {
             field: 'email',
             override: {
@@ -105,14 +140,7 @@ export const AppData = [
               arrayConfig: { minItems: 1 }, // Enforce at least one email
             },
           },
-          {
-            field: 'phone',
-            override: {
-              required: true, // Require at least one phone number
-              display: { order: 3 },
-              arrayConfig: { minItems: 1 }, // Enforce at least one phone
-            },
-          },
+          
          {
             field: 'address',
             override: {

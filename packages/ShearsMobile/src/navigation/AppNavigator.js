@@ -10,6 +10,7 @@ import RootDrawer from './RootDrawer';
 import { getAppConfig } from 'shears-shared/src/config/getAppConfig';
 import { CURRENT_APP, CURRENT_WHITE_LABEL } from 'shears-shared/src/config/currentapp';
 import { AppLogos } from '../config/appLogos';
+import CalendarListView from '../components/Calendar/CalendarListView';
 
 const Stack = createNativeStackNavigator();
 const appConfig = getAppConfig(CURRENT_APP, CURRENT_WHITE_LABEL);
@@ -37,6 +38,18 @@ function AppRoutes() {
             component={DetailView}
             options={{
               title: 'Item Details',
+              presentation: 'modal',
+              headerShown: false,
+              gestureEnabled: false,
+              animation: 'slide_from_bottom',
+            }}
+          />
+
+           <Stack.Screen
+            name="CalendarListView"
+            component={CalendarListView}
+            options={{
+              
               presentation: 'modal',
               headerShown: false,
               gestureEnabled: true,

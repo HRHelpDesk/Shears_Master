@@ -21,7 +21,7 @@ export default function LoginScreen({ appConfig, logo }) {
     setLoading(true);
     try {
       await login(email, password);
-      navigation.replace('Main');
+      navigation.replace('RootDrawer');
     } catch (err) {
       alert(err.message);
     } finally {

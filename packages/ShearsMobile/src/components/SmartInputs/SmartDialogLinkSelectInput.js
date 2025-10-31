@@ -1,3 +1,4 @@
+// src/components/SmartInputs/SmartDialogLinkSelectInput.js
 import React, { useState, useRef, useEffect, useContext } from 'react';
 import {
   View,
@@ -9,11 +10,20 @@ import {
   LayoutAnimation,
   UIManager,
 } from 'react-native';
-import { TextInput, Text, Dialog, Portal, Button, List, useTheme, ActivityIndicator } from 'react-native-paper';
+import {
+  TextInput,
+  Text,
+  Dialog,
+  Portal,
+  Button,
+  List,
+  useTheme,
+  ActivityIndicator,
+  Card,
+} from 'react-native-paper';
 import { AuthContext } from '../../context/AuthContext';
 import { getRecords } from 'shears-shared/src/Services/Authentication';
 
-// Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
@@ -24,6 +34,7 @@ export default function SmartDialogLinkSelectInput({
   recordTypeName = 'contacts',
   onChangeText,
   placeholder = 'Select...',
+  mode = 'edit',
 }) {
   const { token, user } = useContext(AuthContext);
   const [visible, setVisible] = useState(false);
@@ -33,8 +44,16 @@ export default function SmartDialogLinkSelectInput({
   const theme = useTheme();
   const scrollRef = useRef(null);
 
+  // Keep displayed value synced
+  useEffect(() => {
+    if (value && typeof value === 'object' && value.name) {
+      setSearchValue(value.name);
+    } else {
+      setSearchValue('');
+    }
+  }, [value]);
+
   const fetchRecords = async (query = '') => {
-    console.log('Fetching records for', recordTypeName, 'with query:', query);
     if (!token) return;
     setLoading(true);
     try {
@@ -45,28 +64,21 @@ export default function SmartDialogLinkSelectInput({
         token,
         status: 'active',
       });
-console.log('Fetched records:', response);
-const formatted = response?.map((r) => {
-  const fields = r.fieldsData || {};
 
-  // --- Get all keys that include "name" and have a value ---
-  const nameKeys = Object.keys(fields).filter(
-    (key) => key.toLowerCase().includes('name') && fields[key]
-  );
-
-  // --- Take first two values, join with a space ---
-  const displayName = nameKeys.length
-    ? nameKeys.slice(0, 2).map((key) => fields[key]).join(' ')
-    : '(Unnamed)';
-
-  return {
-    _id: r._id,
-    name: displayName,
-    raw: fields,
-  };
-}) || [];
-
-      
+      const formatted =
+        response?.map((r) => {
+          const fields = r.fieldsData || {};
+          const nameKeys = Object.keys(fields).filter(
+            (key) => key.toLowerCase().includes('name') && fields[key]
+          );
+          const displayName = nameKeys.length
+            ? nameKeys
+                .slice(0, 2)
+                .map((key) => fields[key])
+                .join(' ')
+            : '(Unnamed)';
+          return { _id: r._id, name: displayName, raw: fields };
+        }) || [];
 
       const filtered = query
         ? formatted.filter((r) => r.name.toLowerCase().includes(query.toLowerCase()))
@@ -93,15 +105,83 @@ const formatted = response?.map((r) => {
     return () => showListener.remove();
   }, []);
 
- const handleSelect = (record) => {
-  onChangeText(record); // pass full record if parent needs it
-  setSearchValue(record.name); // update input display
-  setVisible(false);
-  setRecords([]);
-};
+  const handleSelect = (record) => {
+    onChangeText(record);
+    setVisible(false);
+    setRecords([]);
+  };
 
+  /** ----------------
+   *  READ MODE
+   * ---------------- */
+  if (mode === 'read') {
+    const displayText =
+      (value && typeof value === 'object' && value.name) ||
+      (typeof value === 'string' && value) ||
+      placeholder;
+
+    return (
+      <View style={{ marginVertical: 6 }}>
+        <Text
+          variant="labelSmall"
+          style={{
+            color: theme.colors.onSurface,
+            fontWeight: '500',
+            marginBottom: 2,
+          }}
+        >
+          {label}
+        </Text>
+
+        <View
+          style={{
+            backgroundColor: theme.dark
+              ? theme.colors.surfaceVariant
+              : theme.colors.surfaceDisabled || '#f4f4f4',
+            borderRadius: 1,
+            paddingVertical: 8,
+            paddingHorizontal: 10,
+          }}
+        >
+          <Text
+            variant="bodyMedium"
+            style={{
+              color: theme.colors.onSurface,
+            }}
+          >
+            {displayText ? (
+              displayText
+            ) : (
+              <Text
+                style={{
+                  color: theme.colors.onSurfaceVariant,
+                  fontStyle: 'italic',
+                }}
+              >
+                —
+              </Text>
+            )}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  /** ----------------
+   *  EDIT MODE
+   * ---------------- */
   return (
     <View style={{ marginVertical: 6 }}>
+      <Text
+        variant="labelSmall"
+        style={{
+          color: theme.colors.onSurface,
+          fontWeight: '500',
+          marginBottom: 2,
+        }}
+      >
+        {label}
+      </Text>
 
       <TouchableOpacity onPress={() => setVisible(true)}>
         <View
@@ -110,17 +190,17 @@ const formatted = response?.map((r) => {
             alignItems: 'center',
             justifyContent: 'space-between',
             borderWidth: 1,
-            borderColor: 'rgba(255,255,255,0.2)',
-            borderRadius: 8,
-            backgroundColor: 'rgba(255,255,255,0.71)',
+            borderColor: theme.colors.outlineVariant,
+            borderRadius: 1,
+            backgroundColor: theme.colors.surface,
             paddingHorizontal: 12,
             paddingVertical: 10,
           }}
         >
-          <Text style={{ color: searchValue ? 'black' : 'gray' }}>
-                {searchValue || placeholder}
-                </Text>
-          <Text style={{ fontSize: 18 }}>{'⌄'}</Text>
+          <Text style={{ color: searchValue ? theme.colors.onSurface : 'gray' }}>
+            {searchValue || placeholder}
+          </Text>
+          <Text style={{ fontSize: 18, color: theme.colors.onSurfaceVariant }}>{'⌄'}</Text>
         </View>
       </TouchableOpacity>
 
@@ -133,7 +213,7 @@ const formatted = response?.map((r) => {
           <Dialog
             visible={visible}
             onDismiss={() => setVisible(false)}
-            style={{ backgroundColor: theme.colors.background, borderRadius: 8 }}
+            style={{ backgroundColor: theme.colors.background, borderRadius: 1 }}
           >
             <Dialog.Title>Select {label}</Dialog.Title>
             <Dialog.Content style={{ maxHeight: 300 }}>
@@ -146,10 +226,8 @@ const formatted = response?.map((r) => {
                 }}
                 style={{
                   marginBottom: 8,
-                  backgroundColor: 'rgba(255,255,255,0.71)',
-                  borderRadius: 8,
-                  paddingHorizontal: 12,
-                  paddingVertical: 10,
+                  backgroundColor: theme.colors.surfaceVariant,
+                  borderRadius: 1,
                 }}
               />
               {loading ? (
@@ -165,7 +243,10 @@ const formatted = response?.map((r) => {
                       key={record._id}
                       title={record.name}
                       onPress={() => handleSelect(record)}
-                      style={{ borderBottomWidth: 0.5, borderBottomColor: '#ccc' }}
+                      style={{
+                        borderBottomWidth: 0.4,
+                        borderBottomColor: theme.colors.outlineVariant,
+                      }}
                     />
                   ))}
                   {records.length === 0 && !loading && (

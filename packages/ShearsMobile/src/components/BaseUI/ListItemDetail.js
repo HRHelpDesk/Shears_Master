@@ -1,459 +1,379 @@
-import React, { useState, useEffect, useContext } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-  KeyboardAvoidingView,
-} from 'react-native';
-import { Avatar, Portal, useTheme } from 'react-native-paper';
-import LinearGradient from 'react-native-linear-gradient';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import { LiquidGlassView, isLiquidGlassSupported } from '@callstack/liquid-glass';
-import { humanizeFieldName } from 'shears-shared/src/utils/stringHelpers';
-import { FieldMap } from '../../config/component-mapping/FieldMap';
-import PlainTextInput from '../SmartInputs/PlainTextInput';
-import AddNestedItemButton from '../UI/AddNestedItemButton';
-import { AuthContext } from '../../context/AuthContext';
+// src/screens/ListItemDetail.js
+import React, { useContext, useEffect, useMemo, useState } from 'react';
+import { ScrollView, View, TouchableOpacity, KeyboardAvoidingView } from 'react-native';
+import { useTheme, Card, Text, Divider, Button, Portal } from 'react-native-paper';
 import { mapFields } from 'shears-shared/src/config/fieldMapper';
+import { FieldMap } from '../../config/component-mapping/FieldMap';
+import { singularize } from 'shears-shared/src/utils/stringHelpers';
 import { createRecord, updateRecord } from 'shears-shared/src/Services/Authentication';
-import { sub } from 'date-fns';
+import { AuthContext } from '../../context/AuthContext';
+import PlainTextInput from '../../components/SmartInputs/PlainTextInput';
 
-export default function ListItemDetail({ route, navigation }) {
-  const {token, user} = useContext(AuthContext);
-  const { item = {}, appConfig, name, mode: initialMode = 'read', settingFields } = route.params; // Default to 'read' if mode not provided
-  const theme = useTheme();
-  const primaryColor = appConfig?.themeColors?.primary || theme.colors.primary;
-  const secondaryColor = appConfig?.themeColors?.secondary || theme.colors.background;
-
-  const [mode, setMode] = useState(initialMode); // Initialize mode from route.params
-  const [formValues, setFormValues] = useState({});
-  const [mappedFields, setMappedFields] = useState([]);
-  console.log('🔎 Found fields:', settingFields);
-
- useEffect(() => {
-  console.log('🔄 ListItemDetail init', { item, appConfig, name, settingFields });
-
-  // --- Step 1: Resolve route fields from mainNavigation ---
-  const currentRoute =
-    appConfig?.mainNavigation?.find(
-      (r) => r.name === name || r.displayName === name
-    ) || null;
-
-  let fields = [];
-    console.log("data:", item)
-
-  if (currentRoute?.fields?.length) {
-    // Priority 1: Use route fields
-    fields = mapFields(currentRoute.fields);
-    console.log('📋 Using fields from mainNavigation route:', fields);
-  } else if (settingFields?.length) {
-    // Priority 2: Use fields passed via Settings page
-    fields = mapFields(settingFields);
-    console.log('📋 Using fields from settingFields:', fields);
-  } else if (Object.keys(item).length > 0) {
-    // Priority 3: Derive fields from item data
-    fields = Object.keys(item)
-      .filter((k) => !['avatar', 'firstName', 'lastName'].includes(k))
-      .map((k) => {
-        const isArray = Array.isArray(item[k]);
-        const firstItem = isArray && item[k][0] ? item[k][0] : {};
-        return {
-          field: k,
-          type: isArray
-            ? 'array'
-            : typeof item[k] === 'object' && item[k] !== null
-            ? 'object'
-            : 'string',
-          displayInList: true,
-          label: humanizeFieldName(k),
-          arrayConfig: isArray
-            ? {
-                object: Object.keys(firstItem).map((subKey) => ({
-                  field: subKey,
-                  type: 'string',
-                  label: humanizeFieldName(subKey),
-                  defaultValue: '',
-                })),
-              }
-            : undefined,
-          objectConfig:
-            typeof item[k] === 'object' && !isArray
-              ? Object.keys(item[k]).map((subKey) => ({
-                  field: subKey,
-                  type: typeof item[k][subKey],
-                  label: humanizeFieldName(subKey),
-                  defaultValue: '',
-                }))
-              : undefined,
-        };
-      });
-    console.log('📋 Derived fields from item data:', fields);
-  } else {
-    // Priority 4: fallback fields
-    fields = [
-      { field: 'name', type: 'string', label: 'Name', displayInList: true },
-      { field: 'description', type: 'string', label: 'Description', displayInList: true },
-    ];
-    console.log('📋 Using fallback fields:', fields);
-  }
-
-  // --- Step 2: Save mapped fields ---
-  setMappedFields(fields);
-
-  // --- Step 3: Initialize formValues with item data ---
-  const initialValues = {};
-  fields.forEach((f) => {
-    if (f.type === 'array') {
-      initialValues[f.field] = Array.isArray(item[f.field]) ? item[f.field] : [];
-    } else if (f.type === 'object') {
-      initialValues[f.field] = typeof item[f.field] === 'object' && item[f.field] !== null
-        ? item[f.field]
-        : {};
-    } else {
-      initialValues[f.field] = item[f.field] ?? '';
-    }
-  });
-  setFormValues(initialValues);
-
-  console.log('🔍 Initialized formValues:', initialValues);
-}, [appConfig, name, item, settingFields]);
-
-
-
-
-  const isReadOnly = mode === 'read';
-
-  const withOpacity = (hex, opacity) => {
-    let c = hex.replace('#', '');
-    if (c.length === 3) c = c[0] + c[0] + c[1] + c[1] + c[2] + c[2];
-    const r = parseInt(c.substring(0, 2), 16);
-    const g = parseInt(c.substring(2, 4), 16);
-    const b = parseInt(c.substring(4, 6), 16);
-    return `rgba(${r},${g},${b},${opacity})`;
-  };
-
-  // --- Avatar and display name
-  const displayNameFieldKey = Object.keys(formValues).find(
-    (k) => k.toLowerCase().includes('name') && k !== 'firstName' && k !== 'lastName'
-  );
-  const displayNameValue = displayNameFieldKey ? formValues[displayNameFieldKey] : '';
-  const initials = !formValues.avatar && displayNameValue
-    ? displayNameValue.split(' ').map((n) => n[0]).join('').toUpperCase()
-    : (formValues.firstName?.[0] || '?') + (formValues.lastName?.[0] || '');
-
-  // --- Input handlers
-  const handleInputChange = (field, value) =>
-    setFormValues((prev) => ({ ...prev, [field]: value }));
-
-const handleNestedChange = (field, index, key, value) => {
-  setFormValues((prev) => {
-    const updated = [...(prev[field] || [])];
-    updated[index] = { ...updated[index], [key]: value };
-    return { ...prev, [field]: updated };
-  });
+const getValue = (source, path) => {
+  if (!source || !path) return '';
+  const normalized = path.replace(/\[(\d+)\]/g, '.$1');
+  return normalized.split('.').reduce((acc, key) => acc?.[key], source) ?? '';
 };
 
-const handleObjectChange = (parentField, key, value) => {
-  setFormValues((prev) => ({
-    ...prev,
-    [parentField]: { ...prev[parentField], [key]: value },
-  }));
-};
+const RenderField = ({ fieldDef, item, handleChange, mode, theme, level = 0, parentPath = '' }) => {
+  const inputType = fieldDef.input || fieldDef.type || 'text';
+  const nestedFields = fieldDef.objectConfig || fieldDef.arrayConfig?.object || [];
+  const FieldComponent = FieldMap[inputType] || PlainTextInput;
+  const fieldPath = parentPath ? `${parentPath}.${fieldDef.field}` : fieldDef.field;
+  const value = getValue(item, fieldPath);
 
-const initializeArrayItem = (fieldKey) => {
-  const fieldDef = mappedFields.find((f) => f.field === fieldKey);
-  if (!fieldDef?.arrayConfig?.object) return {};
-  const newItem = {};
-  fieldDef.arrayConfig.object.forEach((subField) => {
-    newItem[subField.field] = subField.defaultValue ?? '';
-  });
-  return newItem;
-};
+  // Initialize missing structures
+  if (fieldDef.arrayConfig?.object && !Array.isArray(value)) handleChange(fieldPath, []);
+  else if (fieldDef.objectConfig && (value === undefined || typeof value !== 'object'))
+    handleChange(fieldPath, {});
 
-const handleAddNestedItem = (field) => {
-  setFormValues((prev) => {
-    const newItem = initializeArrayItem(field);
-    return { ...prev, [field]: [...(prev[field] || []), newItem] };
-  });
-};
+  // 🧩 ARRAY FIELDS
+  if (Array.isArray(value)) {
+    const handleAddArrayItem = () => {
+      const newItem =
+        fieldDef.input === 'linkSelect'
+          ? { _id: '', name: '' }
+          : Object.fromEntries((nestedFields || []).map((nf) => [nf.field, '']));
+      handleChange(fieldPath, [...value, newItem]);
+    };
 
-const handleRemoveNestedItem = (field, index) => {
-  setFormValues((prev) => {
-    const updated = [...(prev[field] || [])];
-    updated.splice(index, 1);
-    return { ...prev, [field]: updated };
-  });
-};
-
-const handleSave = async () => {
-  console.log('💾 Saving formValues:', JSON.stringify(formValues, null, 2));
-
-  if (!token) {
-    Alert.alert('Authentication Error', 'Please log in to save data.');
-    return;
-  }
-
-  try {
-    if (mode === 'edit' && item._id) {
-      console.log('📝 Edit mode detected for item ID:', item._id);
-      // --- UPDATE existing record
-      console.log(formValues)
-      const updated = await updateRecord(item._id, formValues, token);
-      console.log('💾 Updated successfully:', updated);
-    } else {
-      // --- CREATE new record
-      const created = await createRecord(
-        formValues,
-        name.toLowerCase(),
-        token,
-        user.subscriberId,
-        user.userId
-      );
-      console.log('💾 Created successfully:', created);
-    }
-
-    setMode('read');
-    navigation.goBack();
-  } catch (error) {
-    console.error('Save failed:', error);
-    Alert.alert('Error', error.message || 'Failed to save item. Please try again.');
-  }
-};
-
-
-  const handleDelete = () => {
-    console.log('🗑 Delete:', formValues);
-    navigation.goBack();
-  };
-
-  // --- Recursive field renderer
-  const renderFieldRecursive = (fieldKey, value, fieldDef, parentFieldKey, index) => {
-  const def = fieldDef || mappedFields.find((f) => f.field === fieldKey);
-  if (!def) return null;
-
-  // --- Array fields ---
-  if (def.type?.toLowerCase() === 'array' && def.arrayConfig) {
-    const objectConfig = def.arrayConfig.object || [];
-    const safeValue = Array.isArray(value)
-      ? value
-      : value === undefined || value === null
-      ? []
-      : typeof value === 'object'
-      ? Object.values(value)
-      : [];
-
-    if (!Array.isArray(value)) {
-      console.warn(`⚠️ Field "${fieldKey}" expected an array but got:`, typeof value, value);
-    }
+    const handleDeleteArrayItem = (idx) => {
+      const updated = [...value];
+      updated.splice(idx, 1);
+      handleChange(fieldPath, updated);
+    };
 
     return (
-      <LiquidGlassView
-        key={fieldKey}
-        style={[styles.arrayContainer, !isLiquidGlassSupported && { backgroundColor: '#fff' }]}
-        effect="regular"
-        tintColor={withOpacity(primaryColor, 0.2)}
-        colorScheme="system"
-      >
-        <Text style={[styles.arrayTitle, { color: theme.colors.onSurface }]}>{def.label}</Text>
+      <Card style={{ marginVertical: 8, marginLeft: level * 10 }}>
+        <Card.Content>
+          <Text variant="titleMedium" style={{ marginBottom: 4 }}>
+            {fieldDef.label || fieldDef.field}
+          </Text>
+          <Divider />
 
-        {safeValue.length === 0 && isReadOnly ? (
-          <Text style={{ color: theme.colors.disabled }}>None</Text>
-        ) : (
-          safeValue.map((entry, idx) => (
-            <View
-              key={idx}
-              style={[styles.arrayItem, { backgroundColor: withOpacity(theme.colors.surface, 0.1) }]}
-            >
-              {objectConfig.map((subField) =>
-                renderFieldRecursive(
-                  subField.field,
-                  entry?.[subField.field],
-                  subField,
-                  fieldKey,
-                  idx
-                )
-              )}
-
-              {!isReadOnly && (
-                <TouchableOpacity
-                  onPress={() => handleRemoveNestedItem(fieldKey, idx)}
-                  style={styles.deleteButton}
-                >
-                  <Icon name="delete" size={20} color={theme.colors.error} />
+          {value.length === 0 ? (
+            <View style={{ marginVertical: 8 }}>
+              {mode === 'edit' ? (
+                <TouchableOpacity onPress={handleAddArrayItem}>
+                  <Text
+                    style={{
+                      fontStyle: 'italic',
+                      color: theme.colors.primary,
+                      marginLeft: 4,
+                    }}
+                  >
+                    + Add first entry
+                  </Text>
                 </TouchableOpacity>
+              ) : (
+                <Text
+                  style={{
+                    color: theme.colors.onSurfaceVariant,
+                    marginLeft: 4,
+                    fontStyle: 'italic',
+                  }}
+                >
+                  No entries
+                </Text>
               )}
             </View>
-          ))
-        )}
+          ) : (
+            value.map((entry, idx) => (
+              <Card
+                key={`${fieldPath}[${idx}]`}
+                style={{
+                  marginTop: 8,
+                  padding: 10,
+                  backgroundColor: theme.colors.surfaceVariant,
+                    borderRadius:2
+                }}
+              >
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 6,
+                    borderRadius:1
+                  }}
+                >
+                  <Text variant="titleSmall">
+                    {(fieldDef.label || fieldDef.field)} #{idx + 1}
+                  </Text>
 
-        {!isReadOnly && (
-          <AddNestedItemButton label={def.label} onPress={() => handleAddNestedItem(fieldKey)} />
-        )}
-      </LiquidGlassView>
+                  {(mode === 'edit' || mode === 'add') && (
+                    <Button
+                      mode="contained-tonal"
+                      compact
+                      onPress={() => handleDeleteArrayItem(idx)}
+                      textColor={theme.colors.error}
+                      style={{
+                        backgroundColor: theme.colors.errorContainer,
+                        borderRadius: 1,
+                        paddingHorizontal: 6,
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  )}
+                </View>
+
+                {/* ✅ Handle linkSelect arrays properly */}
+                {fieldDef.input === 'linkSelect' ? (
+                  <FieldMap.linkSelect
+                    label={fieldDef.label || fieldDef.field}
+                    value={entry}
+                    mode={mode}
+                    recordTypeName={fieldDef.inputConfig?.recordType || fieldDef.recordTypeName || 'contacts'}
+                    onChangeText={(newVal) => {
+                      const updated = [...value];
+                      updated[idx] = newVal;
+                      handleChange(fieldPath, updated);
+                    }}
+                  />
+                ) : (
+                  nestedFields.map((nestedField) => (
+                    <RenderField
+                      key={nestedField.field}
+                      fieldDef={nestedField}
+                      item={item}
+                      handleChange={handleChange}
+                      mode={mode}
+                      theme={theme}
+                      level={level + 1}
+                      parentPath={`${fieldPath}[${idx}]`}
+                    />
+                  ))
+                )}
+              </Card>
+            ))
+          )}
+
+          {(mode === 'edit' || mode === 'add') && (
+            <View style={{ alignItems: 'flex-end', marginTop: 12 }}>
+              <Button mode="contained" onPress={handleAddArrayItem} style={{ borderRadius: 1 }}>
+                + Add {singularize(fieldDef.label || fieldDef.field)}
+              </Button>
+            </View>
+          )}
+        </Card.Content>
+      </Card>
     );
   }
 
-  // --- Singular object fields ---
-  if (def.type === 'object' && def.objectConfig) {
-    const safeObject = typeof value === 'object' && value !== null ? value : {};
-    return (
-      <LiquidGlassView
-        key={fieldKey}
-        style={[styles.arrayContainer, !isLiquidGlassSupported && { backgroundColor: '#fff' }]}
-        effect="regular"
-        tintColor={withOpacity(primaryColor, 0.2)}
-        colorScheme="system"
-      >
-        <Text style={[styles.arrayTitle, { color: theme.colors.onSurface }]}>{def.label}</Text>
-        {def.objectConfig.map((subField) =>
-          renderFieldRecursive(
-            subField.field,
-            safeObject[subField.field],
-            subField,
-            fieldKey,
-            undefined
-          )
-        )}
-      </LiquidGlassView>
-    );
-  }
-
-  // --- Primitive fields ---
-  const InputComponent = FieldMap[def.input] || PlainTextInput;
+if (fieldDef.input === 'linkSelect' && !Array.isArray(value)) {
   return (
-    <LiquidGlassView
-      key={fieldKey}
-      style={[styles.arrayContainer, !isLiquidGlassSupported && { backgroundColor: '#fff' }]}
-      effect="regular"
-      tintColor={withOpacity(primaryColor, 0.15)}
-      colorScheme="system"
-    >
-      <Text style={[styles.label, { color: theme.colors.onSurface, marginBottom: 4 }]}>{def.label}</Text>
-
-      {isReadOnly ? (
-        <Text style={[styles.value, { color: theme.colors.onSurface }]}>{value ?? '(empty)'}</Text>
-      ) : (
-        <InputComponent
-          value={value?.toString() || ''}
-          onChangeText={(val) => {
-            if (parentFieldKey && index !== undefined) handleNestedChange(parentFieldKey, index, fieldKey, val);
-            else if (parentFieldKey) handleObjectChange(parentFieldKey, fieldKey, val);
-            else handleInputChange(fieldKey, val);
-          }}
-           recordTypeName={def.recordTypeName}  // <-- pass it here
-
-          placeholder={def.display?.placeholder || `Enter ${def.label}`}
-          label={def.label}
-          {...def.inputConfig}
+    <Card style={{ marginVertical: 6, marginLeft: level * 10 }}>
+      <Card.Content>
+        <FieldMap.linkSelect
+          label={fieldDef.label || fieldDef.field}
+          value={value}
+          mode={mode}
+          recordTypeName={
+            fieldDef.inputConfig?.recordType ||
+            fieldDef.recordTypeName ||
+            'contacts'
+          }
+          onChangeText={(newVal) => handleChange(fieldPath, newVal)}
         />
-      )}
-    </LiquidGlassView>
-  );
-};
-
-
-  return (
-    <Portal.Host>
-    <LinearGradient colors={[withOpacity(primaryColor, 0.6), withOpacity(secondaryColor, 0.6)]} style={styles.gradient}>
-      {/* Back Button */}
-      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-        <LiquidGlassView
-          style={[styles.backButtonGlass, !isLiquidGlassSupported && { backgroundColor: theme.colors.surface }]}
-          tintColor="rgba(255,255,255,0.1)"
-          effect="clear"
-          interactive
-        >
-          <Icon name="arrow-back" size={24} color={theme.colors.onSurface} />
-        </LiquidGlassView>
-      </TouchableOpacity>
-
-      {/* Edit/Save Button */}
-      <TouchableOpacity style={styles.editButton} onPress={() => (isReadOnly ? setMode('edit') : handleSave())}>
-        <LiquidGlassView
-          style={[styles.backButtonGlass, !isLiquidGlassSupported && { backgroundColor: theme.colors.surface }]}
-          tintColor="rgba(255,255,255,0.1)"
-          effect="clear"
-          interactive
-        >
-          {isReadOnly ? (
-            <Text style={[styles.editText, { color: primaryColor }]}>Edit</Text>
-          ) : (
-            <Icon name="check" size={24} color={primaryColor} />
-          )}
-        </LiquidGlassView>
-      </TouchableOpacity>
-      <KeyboardAvoidingView behavior="padding" style={{ flex: 1, width: '100%', }}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Avatar */}
-        <View style={styles.avatarContainer}>
-          {formValues.avatar ? (
-            <Avatar.Image size={100} source={{ uri: formValues.avatar }} />
-          ) : (
-            <Avatar.Text size={100} label={initials} style={{ backgroundColor: primaryColor }} color="#fff" />
-          )}
-        </View>
-
-        {/* Display Name */}
-        {displayNameValue ? (
-          <Text style={[styles.nameHeader, { color: theme.colors.onSurface }]}>{displayNameValue}</Text>
-        ) : (
-          (formValues.firstName || formValues.lastName) && (
-            <Text style={[styles.nameHeader, { color: theme.colors.onSurface }]}>
-              {formValues.firstName} {formValues.lastName}
-            </Text>
-          )
-        )}
-
-        {/* Render Fields */}
-        {mappedFields.map((field) =>
-          renderFieldRecursive(field.field, formValues[field.field], field)
-        )}
-      </ScrollView>
-      </KeyboardAvoidingView>
-    </LinearGradient>
-    </Portal.Host>
+      </Card.Content>
+    </Card>
   );
 }
 
-const styles = StyleSheet.create({
-  gradient: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 80, paddingBottom: 40, alignItems: 'center' },
-  backButton: { position: 'absolute', top: 50, left: 20, zIndex: 1 },
-  backButtonGlass: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-  editButton: { position: 'absolute', top: 50, right: 20, zIndex: 2 },
-  editButtonGlass: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-  editText: { fontSize: 16, fontWeight: 'bold' },
-  avatarContainer: { marginBottom: 20 },
-  nameHeader: { fontSize: 28, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
-  stackedField: { width: '100%', marginBottom: 15 },
-  label: { fontSize: 14, fontWeight: 'bold', marginBottom: 4 },
-  value: { fontSize: 16, flexWrap: 'wrap' },
-  paperInput: { width: '100%' },
-  arrayContainer: {
-    width: '100%',
-    marginBottom: 15,
-    padding: 10,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  arrayTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 8 },
-  arrayItem: {
-    marginBottom: 10,
-    padding: 8,
-    borderRadius: 10,
-    position: 'relative',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  deleteButton: { position: 'absolute', top: 4, right: 4 },
-});
+// 🧱 OBJECT FIELDS (for nested field objects)
+if (
+  value &&
+  typeof value === 'object' &&
+  !Array.isArray(value) &&
+  fieldDef.objectConfig
+) {
+  return (
+    <Card style={{ marginVertical: 8, marginLeft: level * 10 }}>
+      <Card.Content>
+        <Text variant="titleMedium" style={{ marginBottom: 4 }}>
+          {fieldDef.label || fieldDef.field}
+        </Text>
+        <Divider />
+        {nestedFields.map((nestedField) => (
+          <RenderField
+            key={nestedField.field}
+            fieldDef={nestedField}
+            item={item}
+            handleChange={handleChange}
+            mode={mode}
+            theme={theme}
+            level={level + 1}
+            parentPath={fieldPath}
+          />
+        ))}
+      </Card.Content>
+    </Card>
+  );
+}
+
+  // ✏️ SIMPLE FIELD TYPES
+  if (fieldDef.input === 'linkSelect') {
+    return (
+      <Card style={{ marginVertical: 6, marginLeft: level * 10 }}>
+        <Card.Content>
+          <FieldMap.linkSelect
+            label={fieldDef.label || fieldDef.field}
+            value={value}
+            mode={mode}
+            recordTypeName={fieldDef.inputConfig?.recordType || fieldDef.recordTypeName || 'contacts'}
+            onChangeText={(newVal) => handleChange(fieldPath, newVal)}
+          />
+        </Card.Content>
+      </Card>
+    );
+  }
+
+  return (
+    <Card style={{ marginVertical: 6, marginLeft: level * 10 }}>
+      <Card.Content>
+        <FieldComponent
+          label={fieldDef.label || fieldDef.field}
+          value={value}
+          mode={mode}
+          onChangeText={(newVal) => handleChange(fieldPath, newVal)}
+          multiline={fieldDef.input === 'textarea'}
+          keyboardType={fieldDef.input === 'number' ? 'numeric' : 'default'}
+          options={
+            fieldDef.input === 'select' ? fieldDef.inputConfig?.options || [] : []
+          }
+        />
+      </Card.Content>
+    </Card>
+  );
+};
+
+
+export default function ListItemDetailScreen({ route, navigation }) {
+  const { item = {}, name, appConfig, fields = [], mode: initialMode = 'read' } = route.params;
+  const theme = useTheme();
+  const { token, user } = useContext(AuthContext);
+
+  useEffect(() => {
+    console.log('Fields:', fields);
+  }, []);
+
+  const initializeItemFromFields = (fields) => {
+    const obj = {};
+    fields.forEach((f) => {
+      if (f.objectConfig) obj[f.field] = initializeItemFromFields(f.objectConfig);
+      else if (f.arrayConfig?.object || f.type === 'array') obj[f.field] = [];
+      else obj[f.field] = '';
+    });
+    return obj;
+  };
+
+  const initialData = useMemo(() => {
+    if (item?.fieldsData) return item.fieldsData;
+    if (item && Object.keys(item).length > 0) return item;
+    return initializeItemFromFields(fields);
+  }, [item, fields]);
+
+  const [localItem, setLocalItem] = useState(initialData);
+  const [mode, setMode] = useState(initialMode);
+
+  const handleChange = (path, value) => {
+    setLocalItem((prev) => {
+      const updated = { ...prev };
+      const keys = path.replace(/\[(\d+)\]/g, '.$1').split('.');
+      let target = updated;
+      while (keys.length > 1) {
+        const key = keys.shift();
+        if (!target[key]) target[key] = {};
+        target = target[key];
+      }
+      target[keys[0]] = value;
+      return updated;
+    });
+  };
+
+  const handleSave = async () => {
+    try {
+      if (mode === 'edit' && item._id) {
+        await updateRecord(item._id, localItem, token);
+      } else {
+        await createRecord(localItem, name.toLowerCase(), token, user.subscriberId, user.userId);
+      }
+      setMode('read');
+      navigation.goBack();
+    } catch (error) {
+      console.error('Save failed:', error);
+    }
+  };
+
+  return (
+       <Portal.Host>
+          <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+       
+      >
+    <ScrollView
+      style={{ flex: 1, backgroundColor: theme.colors.background, padding: 12 }}
+      contentContainerStyle={{ paddingBottom: 60 }}
+    >
+      {/* Header */}
+      <Card style={{ marginBottom: 10, paddingBottom: 4 }}>
+        <Card.Content>
+          <Text variant="titleLarge" style={{ marginBottom: 6 }}>
+            {mode === 'add'
+              ? `Add ${singularize(name)}`
+              : localItem?.serviceName || localItem?.firstName || 'Item Detail'}
+          </Text>
+          <Divider style={{ marginBottom: 6 }} />
+        </Card.Content>
+
+        <Card.Content style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 6 }}>
+       {/* Header Actions */}
+<Card.Content style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 6 }}>
+  {mode === 'read' ? (
+    <>
+      <Button onPress={() => navigation.goBack()}>Close</Button>
+      <Button mode="contained" onPress={() => setMode('edit')}>
+        Edit
+      </Button>
+    </>
+  ) : mode === 'add' ? (
+    <>
+      <Button onPress={() => navigation.goBack()}>Close</Button>
+      <Button mode="contained" onPress={handleSave}>
+        Save
+      </Button>
+    </>
+  ) : (
+    <>
+      <Button onPress={() => setMode('read')}>Cancel</Button>
+      <Button mode="contained" onPress={handleSave}>
+        Save
+      </Button>
+    </>
+  )}
+</Card.Content>
+
+        </Card.Content>
+      </Card>
+
+      {/* Body */}
+      {fields.map((field) => (
+     
+        <RenderField
+          key={field.field}
+          fieldDef={field}
+          item={localItem}
+          handleChange={handleChange}
+          mode={mode}
+          theme={theme}
+        />
+    
+      ))}
+
+    </ScrollView>
+    </KeyboardAvoidingView>
+               </Portal.Host>
+  );
+}

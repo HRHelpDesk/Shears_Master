@@ -84,3 +84,23 @@ export const normalizeValue = (val) => {
   }
   return String(val);
 };
+
+/**
+ * Converts a 24-hour time string (e.g., "13:45") to 12-hour format with AM/PM.
+ * @param {string} time24 - Time in "HH:MM" format (24-hour)
+ * @returns {string} - Time in "h:mm AM/PM" format
+ */
+const formatTime12 = (time24) => {
+  if (!time24 || typeof time24 !== 'string') return '12:00 AM';
+
+  const [hours, minutes] = time24.split(':').map(Number);
+  if (isNaN(hours) || isNaN(minutes)) return '12:00 AM';
+
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours % 12 || 12; // 0 → 12
+  const paddedMinutes = minutes.toString().padStart(2, '0');
+
+  return `${displayHours}:${paddedMinutes} ${period}`;
+};
+
+export default formatTime12;

@@ -30,13 +30,14 @@ export default function ListView({
   const theme = useTheme();
   const navigation = useNavigation();
   const [search, setSearch] = useState('');
+  const [finalFields, setFinalFields] = useState([])
   const [localData, setLocalData] = useState(data);
   const { token, user } = useContext(AuthContext);
   // Keep local data in sync if props.data changes
   useEffect(() => {
     console.log('ListView fiields:', fields);
     console.log('ListView appConfig:', appConfig);
-    
+    console.log('ListView name:', name);
   },[])
   React.useEffect(() => setLocalData(data), [data]);
 
@@ -59,9 +60,14 @@ export default function ListView({
       );
       appFields = route?.fields || [];
     }
+
     const normalized = mapFields(appFields);
+    console.log(normalized)
+    setFinalFields(normalized)
     return normalized.filter((f) => f.displayInList === true);
   }, [fields, appConfig, name]);
+
+      console.log(displayFields)
 
   const keys = displayFields.map((f) => f.field);
 
@@ -204,7 +210,7 @@ export default function ListView({
             },
           ]}
           onPress={() =>
-            navigation.navigate('ListItemDetail', { item, name, appConfig })
+            navigation.navigate('ListItemDetail', { item, name, appConfig, fields: finalFields })
           }
         >
           {item.avatar ? (
@@ -233,7 +239,7 @@ export default function ListView({
   };
 
   const renderSectionHeader = ({ section: { title } }) => (
-    <View style={[styles.sectionHeader, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.sectionHeader]}>
       <Text style={[styles.sectionHeaderText, { color: theme.colors.primary }]}>
         {title}
       </Text>
@@ -286,6 +292,7 @@ export default function ListView({
             appConfig,
             mode: 'add',
             settingFields: fields,
+            fields: finalFields
 
           })
         }
