@@ -9,6 +9,7 @@ import {
   Keyboard,
   LayoutAnimation,
   UIManager,
+  StyleSheet,
 } from 'react-native';
 import {
   TextInput,
@@ -35,25 +36,26 @@ export default function DialogSelectInput({
   onChangeText,
   placeholder = 'Select...',
   allowCustom = true,
-  mode = 'edit', // 'read' or 'edit'
-  forceModal = false, // optional override
+  mode = 'edit', // 'read' | 'edit'
+  forceModal = false,
+  error,
+  helperText,
 }) {
+  const theme = useTheme();
   const [visible, setVisible] = useState(false);
   const [customValue, setCustomValue] = useState('');
   const [isCustom, setIsCustom] = useState(false);
-  const theme = useTheme();
   const inputRef = useRef(null);
   const scrollRef = useRef(null);
 
-  // 🧭 Detect if we’re inside a navigation modal
+  // Detect if we're already in a modal
   const navigationState = useNavigationState((state) => state);
   const insideModalScreen = navigationState?.routes?.some(
     (r) => r?.params?.presentation === 'modal' || r?.name?.toLowerCase().includes('modal')
   );
-
   const shouldUseModal = forceModal || insideModalScreen;
 
-  // Smooth scroll animation for custom input focus
+  // Smooth scroll for custom input
   useEffect(() => {
     if (!isCustom) return;
     const showListener = Keyboard.addListener('keyboardDidShow', () => {
@@ -63,6 +65,10 @@ export default function DialogSelectInput({
     });
     return () => showListener.remove();
   }, [isCustom]);
+
+  /* -------------------------------------------------------------------------- */
+  /*                                  HANDLERS                                  */
+  /* -------------------------------------------------------------------------- */
 
   const handleSelect = (opt) => {
     if (opt === 'Other' && allowCustom) {
@@ -83,96 +89,81 @@ export default function DialogSelectInput({
     }
   };
 
-  /** ----------------
-   *  READ MODE
-   * ---------------- */
+  /* -------------------------------------------------------------------------- */
+  /*                                 READ MODE                                  */
+  /* -------------------------------------------------------------------------- */
   if (mode === 'read') {
     return (
-      <View style={{ marginVertical: 6 }}>
+      <View style={styles.readContainer}>
         <Text
-          variant="labelSmall"
-          style={{
-            color: theme.colors.onSurface,
-            fontWeight: '500',
-            marginBottom: 2,
-          }}
+          variant="titleMedium"
+          style={[styles.label, { color: theme.colors.primary }]}
         >
           {label}
         </Text>
-
-        <View
-          style={{
-            backgroundColor: theme.dark
-              ? theme.colors.surfaceVariant
-              : theme.colors.surfaceDisabled || '#f4f4f4',
-            borderRadius: 6,
-            paddingVertical: 8,
-            paddingHorizontal: 10,
-          }}
+        <Text
+          variant="bodyLarge"
+          style={[
+            styles.readValue,
+            { color: theme.colors.text },
+          ]}
         >
-          <Text
-            variant="bodyMedium"
-            style={{
-              color: theme.colors.onSurface,
-            }}
-          >
-            {value ? (
-              value.toString()
-            ) : (
-              <Text
-                style={{
-                  color: theme.colors.onSurfaceVariant,
-                  fontStyle: 'italic',
-                }}
-              >
-                —
-              </Text>
-            )}
-          </Text>
-        </View>
+          {value ? (
+            value.toString()
+          ) : (
+            <Text style={{ color: theme.colors.textLight, fontStyle: 'italic' }}>
+              Not set
+            </Text>
+          )}
+        </Text>
       </View>
     );
   }
 
-  /** ----------------
-   *  EDIT MODE
-   * ---------------- */
+  /* -------------------------------------------------------------------------- */
+  /*                                 EDIT MODE                                  */
+  /* -------------------------------------------------------------------------- */
+
+  const borderColor = error
+    ? theme.colors.error
+    : visible
+    ? theme.colors.primary
+    : theme.colors.outlineVariant || theme.colors.border;
+
   const SelectorField = (
-    <TouchableOpacity onPress={() => setVisible(true)}>
+    <TouchableOpacity onPress={() => setVisible(true)} activeOpacity={0.8}>
       <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          borderWidth: 1,
-          borderColor: theme.colors.outlineVariant,
-          borderRadius: 6,
-          backgroundColor: theme.colors.surface,
-          paddingHorizontal: 12,
-          paddingVertical: 10,
-        }}
+        style={[
+          styles.selectorContainer,
+          {
+            backgroundColor: theme.colors.surface,
+            borderColor,
+          },
+        ]}
       >
         <Text
-          style={{
-            color: value ? theme.colors.onSurface : theme.colors.onSurfaceVariant,
-          }}
+          style={[
+            styles.selectorText,
+            {
+              color: value
+                ? theme.colors.onSurface
+                : theme.colors.onSurfaceVariant,
+            },
+          ]}
         >
           {value ? String(value) : placeholder}
         </Text>
-        <Text style={{ fontSize: 18, color: theme.colors.onSurfaceVariant }}>{'⌄'}</Text>
+        <Text style={styles.dropdownIcon}>⌄</Text>
       </View>
     </TouchableOpacity>
   );
 
-  /** ----------------
-   *  DIALOG CONTENT
-   * ---------------- */
   const SelectionContent = (
     <ScrollView
       ref={scrollRef}
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={{ paddingBottom: 12 }}
-      style={{ maxHeight: 300 }}
+      style={{ maxHeight: 320 }}
     >
       {options.map((opt, i) => (
         <List.Item
@@ -200,6 +191,7 @@ export default function DialogSelectInput({
           label="Enter custom value"
           value={customValue}
           onChangeText={setCustomValue}
+          mode="outlined"
           style={{
             marginTop: 12,
             backgroundColor: theme.colors.surfaceVariant,
@@ -212,36 +204,47 @@ export default function DialogSelectInput({
   );
 
   return (
-    <View style={{ marginVertical: 6 }}>
+    <View style={styles.editContainer}>
+      {/* Label */}
       <Text
-        variant="labelSmall"
-        style={{
-          color: theme.colors.onSurface,
-          fontWeight: '500',
-          marginBottom: 2,
-        }}
+        variant="labelMedium"
+        style={[
+          styles.label,
+          {
+            color: error ? theme.colors.error : theme.colors.text,
+            marginBottom: 6,
+          },
+        ]}
       >
         {label}
       </Text>
 
       {SelectorField}
 
+      {(helperText || error) && (
+        <Text
+          variant="bodySmall"
+          style={[
+            styles.helperText,
+            { color: error ? theme.colors.error : theme.colors.textSecondary },
+          ]}
+        >
+          {error || helperText}
+        </Text>
+      )}
+
       <Portal>
         {shouldUseModal ? (
-          /** 🧱 Local Modal fallback */
           <Modal
             visible={visible}
             onDismiss={() => {
               setIsCustom(false);
               setVisible(false);
             }}
-            contentContainerStyle={{
-              backgroundColor: theme.colors.background,
-              margin: 24,
-              borderRadius: 8,
-              elevation: 6,
-              padding: 16,
-            }}
+            contentContainerStyle={[
+              styles.modalContainer,
+              { backgroundColor: theme.colors.background },
+            ]}
           >
             <Card>
               <Card.Title title={`Select ${label}`} />
@@ -262,7 +265,6 @@ export default function DialogSelectInput({
             </Card>
           </Modal>
         ) : (
-          /** 🪟 Default Dialog */
           <KeyboardAvoidingView
             style={{ flex: 1 }}
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -274,7 +276,10 @@ export default function DialogSelectInput({
                 setIsCustom(false);
                 setVisible(false);
               }}
-              style={{ backgroundColor: theme.colors.background, borderRadius: 8 }}
+              style={[
+                styles.dialogContainer,
+                { backgroundColor: theme.colors.background },
+              ]}
             >
               <Dialog.Title>Select {label}</Dialog.Title>
               <Dialog.Content>{SelectionContent}</Dialog.Content>
@@ -298,3 +303,53 @@ export default function DialogSelectInput({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  // READ MODE
+  readContainer: {
+    marginBottom: 4,
+  },
+  label: {
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  readValue: {
+    lineHeight: 22,
+  },
+
+  // EDIT MODE
+  editContainer: {
+    marginBottom: 12,
+  },
+  selectorContainer: {
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  selectorText: {
+    fontSize: 16,
+    fontFamily: 'System',
+  },
+  dropdownIcon: {
+    fontSize: 18,
+    color: '#999',
+    marginLeft: 6,
+  },
+  helperText: {
+    marginTop: 4,
+    marginLeft: 2,
+  },
+  modalContainer: {
+    margin: 24,
+    borderRadius: 8,
+    elevation: 6,
+    padding: 16,
+  },
+  dialogContainer: {
+    borderRadius: 8,
+  },
+});

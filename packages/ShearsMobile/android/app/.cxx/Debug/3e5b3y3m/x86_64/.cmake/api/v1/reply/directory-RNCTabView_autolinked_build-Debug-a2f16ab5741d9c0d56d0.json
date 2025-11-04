@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "RNCTabView_autolinked_build",
+		"source" : "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/react-native-bottom-tabs/android/build/generated/source/codegen/jni"
+	}
+}

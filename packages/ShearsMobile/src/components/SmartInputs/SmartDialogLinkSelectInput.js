@@ -9,6 +9,7 @@ import {
   Keyboard,
   LayoutAnimation,
   UIManager,
+  StyleSheet,
 } from 'react-native';
 import {
   TextInput,
@@ -19,11 +20,11 @@ import {
   List,
   useTheme,
   ActivityIndicator,
-  Card,
 } from 'react-native-paper';
 import { AuthContext } from '../../context/AuthContext';
 import { getRecords } from 'shears-shared/src/Services/Authentication';
 
+// Enable smooth LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
@@ -35,23 +36,49 @@ export default function SmartDialogLinkSelectInput({
   onChangeText,
   placeholder = 'Select...',
   mode = 'edit',
+  error,
+  helperText,
 }) {
   const { token, user } = useContext(AuthContext);
+  const theme = useTheme();
   const [visible, setVisible] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
-  const theme = useTheme();
   const scrollRef = useRef(null);
 
-  // Keep displayed value synced
+  /* -------------------------------------------------------------------------- */
+  /*                                  EFFECTS                                   */
+  /* -------------------------------------------------------------------------- */
+
+  // Keep search display synced to selected value
   useEffect(() => {
     if (value && typeof value === 'object' && value.name) {
       setSearchValue(value.name);
+    } else if (typeof value === 'string') {
+      setSearchValue(value);
     } else {
       setSearchValue('');
     }
   }, [value]);
+
+  // Fetch records when visible
+  useEffect(() => {
+    if (visible) fetchRecords();
+  }, [visible]);
+
+  // Smooth scroll when keyboard opens
+  useEffect(() => {
+    const showListener = Keyboard.addListener('keyboardDidShow', () => {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      scrollRef.current?.scrollToEnd({ animated: true });
+    });
+    return () => showListener.remove();
+  }, []);
+
+  /* -------------------------------------------------------------------------- */
+  /*                               DATA FETCHING                                */
+  /* -------------------------------------------------------------------------- */
 
   const fetchRecords = async (query = '') => {
     if (!token) return;
@@ -93,117 +120,110 @@ export default function SmartDialogLinkSelectInput({
     }
   };
 
-  useEffect(() => {
-    if (visible) fetchRecords();
-  }, [visible]);
-
-  useEffect(() => {
-    const showListener = Keyboard.addListener('keyboardDidShow', () => {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      scrollRef.current?.scrollToEnd({ animated: true });
-    });
-    return () => showListener.remove();
-  }, []);
-
   const handleSelect = (record) => {
     onChangeText(record);
     setVisible(false);
     setRecords([]);
   };
 
-  /** ----------------
-   *  READ MODE
-   * ---------------- */
+  /* -------------------------------------------------------------------------- */
+  /*                                 READ MODE                                  */
+  /* -------------------------------------------------------------------------- */
   if (mode === 'read') {
     const displayText =
       (value && typeof value === 'object' && value.name) ||
       (typeof value === 'string' && value) ||
-      placeholder;
+      '';
 
     return (
-      <View style={{ marginVertical: 6 }}>
+      <View style={styles.readContainer}>
         <Text
-          variant="labelSmall"
-          style={{
-            color: theme.colors.onSurface,
-            fontWeight: '500',
-            marginBottom: 2,
-          }}
+          variant="titleMedium"
+          style={[styles.label, { color: theme.colors.primary }]}
         >
           {label}
         </Text>
 
-        <View
-          style={{
-            backgroundColor: theme.dark
-              ? theme.colors.surfaceVariant
-              : theme.colors.surfaceDisabled || '#f4f4f4',
-            borderRadius: 1,
-            paddingVertical: 8,
-            paddingHorizontal: 10,
-          }}
+        <Text
+          variant="bodyLarge"
+          style={[styles.readValue, { color: theme.colors.text }]}
         >
-          <Text
-            variant="bodyMedium"
-            style={{
-              color: theme.colors.onSurface,
-            }}
-          >
-            {displayText ? (
-              displayText
-            ) : (
-              <Text
-                style={{
-                  color: theme.colors.onSurfaceVariant,
-                  fontStyle: 'italic',
-                }}
-              >
-                —
-              </Text>
-            )}
-          </Text>
-        </View>
+          {displayText ? (
+            displayText
+          ) : (
+            <Text style={{ color: theme.colors.textLight, fontStyle: 'italic' }}>
+              Not set
+            </Text>
+          )}
+        </Text>
       </View>
     );
   }
 
-  /** ----------------
-   *  EDIT MODE
-   * ---------------- */
+  /* -------------------------------------------------------------------------- */
+  /*                                 EDIT MODE                                  */
+  /* -------------------------------------------------------------------------- */
+
+  const borderColor = error
+    ? theme.colors.error
+    : visible
+    ? theme.colors.primary
+    : theme.colors.outlineVariant || theme.colors.border;
+
   return (
-    <View style={{ marginVertical: 6 }}>
+    <View style={styles.editContainer}>
+      {/* Label */}
       <Text
-        variant="labelSmall"
-        style={{
-          color: theme.colors.onSurface,
-          fontWeight: '500',
-          marginBottom: 2,
-        }}
+        variant="labelMedium"
+        style={[
+          styles.label,
+          {
+            color: error ? theme.colors.error : theme.colors.text,
+            marginBottom: 6,
+          },
+        ]}
       >
         {label}
       </Text>
 
-      <TouchableOpacity onPress={() => setVisible(true)}>
+      {/* Touchable Selector */}
+      <TouchableOpacity onPress={() => setVisible(true)} activeOpacity={0.8}>
         <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            borderWidth: 1,
-            borderColor: theme.colors.outlineVariant,
-            borderRadius: 1,
-            backgroundColor: theme.colors.surface,
-            paddingHorizontal: 12,
-            paddingVertical: 10,
-          }}
+          style={[
+            styles.selectorContainer,
+            { backgroundColor: theme.colors.surface, borderColor },
+          ]}
         >
-          <Text style={{ color: searchValue ? theme.colors.onSurface : 'gray' }}>
+          <Text
+            style={[
+              styles.selectorText,
+              {
+                color: searchValue
+                  ? theme.colors.onSurface
+                  : theme.colors.onSurfaceVariant,
+              },
+            ]}
+          >
             {searchValue || placeholder}
           </Text>
-          <Text style={{ fontSize: 18, color: theme.colors.onSurfaceVariant }}>{'⌄'}</Text>
+          <Text style={styles.dropdownIcon}>⌄</Text>
         </View>
       </TouchableOpacity>
 
+      {/* Helper or Error Text */}
+      {(helperText || error) && (
+        <Text
+          variant="bodySmall"
+          style={[
+            styles.helperText,
+            { color: error ? theme.colors.error : theme.colors.textSecondary },
+          ]}
+        >
+          {error || helperText}
+        </Text>
+      )}
+
+      {/* Dialog */}
       <Portal>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
@@ -213,10 +233,13 @@ export default function SmartDialogLinkSelectInput({
           <Dialog
             visible={visible}
             onDismiss={() => setVisible(false)}
-            style={{ backgroundColor: theme.colors.background, borderRadius: 1 }}
+            style={[
+              styles.dialogContainer,
+              { backgroundColor: theme.colors.background },
+            ]}
           >
             <Dialog.Title>Select {label}</Dialog.Title>
-            <Dialog.Content style={{ maxHeight: 300 }}>
+            <Dialog.Content style={{ maxHeight: 320 }}>
               <TextInput
                 placeholder="Search..."
                 value={searchValue}
@@ -224,12 +247,13 @@ export default function SmartDialogLinkSelectInput({
                   setSearchValue(text);
                   fetchRecords(text);
                 }}
+                mode="outlined"
                 style={{
                   marginBottom: 8,
                   backgroundColor: theme.colors.surfaceVariant,
-                  borderRadius: 1,
                 }}
               />
+
               {loading ? (
                 <ActivityIndicator animating={true} style={{ marginTop: 20 }} />
               ) : (
@@ -250,7 +274,14 @@ export default function SmartDialogLinkSelectInput({
                     />
                   ))}
                   {records.length === 0 && !loading && (
-                    <Text style={{ textAlign: 'center', color: 'gray', marginTop: 12 }}>
+                    <Text
+                      style={{
+                        textAlign: 'center',
+                        color: theme.colors.textSecondary,
+                        marginTop: 12,
+                        fontStyle: 'italic',
+                      }}
+                    >
                       No results found
                     </Text>
                   )}
@@ -266,3 +297,50 @@ export default function SmartDialogLinkSelectInput({
     </View>
   );
 }
+
+/* -------------------------------------------------------------------------- */
+/*                                   STYLES                                   */
+/* -------------------------------------------------------------------------- */
+const styles = StyleSheet.create({
+  // READ MODE
+  readContainer: {
+    marginBottom: 4,
+  },
+  label: {
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  readValue: {
+    lineHeight: 22,
+  },
+
+  // EDIT MODE
+  editContainer: {
+    marginBottom: 12,
+  },
+  selectorContainer: {
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  selectorText: {
+    fontSize: 16,
+    fontFamily: 'System',
+  },
+  dropdownIcon: {
+    fontSize: 18,
+    color: '#999',
+    marginLeft: 6,
+  },
+  helperText: {
+    marginTop: 4,
+    marginLeft: 2,
+  },
+  dialogContainer: {
+    borderRadius: 8,
+  },
+});

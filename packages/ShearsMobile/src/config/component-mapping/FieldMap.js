@@ -9,6 +9,7 @@ import MultiLineInput from "../../components/SmartInputs/MulitLineInput";
 import PlainTextInput from "../../components/SmartInputs/PlainTextInput";
 import DialogSelectInput from "../../components/SmartInputs/DialogSelectInput";
 import SmartDialogLinkSelectInput from "../../components/SmartInputs/SmartDialogLinkSelectInput";
+import PhoneTextInput from "../../components/SmartInputs/PhoneTextInput";
 
 export const FieldMap = {
   text: PlainTextInput,
@@ -18,4 +19,5 @@ export const FieldMap = {
   date: DatePickerInput, // replace with DatePickerInput
   number: PlainTextInput,
   time: TimePickerInput,
+  phone: PhoneTextInput
 };

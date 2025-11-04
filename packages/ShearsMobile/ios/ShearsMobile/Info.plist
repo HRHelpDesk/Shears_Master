@@ -33,8 +33,21 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>We need Bluetooth to connect to card readers</string>
+
+	<key>NSLocalNetworkUsageDescription</key>
+<string>Local network access is required to communicate with nearby card readers.</string>
+
+
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>We need Bluetooth to connect to card readers</string>
+
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string></string>
+	<string>Location is required for card reader compliance</string>
+
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Microphone access is required for Tap to Pay on iPhone</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UIAppFonts</key>
@@ -73,5 +86,14 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<key>CFBundleURLTypes</key>
+<array>
+  <dict>
+    <key>CFBundleURLSchemes</key>
+    <array>
+      <string>yourapp</string>
+    </array>
+  </dict>
+</array>
 </dict>
 </plist>
