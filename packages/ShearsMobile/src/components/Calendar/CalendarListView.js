@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { Avatar, useTheme, FAB } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useNavigation, useRoute } from '@react-navigation/native'; // Added useRoute
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { deleteRecord } from 'shears-shared/src/Services/Authentication';
 import { mapFields } from 'shears-shared/src/config/fieldMapper';
@@ -21,17 +21,37 @@ import formatTime12 from 'shears-shared/src/utils/stringHelpers';
 import { LiquidGlassView } from '@callstack/liquid-glass';
 
 /* --------------------------------------------------------------
-   Helper – pretty date
-   -------------------------------------------------------------- */
-const formatDatePretty = (dateStr) => {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString(undefined, {
+   Helper – pretty date (timezone-safe)
+-------------------------------------------------------------- */
+const formatDatePretty = (value) => {
+  if (!value) return '';
+
+  // ✅ Handle pure YYYY-MM-DD strings (prevents timezone shift)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [y, m, d] = value.split('-').map(Number);
+
+    // ✅ Build UTC date so it cannot shift around
+    const date = new Date(Date.UTC(y, m - 1, d));
+
+    return date.toLocaleDateString(undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      timeZone: 'UTC', // ✅ YES — required in RN too
+    });
+  }
+
+  // ✅ Otherwise handle full ISO timestamps
+  const dateObj = new Date(value);
+  if (isNaN(dateObj)) return value;
+
+  return dateObj.toLocaleDateString(undefined, {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
   });
 };
+
 
 const renderObjectAsLines = (obj, fieldName) => {
   if (!obj || typeof obj !== 'object') return null;
@@ -53,14 +73,9 @@ const renderObjectAsLines = (obj, fieldName) => {
   // 🧾 Arrays
   if (Array.isArray(obj)) {
     if (obj.length === 0) return '—';
-
-    // ✅ Case 1: Array of linked items (services, contacts, etc.)
     const hasNames = obj.every((item) => item && typeof item === 'object' && 'name' in item);
-    if (hasNames) {
-      return obj.map((item) => item.name).join(', ');
-    }
+    if (hasNames) return obj.map((item) => item.name).join(', ');
 
-    // ✅ Case 2: Array of label/value pairs
     const hasLabels = obj.every(
       (item) => item && typeof item === 'object' && ('label' in item || 'value' in item)
     );
@@ -73,13 +88,10 @@ const renderObjectAsLines = (obj, fieldName) => {
         .filter(Boolean)
         .join(' • ');
     }
-
-    // ✅ Case 3: Fallback – primitive array
     return obj.map((i) => String(i)).join(', ');
   }
 
-  // 🧱 Single object fallback
-  if (obj.name) return obj.name; // handle single linked object
+  if (obj.name) return obj.name;
   if (obj.label && obj.value) return `${obj.label}: ${obj.value}`;
 
   const parts = Object.entries(obj)
@@ -89,64 +101,69 @@ const renderObjectAsLines = (obj, fieldName) => {
   return parts.join(' • ');
 };
 
-
-export default function CalendarListView({
-  data: propData = [], // from parent component
-  appConfig,
-  onRefresh,
-  refreshing = false,
-  name
-}) {
+export default function CalendarListView(props) {
   const theme = useTheme();
   const navigation = useNavigation();
-  const route = useRoute(); // Get route params
-  const [search, setSearch] = useState('');
+  const route = useRoute();
   const { token } = useContext(AuthContext);
 
-  // Determine final data source
-  const data = route.params?.data || propData;
-  const [header, setHeader] = useState(route.params?.header);
+  /* ----------------------------------------------------------------
+     1️⃣  Merge route params and props so it works in both cases
+     ---------------------------------------------------------------- */
+  const routeParams = route?.params ?? {};
+  const merged = { ...routeParams, ...props };
 
-  const [localData, setLocalData] = useState(data);
-  const viewData = appConfig.mainNavigation.find((r) => r.name === name);
+  const {
+    data: propData = [],
+    appConfig,
+    onRefresh,
+    refreshing = false,
+    name = 'Calendar',
+    header: headerProp,
+  } = merged;
+
+  const [search, setSearch] = useState('');
+  const [header, setHeader] = useState(headerProp);
+  const [localData, setLocalData] = useState(propData);
 
   useEffect(() => {
-    
-    setLocalData(data);
-    console.log("AppConfig", appConfig);
-    console.log("name", name);
+    setLocalData(propData);
+    if (!appConfig) console.warn('[CalendarListView] appConfig not provided — fallback mode active.');
+  }, [propData, appConfig]);
 
-    console.log("viewData", viewData);
+  /* ----------------------------------------------------------------
+     2️⃣  View configuration (safe access)
+     ---------------------------------------------------------------- */
+  const viewData = useMemo(() => {
+    if (!appConfig?.mainNavigation) return null;
+    return appConfig.mainNavigation.find((r) => r.name === name);
+  }, [appConfig, name]);
 
-    console.log("CalendarListView data source:", route.params?.data ? "route.params.data" : "propData");
-    console.log("Final data:", data);
-    
-  }, [data]);
-
-
+  /* ----------------------------------------------------------------
+     3️⃣  Map list fields safely
+     ---------------------------------------------------------------- */
   const listFields = useMemo(() => {
-    const routeConfig = appConfig?.mainNavigation?.find(
+    if (!appConfig?.mainNavigation) return [];
+    const routeConfig = appConfig.mainNavigation.find(
       (r) =>
         r.name?.toLowerCase() === 'calendar' ||
         r.displayName?.toLowerCase() === 'calendar'
     );
     const rawFields = routeConfig?.fields || [];
-    console.log('CalendarListView listFields', rawFields);
-    const mapped = mapFields(rawFields);
-    return mapped.filter((f) => f.displayInList);
+    return mapFields(rawFields).filter((f) => f.displayInList);
   }, [appConfig]);
 
+  /* ----------------------------------------------------------------
+     4️⃣  Normalize and group data
+     ---------------------------------------------------------------- */
   const normalizedData = useMemo(() => {
     return localData
       .map((item) => {
         const fd = item.fieldsData || {};
         const dateStr = fd.date;
         const startTime = fd.time?.startTime;
-
         const dateObj = dateStr ? new Date(dateStr) : null;
-        const timeValue = startTime
-          ? parseInt(startTime.replace(':', ''), 10)
-          : 9999;
+        const timeValue = startTime ? parseInt(startTime.replace(':', ''), 10) : 9999;
 
         return {
           _id: item._id,
@@ -159,9 +176,9 @@ export default function CalendarListView({
             subscriberId: item.subscriberId,
           },
           contactName: fd.contact?.name ?? '—',
-           serviceName: Array.isArray(fd.service)
-    ? fd.service.map((s) => s.name).filter(Boolean).join(', ')
-    : fd.service?.name ?? '—',
+          serviceName: Array.isArray(fd.service)
+            ? fd.service.map((s) => s.name).filter(Boolean).join(', ')
+            : fd.service?.name ?? '—',
           date: dateStr,
           dateObj,
           startTime,
@@ -199,8 +216,10 @@ export default function CalendarListView({
       groups[key].push(item);
     });
 
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
     return Object.keys(groups)
       .map((dateKey) => {
@@ -209,33 +228,31 @@ export default function CalendarListView({
         if (date.getTime() === today.getTime()) title = 'Today';
         else if (date.getTime() === tomorrow.getTime()) title = 'Tomorrow';
         else title = formatDatePretty(dateKey);
-
         const sorted = groups[dateKey].sort((a, b) => a.timeValue - b.timeValue);
         return { title, data: sorted, dateKey };
       })
       .sort((a, b) => new Date(a.dateKey) - new Date(b.dateKey));
   }, [filteredData]);
 
+  /* ----------------------------------------------------------------
+     5️⃣  Delete and render logic
+     ---------------------------------------------------------------- */
   const handleDelete = (id) => {
-    Alert.alert(
-      'Delete appointment?',
-      'This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteRecord(id, token);
-              setLocalData((prev) => prev.filter((i) => i._id !== id));
-            } catch (e) {
-              console.error(e);
-            }
-          },
+    Alert.alert('Delete appointment?', 'This action cannot be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteRecord(id, token);
+            setLocalData((prev) => prev.filter((i) => i._id !== id));
+          } catch (e) {
+            console.error(e);
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const renderRightActions = (item) => (
@@ -244,98 +261,87 @@ export default function CalendarListView({
     </TouchableOpacity>
   );
 
- const renderItem = ({ item }) => {
-  const initials =
-    item.contactName
-      .split(' ')
-      .map((p) => p[0])
-      .join('')
-      .substring(0, 2)
-      .toUpperCase() || '?';
+  const renderItem = ({ item }) => {
+    const initials =
+      item.contactName
+        .split(' ')
+        .map((p) => p[0])
+        .join('')
+        .substring(0, 2)
+        .toUpperCase() || '?';
 
-  const extraLines = listFields
-    .filter((f) => !['contact', 'service'].includes(f.field))
-    .map((field) => {
-      const raw = item.flatItem[field.field];
-      if (raw === null || raw === undefined) return null;
+    const extraLines = listFields
+      .filter((f) => !['contact', 'service'].includes(f.field))
+      .map((field) => {
+        const raw = item.flatItem[field.field];
+        if (raw === null || raw === undefined) return null;
+        let txt = renderObjectAsLines(raw, field.field);
+        if (!txt && typeof raw !== 'object') txt = String(raw);
+        if (field.field === 'date' && raw) txt = formatDatePretty(raw);
+        return txt ? (
+          <Text
+            key={field.field}
+            style={[styles.tertiary, { color: theme.colors.onSurfaceVariant }]}
+          >
+            {txt}
+          </Text>
+        ) : null;
+      })
+      .filter(Boolean);
 
-      let txt = renderObjectAsLines(raw, field.field);
-      if (!txt && typeof raw !== 'object') {
-        txt = String(raw);
-      }
-      if (field.field === 'date' && raw) {
-        txt = formatDatePretty(raw);
-      }
-
-      return txt ? (
-        <Text
-          key={field.field}
-          style={[styles.tertiary, { color: theme.colors.onSurfaceVariant }]}
+    return (
+      <Swipeable renderRightActions={() => renderRightActions(item)}>
+        <TouchableOpacity
+          style={[styles.card, { backgroundColor: theme.colors.surface }]}
+          onPress={() =>
+            navigation.navigate('ListItemDetail', {
+              item: item.flatItem,
+              name: 'Calendar',
+              appConfig,
+              fields: mapFields(viewData?.fields || []),
+              mode: 'read',
+            })
+          }
         >
-          {txt}
-        </Text>
-      ) : null;
-    })
-    .filter(Boolean);
-
-  return (
-    <Swipeable renderRightActions={() => renderRightActions(item)}>
-      <TouchableOpacity
-        style={[styles.card, { backgroundColor: theme.colors.surface }]}
-        onPress={() =>
-          navigation.navigate('ListItemDetail', {
-            item: item.flatItem,                     // ✅ same as ListView
-            name: 'Calendar',                        // ✅ consistent naming
-            appConfig,
-            fields: mapFields(viewData.fields),      // ✅ consistent field mapping
-            mode: 'read',                            // ✅ explicit
-          })
-        }
-      >
-        <Avatar.Text
-          size={48}
-          label={initials}
-          style={{ backgroundColor: theme.colors.primary }}
-          color={theme.colors.onPrimary}
-        />
-
-        <View style={styles.textContainer}>
-          <Text style={[styles.primary, { color: theme.colors.onSurface }]}>
-            {item.contactName}
-          </Text>
-
-          <Text style={[styles.secondary, { color: theme.colors.onSurfaceVariant }]}>
-            {item.serviceName}
-          </Text>
-
-          {extraLines}
-        </View>
-      </TouchableOpacity>
-    </Swipeable>
-  );
-};
-
+          <Avatar.Text
+            size={48}
+            label={initials}
+            style={{ backgroundColor: theme.colors.primary }}
+            color={theme.colors.onPrimary}
+          />
+          <View style={styles.textContainer}>
+            <Text style={[styles.primary, { color: theme.colors.onSurface }]}>
+              {item.contactName}
+            </Text>
+            <Text style={[styles.secondary, { color: theme.colors.onSurfaceVariant }]}>
+              {item.serviceName}
+            </Text>
+            {extraLines}
+          </View>
+        </TouchableOpacity>
+      </Swipeable>
+    );
+  };
 
   const renderSectionHeader = ({ section }) => (
-    <View style={[styles.sectionHeader, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.sectionHeader, { backgroundColor: 'transparent' }]}>
       <Text style={[styles.sectionHeaderText, { color: theme.colors.primary }]}>
         {section.title}
       </Text>
     </View>
   );
 
+  /* ----------------------------------------------------------------
+     6️⃣  Render
+     ---------------------------------------------------------------- */
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        {header  && (
-           <View style={styles.headerRow}>
+      {header && (
+        <View style={styles.headerRow}>
           <Text style={[styles.pageTitle, { color: theme.colors.primary }]}>{}</Text>
-          
-          <TouchableOpacity
-            style={styles.editButton} // absolute positioning
-            onPress={() => navigation.goBack()}
-          >
+          <TouchableOpacity style={styles.editButton} onPress={() => navigation.goBack()}>
             <LiquidGlassView
-              style={styles.editButtonGlass} // your glass styling
+              style={styles.editButtonGlass}
               tintColor="rgba(255,255,255,0.1)"
               effect="clear"
               interactive
@@ -344,7 +350,8 @@ export default function CalendarListView({
             </LiquidGlassView>
           </TouchableOpacity>
         </View>
-        )}
+      )}
+
       <TextInput
         style={[
           styles.searchInput,
@@ -369,30 +376,27 @@ export default function CalendarListView({
         contentContainerStyle={{ paddingBottom: 80, paddingTop: 5, flexGrow: 1 }}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={{ color: theme.colors.onSurfaceVariant }}>
-              No appointments found.
-            </Text>
+            <Text style={{ color: theme.colors.onSurfaceVariant }}>No appointments found.</Text>
           </View>
         }
         refreshing={refreshing}
         onRefresh={onRefresh}
       />
 
-     <FAB
-  icon="plus"
-  style={[styles.fab, { backgroundColor: theme.colors.primary }]}
-  color={theme.colors.onPrimary}
-  onPress={() =>
-    navigation.navigate('ListItemDetail', {
-      item: {},
-      name: 'Calendar',
-      appConfig,
-      mode: 'add',
-      fields: mapFields(viewData.fields),
-    })
-  }
-/>
-
+      <FAB
+        icon="plus"
+        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
+        color={theme.colors.onPrimary}
+        onPress={() =>
+          navigation.navigate('ListItemDetail', {
+            item: {},
+            name: 'Calendar',
+            appConfig,
+            mode: 'add',
+            fields: mapFields(viewData?.fields || []),
+          })
+        }
+      />
     </View>
   );
 }
@@ -450,7 +454,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   deleteText: { color: 'white', fontWeight: 'bold' },
-   headerRow: {
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -459,19 +463,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingBottom: 20,
   },
-    pageTitle: { fontSize: 22, fontWeight: 'bold' },
-   editButton: { position: 'absolute', top: 0, right: 10, zIndex: 2 },
+  pageTitle: { fontSize: 22, fontWeight: 'bold' },
+  editButton: { position: 'absolute', top: 0, right: 10, zIndex: 2 },
   editButtonGlass: {
     paddingHorizontal: 6,
     paddingVertical: 6,
     borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  glassButton: {
-    width: 20,
-    height: 20,
-    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
   },

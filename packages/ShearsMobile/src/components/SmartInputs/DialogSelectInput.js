@@ -40,6 +40,7 @@ export default function DialogSelectInput({
   forceModal = false,
   error,
   helperText,
+  defaultValue
 }) {
   const theme = useTheme();
   const [visible, setVisible] = useState(false);
@@ -65,6 +66,7 @@ export default function DialogSelectInput({
     });
     return () => showListener.remove();
   }, [isCustom]);
+  
 
   /* -------------------------------------------------------------------------- */
   /*                                  HANDLERS                                  */

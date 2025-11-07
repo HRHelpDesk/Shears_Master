@@ -1,5 +1,5 @@
 // src/navigation/RootDrawer.js
-import React, { useContext } from 'react';
+import React, { useContext, useEffect } from 'react';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import MainNavigator from './MainNavigator';
 import SettingsStack from './SettingsNavigator';
@@ -13,6 +13,8 @@ const Drawer = createDrawerNavigator();
 export default function RootDrawer({ appConfig }) {
     const theme = useTheme();
     const {logout} = useContext(AuthContext);
+
+    useEffect(()=>{console.log(appConfig)},[])
   return (
     <Drawer.Navigator
       screenOptions={{
@@ -47,6 +49,7 @@ export default function RootDrawer({ appConfig }) {
               viewData={route.views || []}
               displayName={route.displayName || route.name}
               settings={route.settings || []}
+              subNav={true}
             />
           )}
           options={{

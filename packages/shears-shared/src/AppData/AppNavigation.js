@@ -7,6 +7,7 @@ import { ServicesList } from './view-schema/services-view.js';
 import { shearWhitelabels } from './whitelabels/shear.js';
 import { splashWhitelabels } from './whitelabels/splash.js';
 import { shearSettings } from './settings.js';
+import { StripeCheckout, StripeTerminal } from './view-schema/stripe-setup-view.js';
 export const AppData = [
   {
     appName: 'shear',
@@ -48,11 +49,11 @@ export const AppData = [
                 },
               },
                {
-                field: 'duration',
+                field: 'payment',
                 override: {
-                  required: true,
-                  display: { order: 3 },
-                  arrayConfig: { minItems: 1 },
+                  label: 'Payment Information',
+                  required: false,
+                  display: { order: 6 },
                 },
               },
               {
@@ -63,6 +64,15 @@ export const AppData = [
                   arrayConfig: { minItems: 1 },
                 },
               },
+               {
+                field: 'duration',
+                override: {
+                  required: true,
+                  display: { order: 3 },
+                  arrayConfig: { minItems: 1 },
+                },
+              },
+              
               {
                 field: 'time',
                 override: {
@@ -95,6 +105,7 @@ export const AppData = [
       },
       {
         name: 'Contacts',
+        actions:['phone'],
         displayName: 'Clients',
         icon: { ios: 'person.2.fill', android: 'contacts', web: 'fa fa-address-book' },
         fields: [
@@ -156,7 +167,7 @@ export const AppData = [
         name: 'Transactions',
         displayName: 'Transactions',
         icon: { ios: 'dollarsign.circle', android: 'currency-usd', web: 'fa fa-dollar-sign' },
-        views: [],
+        views: [StripeCheckout, StripeTerminal],
         fields: [],
       },
       {
@@ -175,7 +186,55 @@ export const AppData = [
         displayName: 'Inventory',
         icon: { ios: 'cube.box.fill', android: 'truck', web: 'fa fa-user-circle' },
         views: [InventoryList],
-        fields: [],
+        fields: [{
+                field: 'linkField',
+                override: {
+                  field: 'product',
+                  label: 'Product',
+                  type: 'object', // optional explicit
+
+                  inputConfig: {
+                    recordType: 'products',
+                    searchField: 'productName',
+                  },
+                  display: { order: 2 },
+                },
+              },
+               {
+              field: 'quantityInStock', // refers to base field in SharedNameFields
+              override: {
+                field: 'quantityInStock', // ← This changes the actual output key
+                label: 'Quantity In Stock',
+                required: true,
+                
+              },
+              
+            },
+               {
+              field: 'reorderLevel', // refers to base field in SharedNameFields
+              override: {
+                label: 'Reorder Level',
+                required: true,
+                
+              },
+            },
+            {
+              field: 'reorderQuantity', // refers to base field in SharedNameFields
+              override: {
+               label: 'Reorder Quantity',
+                required: true,
+                
+              },
+            },
+             {
+              field: 'location', // refers to base field in SharedNameFields
+              override: {
+              label: 'Storage Location',
+                required: true,
+                
+              },
+            },
+            ],
       }],
     settings: [shearSettings],
   },

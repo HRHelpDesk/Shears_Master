@@ -19,22 +19,19 @@ import { BASE_URL } from 'shears-shared/src/config/api';
 const StripeTerminal = ({ amount = 100, currency = 'usd', onPaymentSuccess, onPaymentCancel }) => {
   const { user } = useContext(AuthContext);
   
-  const {
-    initialize,
-    discoverReaders,
-    connectBluetoothReader,
-    connectInternetReader,
-    disconnectReader,
-    collectPaymentMethod,
-    confirmPaymentIntent,
-    cancelCollectPaymentMethod,
-    connectedReader,
-    discoveredReaders,
-  } = useStripeTerminal({
-    onUpdateDiscoveredReaders: (readers) => {
-      setReaders(readers);
-    },
-  });
+const {
+  initialize,
+  discoverReaders,
+  connectReader, // ✅ new unified method
+  disconnectReader,
+  collectPaymentMethod,
+  confirmPaymentIntent,
+  cancelCollectPaymentMethod,
+  connectedReader,
+  discoveredReaders,
+} = useStripeTerminal({
+  onUpdateDiscoveredReaders: (readers) => {setReaders(readers); console.log(readers)},
+});
 
   const [isInitialized, setIsInitialized] = useState(false);
   const [isDiscovering, setIsDiscovering] = useState(false);
@@ -73,8 +70,9 @@ const StripeTerminal = ({ amount = 100, currency = 'usd', onPaymentSuccess, onPa
         setLoadingAccount(false);
         return;
       }
-
+     console.log("Account", accountData.account)
       setStripeAccount(accountData.account);
+
 
       // Get or create location
       const locationRes = await fetch(`${BASE_URL}/v1/stripe/location/${user.userId}`, {
@@ -176,28 +174,40 @@ const StripeTerminal = ({ amount = 100, currency = 'usd', onPaymentSuccess, onPa
   };
 
   const handleConnectReader = async (reader) => {
-    try {
-      setIsProcessing(true);
-      const { error } = await connectBluetoothReader({
-        reader,
-        locationId: locationId, // Use the user's location
-      });
+  try {
+    setIsProcessing(true);
 
-      if (error) {
-        console.error('Reader connection error:', error);
-        Alert.alert('Connection Error', error.message);
-        return;
-      }
+    // Use the unified API shape: (paramsObject, discoveryMethod)
+    const { reader: connected, error } = await connectReader(
+      {
+        reader,                                  // ← full object from discovery
+        locationId: locationId || reader.locationId || 'tml_simulated',
+        // autoReconnectOnUnexpectedDisconnect: true, // optional
+      },
+      'bluetoothScan'                            // ← match your discovery method
+    );
+    console.log("Connected", connected)
 
-      Alert.alert('Success', `Connected to ${reader.label || 'reader'}`);
-      setPaymentMode('reader');
-    } catch (err) {
-      console.error('Failed to connect reader:', err);
-      Alert.alert('Error', 'Failed to connect to reader');
-    } finally {
-      setIsProcessing(false);
+    if (error) {
+      console.error('❌ connectReader error:', error);
+      Alert.alert('Connection Error', error.message);
+      return;
     }
-  };
+
+    console.log('✅ Reader connected:', connected);
+    Alert.alert('✅ Connected', connected?.serialNumber || 'Simulated Reader');
+    setPaymentMode('reader');
+  } catch (err) {
+    console.error('💥 Failed to connect reader:', err);
+    Alert.alert('Error', 'Failed to connect to reader');
+  } finally {
+    setIsProcessing(false);
+  }
+};
+
+
+
+
 
   const handleDisconnectReader = async () => {
     try {
@@ -480,17 +490,18 @@ const StripeTerminal = ({ amount = 100, currency = 'usd', onPaymentSuccess, onPa
             <View style={styles.readersList}>
               <Text style={styles.readersListTitle}>Available Readers:</Text>
               {readers.map((reader, index) => (
-                <TouchableOpacity
-                  key={reader.serialNumber || index}
-                  style={styles.readerItem}
-                  onPress={() => handleConnectReader(reader)}
-                >
-                  <Text style={styles.readerName}>
-                    {reader.label || `Reader ${index + 1}`}
-                  </Text>
-                  <Text style={styles.readerSerial}>{reader.serialNumber}</Text>
-                </TouchableOpacity>
-              ))}
+            <TouchableOpacity
+              key={reader.serialNumber || index}
+              onPress={() =>{console.log('This is running'); handleConnectReader(reader)}} // ✅ full object
+              style={styles.readerItem}
+            >
+              <Text style={styles.readerName}>
+                {reader.label || `Reader ${index + 1}`}
+              </Text>
+              <Text style={styles.readerSerial}>{reader.serialNumber}</Text>
+            </TouchableOpacity>
+          ))}
+
             </View>
           )}
         </View>

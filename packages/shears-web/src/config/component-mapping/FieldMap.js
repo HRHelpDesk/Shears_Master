@@ -1,3 +1,5 @@
+import PaymentButton from "../../components/BaseUI/SmartInputs/PaymentButton";
+import PhoneTextInput from "../../components/BaseUI/SmartInputs/PhoneTextInput";
 import PlainTextInput from "../../components/BaseUI/SmartInputs/PlainTextInput";
 import { SmartDateInput, SmartTimeInput } from "../../components/BaseUI/SmartInputs/SmartDateTimeInputs";
 import SmartDialogLinkSelectInput from "../../components/BaseUI/SmartInputs/SmartDialogLinkSelectInput";
@@ -10,6 +12,8 @@ export const FieldMap = {
   select: SmartDialogSelect,
   linkSelect: SmartDialogLinkSelectInput,
   date: SmartDateInput, // replace with DatePickerInput
+  phone:PhoneTextInput,
+  paymentButton: PaymentButton,
 //   number: PlainTextInput,
   time: SmartTimeInput,
 };

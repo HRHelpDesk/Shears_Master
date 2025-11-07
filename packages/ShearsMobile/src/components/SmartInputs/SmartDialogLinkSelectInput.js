@@ -24,10 +24,61 @@ import {
 import { AuthContext } from '../../context/AuthContext';
 import { getRecords } from 'shears-shared/src/Services/Authentication';
 
-// Enable smooth LayoutAnimation on Android
+// ✅ NEW: inline phone actions
+import FieldActionsForEntry from "../BaseUI/ActionMenu/FieldActionsForEntry";
+
+// ✅ Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
+
+/* ============================================================
+   ✅ Helper: Format price/duration
+============================================================ */
+const formatLinkedValue = (key, value) => {
+  if (!value) return "";
+
+  if (key === "price") {
+    const num = parseFloat(value);
+    return isNaN(num) ? value : `$${num.toFixed(2)}`;
+  }
+
+  if (key === "duration" && typeof value === "object") {
+    const h = value.hours || "0";
+    const m = value.minutes || "00";
+    return `${h}h ${m}m`;
+  }
+
+  return value;
+};
+
+/* ============================================================
+   ✅ Helper: Determine which fields to show
+============================================================ */
+const getLinkedDisplayFields = (raw) => {
+  if (!raw || typeof raw !== "object") return [];
+
+  const fields = [];
+
+  if (raw.price != null) {
+    fields.push({ key: "price", label: "Price", layout: "inline" });
+  }
+
+  if (raw.duration != null) {
+    fields.push({ key: "duration", label: "Duration", layout: "inline" });
+  }
+
+  // ✅ NEW: Phone support
+  if (raw.phone && Array.isArray(raw.phone)) {
+    fields.push({ key: "phone", label: "Phone", layout: "inline" });
+  }
+
+  if (raw.description) {
+    fields.push({ key: "description", label: "Description", layout: "full" });
+  }
+
+  return fields;
+};
 
 export default function SmartDialogLinkSelectInput({
   label,
@@ -41,33 +92,33 @@ export default function SmartDialogLinkSelectInput({
 }) {
   const { token, user } = useContext(AuthContext);
   const theme = useTheme();
+
   const [visible, setVisible] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef(null);
 
-  /* -------------------------------------------------------------------------- */
-  /*                                  EFFECTS                                   */
-  /* -------------------------------------------------------------------------- */
-
-  // Keep search display synced to selected value
+  /* ============================================================
+     ✅ EFFECT: Sync displayed value
+  ============================================================ */
   useEffect(() => {
-    if (value && typeof value === 'object' && value.name) {
-      setSearchValue(value.name);
-    } else if (typeof value === 'string') {
-      setSearchValue(value);
-    } else {
-      setSearchValue('');
-    }
+    if (value?.name) setSearchValue(value.name);
+    else if (typeof value === "string") setSearchValue(value);
+    else setSearchValue("");
   }, [value]);
 
-  // Fetch records when visible
+  /* ============================================================
+     ✅ EFFECT: Fetch records when dialog opens
+  ============================================================ */
   useEffect(() => {
     if (visible) fetchRecords();
   }, [visible]);
 
-  // Smooth scroll when keyboard opens
+  /* ============================================================
+     ✅ EFFECT: Smooth scroll on keyboard
+  ============================================================ */
   useEffect(() => {
     const showListener = Keyboard.addListener('keyboardDidShow', () => {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -76,13 +127,13 @@ export default function SmartDialogLinkSelectInput({
     return () => showListener.remove();
   }, []);
 
-  /* -------------------------------------------------------------------------- */
-  /*                               DATA FETCHING                                */
-  /* -------------------------------------------------------------------------- */
-
+  /* ============================================================
+     ✅ DATA FETCHING
+  ============================================================ */
   const fetchRecords = async (query = '') => {
     if (!token) return;
     setLoading(true);
+
     try {
       const response = await getRecords({
         recordType: recordTypeName.toLowerCase(),
@@ -95,26 +146,29 @@ export default function SmartDialogLinkSelectInput({
       const formatted =
         response?.map((r) => {
           const fields = r.fieldsData || {};
-          const nameKeys = Object.keys(fields).filter(
-            (key) => key.toLowerCase().includes('name') && fields[key]
+          const nameKeys = Object.keys(fields).filter(k =>
+            k.toLowerCase().includes("name") && fields[k]
           );
+
           const displayName = nameKeys.length
-            ? nameKeys
-                .slice(0, 2)
-                .map((key) => fields[key])
-                .join(' ')
-            : '(Unnamed)';
+            ? nameKeys.slice(0, 2).map(k => fields[k]).join(" ")
+            : "(Unnamed)";
+
           return { _id: r._id, name: displayName, raw: fields };
         }) || [];
 
       const filtered = query
-        ? formatted.filter((r) => r.name.toLowerCase().includes(query.toLowerCase()))
+        ? formatted.filter(r =>
+            r.name.toLowerCase().includes(query.toLowerCase())
+          )
         : formatted;
 
       setRecords(filtered);
+
     } catch (err) {
-      console.error('Error fetching records:', err);
+      console.error("Error fetching records:", err);
       setRecords([]);
+
     } finally {
       setLoading(false);
     }
@@ -126,44 +180,169 @@ export default function SmartDialogLinkSelectInput({
     setRecords([]);
   };
 
-  /* -------------------------------------------------------------------------- */
-  /*                                 READ MODE                                  */
-  /* -------------------------------------------------------------------------- */
+  /* ============================================================
+     ✅ READ MODE
+  ============================================================ */
   if (mode === 'read') {
-    const displayText =
-      (value && typeof value === 'object' && value.name) ||
-      (typeof value === 'string' && value) ||
-      '';
+    const raw = value?.raw || {};
+    const fields = getLinkedDisplayFields(raw);
+
+    const compact = fields.filter(f => f.layout === "inline");
+    const fullWidth = fields.filter(f => f.layout === "full");
 
     return (
-      <View style={styles.readContainer}>
+      <View style={{ marginBottom: 12 }}>
         <Text
           variant="titleMedium"
-          style={[styles.label, { color: theme.colors.primary }]}
+          style={{ marginBottom: 6, color: theme.colors.primary }}
         >
           {label}
         </Text>
 
-        <Text
-          variant="bodyLarge"
-          style={[styles.readValue, { color: theme.colors.text }]}
+        {/* Dropdown header */}
+        <TouchableOpacity
+          onPress={() => {
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            setExpanded(!expanded);
+          }}
+          activeOpacity={0.8}
         >
-          {displayText ? (
-            displayText
-          ) : (
-            <Text style={{ color: theme.colors.textLight, fontStyle: 'italic' }}>
-              Not set
+          <View
+            style={{
+              backgroundColor: theme.dark
+                ? 'rgba(255,255,255,0.06)'
+                : 'rgba(0,0,0,0.05)',
+              padding: 14,
+              borderRadius: 8,
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <Text
+              variant="titleMedium"
+              style={{ fontWeight: '600', color: theme.colors.text }}
+            >
+              {value?.name || (
+                <Text style={{ color: theme.colors.textSecondary, fontStyle: 'italic' }}>
+                  Not set
+                </Text>
+              )}
             </Text>
-          )}
-        </Text>
+
+            <Text
+              style={{
+                fontSize: 18,
+                color: theme.colors.textSecondary,
+                transform: [{ rotate: expanded ? '180deg' : '0deg' }],
+              }}
+            >
+              ▼
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* ✅ Expandable detail */}
+        {expanded && (
+          <View style={{ paddingHorizontal: 6, paddingTop: 12 }}>
+
+            {/* ✅ Inline compact fields */}
+            {compact.length > 0 && (
+              <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+                {compact.map((f) => {
+                const isPhoneField = f.key === "phone";
+
+                let formatted;
+                let phoneEntry = null;
+
+                if (isPhoneField) {
+                  if (Array.isArray(raw.phone) && raw.phone.length > 0) {
+                    phoneEntry = raw.phone[0];      // object {label, value}
+                    formatted = phoneEntry.value;   // ✅ ONLY render the number
+                  } else {
+                    formatted = "Not set";
+                  }
+                } else {
+                  formatted = formatLinkedValue(f.key, raw[f.key]); 
+                }
+
+                  return (
+                    <View
+                      key={f.key}
+                      style={{ width: "50%", marginBottom: 12 }}
+                    >
+                      <Text
+                        style={{
+                          color: theme.colors.textSecondary,
+                          marginBottom: 2,
+                          fontSize: 12,
+                        }}
+                      >
+                        {f.label}
+                      </Text>
+
+                    <View
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          flexWrap: "nowrap",  
+                          minWidth: 0,      
+                          flex: 1,           
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: theme.colors.text,
+                            fontWeight: "500",
+                            fontSize: 14,
+                            marginRight: 6,
+                          }}
+                        >
+                          {formatted}
+                        </Text>
+
+                        {/* ✅ Inline phone actions */}
+                        {isPhoneField && phoneEntry && (
+                          <View style={{ marginLeft: 4, flexDirection: "row", alignItems: "center" }}>
+                          <FieldActionsForEntry entry={phoneEntry} />
+                        </View>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
+            {/* ✅ Full width fields */}
+            {fullWidth.map((f) => {
+              const formatted = formatLinkedValue(f.key, raw[f.key]);
+              return (
+                <View key={f.key} style={{ marginBottom: 12 }}>
+                  <Text
+                    style={{
+                      color: theme.colors.textSecondary,
+                      marginBottom: 2,
+                      fontSize: 12,
+                    }}
+                  >
+                    {f.label}
+                  </Text>
+                  <Text style={{ color: theme.colors.text, fontSize: 14 }}>
+                    {formatted}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
       </View>
     );
   }
 
-  /* -------------------------------------------------------------------------- */
-  /*                                 EDIT MODE                                  */
-  /* -------------------------------------------------------------------------- */
-
+  /* ============================================================
+     ✅ EDIT MODE
+  ============================================================ */
   const borderColor = error
     ? theme.colors.error
     : visible
@@ -172,21 +351,16 @@ export default function SmartDialogLinkSelectInput({
 
   return (
     <View style={styles.editContainer}>
-      {/* Label */}
       <Text
         variant="labelMedium"
         style={[
           styles.label,
-          {
-            color: error ? theme.colors.error : theme.colors.text,
-            marginBottom: 6,
-          },
+          { color: error ? theme.colors.error : theme.colors.text },
         ]}
       >
         {label}
       </Text>
 
-      {/* Touchable Selector */}
       <TouchableOpacity onPress={() => setVisible(true)} activeOpacity={0.8}>
         <View
           style={[
@@ -210,7 +384,6 @@ export default function SmartDialogLinkSelectInput({
         </View>
       </TouchableOpacity>
 
-      {/* Helper or Error Text */}
       {(helperText || error) && (
         <Text
           variant="bodySmall"
@@ -239,6 +412,7 @@ export default function SmartDialogLinkSelectInput({
             ]}
           >
             <Dialog.Title>Select {label}</Dialog.Title>
+
             <Dialog.Content style={{ maxHeight: 320 }}>
               <TextInput
                 placeholder="Search..."
@@ -273,7 +447,8 @@ export default function SmartDialogLinkSelectInput({
                       }}
                     />
                   ))}
-                  {records.length === 0 && !loading && (
+
+                  {records.length === 0 && (
                     <Text
                       style={{
                         textAlign: 'center',
@@ -288,6 +463,7 @@ export default function SmartDialogLinkSelectInput({
                 </ScrollView>
               )}
             </Dialog.Content>
+
             <Dialog.Actions>
               <Button onPress={() => setVisible(false)}>Cancel</Button>
             </Dialog.Actions>
@@ -298,23 +474,15 @@ export default function SmartDialogLinkSelectInput({
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/*                                   STYLES                                   */
-/* -------------------------------------------------------------------------- */
+/* ============================================================
+   ✅ Styles
+============================================================ */
 const styles = StyleSheet.create({
-  // READ MODE
-  readContainer: {
-    marginBottom: 4,
-  },
   label: {
     fontWeight: '500',
     marginBottom: 4,
   },
-  readValue: {
-    lineHeight: 22,
-  },
 
-  // EDIT MODE
   editContainer: {
     marginBottom: 12,
   },
@@ -329,7 +497,6 @@ const styles = StyleSheet.create({
   },
   selectorText: {
     fontSize: 16,
-    fontFamily: 'System',
   },
   dropdownIcon: {
     fontSize: 18,

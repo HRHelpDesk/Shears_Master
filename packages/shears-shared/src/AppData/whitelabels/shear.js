@@ -3,49 +3,74 @@ export const shearWhitelabels = [
     whiteLabel: 'shear',
     app: 'shear',
     themeColors: {
-      light: {
-        primary: '#4A90E2', // Vibrant blue for primary actions (buttons, highlights)
-        secondary: '#50E3C2', // Teal for secondary elements (accents, secondary buttons)
-        accent: '#F5A623', // Warm gold for highlights or call-to-action
-        background: '#F5F5F5', // Light gray for a clean background
-        surface: '#FFFFFF', // White for cards, dialogs, etc.
-        text: '#2E2E2E', // Dark gray for primary text
-        textSecondary: '#6B7280', // Muted gray for secondary text
-        textLight: '#A3A3A3', // Light gray for hints or disabled text
-        primaryContainer: '#DCE3F5', // Light blue for containers (e.g., chips, backgrounds)
-        secondaryContainer: '#D1FAE5', // Light teal for secondary containers
-        error: '#EF4444', // Red for errors
-        onPrimary: '#FFFFFF', // Text/icon color on primary background
-        onSecondary: '#1F2A44', // Text/icon color on secondary background
-        onSurface: '#2E2E2E', // Text/icon color on surface
-        border: '#E5E7EB', // Subtle border color
-        disabled: '#D1D5DB', // Gray for disabled elements
-      },
-      dark: {
-        primary: '#6AA8F7', // Lighter blue for dark mode primary
-        secondary: '#6EE7B7', // Lighter teal for dark mode secondary
-        accent: '#FBBF24', // Brighter gold for dark mode accents
-        background: '#1F2A44', // Dark navy for background
-        surface: '#374151', // Dark gray for cards, dialogs
-        text: '#F3F4F6', // Light gray for primary text
-        textSecondary: '#D1D5DB', // Muted gray for secondary text
-        textLight: '#9CA3AF', // Light gray for hints or disabled text
-        primaryContainer: '#3B82F6', // Slightly darker blue for containers
-        secondaryContainer: '#34D399', // Slightly darker teal for containers
-        error: '#F87171', // Lighter red for errors
-        onPrimary: '#1F2A44', // Text/icon color on primary background
-        onSecondary: '#1F2A44', // Text/icon color on secondary background
-        onSurface: '#F3F4F6', // Text/icon color on surface
-        border: '#4B5563', // Subtle border color for dark mode
-        disabled: '#6B7280', // Gray for disabled elements
-      },
-      primary: '#4A90E2',
-      secondary: '#50E3C2',
-      background: '#ff0000ff',
-      text: '#4A4A4A',
-      textLight: '#838383ff',
-      primaryContainer:'#4a91e2a8'
-    },
+  light: {
+    primary: '#4A90E2',
+    secondary: '#50E3C2',
+    accent: '#F5A623',
+    background: '#F5F5F5',
+    surface: '#FFFFFF',
+    surfaceVariant: '#F9FAFB', // Very subtle gray for sections
+    text: '#2E2E2E',
+    textSecondary: '#6B7280',
+    textLight: '#A3A3A3',
+    primaryContainer: '#DCE3F5',
+    secondaryContainer: '#D1FAE5',
+    error: '#EF4444',
+    onPrimary: '#FFFFFF',
+    onSecondary: '#1F2A44',
+    onSurface: '#2E2E2E',
+    border: '#E5E7EB',
+    borderLight: '#F3F4F6', // Even lighter border
+    disabled: '#D1D5DB',
+    // Input specific
+    inputBackground: '#FFFFFF',
+    inputBorder: '#E5E7EB',
+    inputFocusBorder: '#4A90E2',
+  },
+  dark: {
+    primary: '#6AA8F7',
+    secondary: '#6EE7B7',
+    accent: '#FBBF24',
+    background: '#1F2A44',
+    surface: '#374151',
+    surfaceVariant: '#2D3748', // Slightly lighter than surface
+    text: '#F3F4F6',
+    textSecondary: '#D1D5DB',
+    textLight: '#9CA3AF',
+    primaryContainer: '#3B82F6',
+    secondaryContainer: '#34D399',
+    error: '#F87171',
+    onPrimary: '#1F2A44',
+    onSecondary: '#1F2A44',
+    onSurface: '#F3F4F6',
+    border: '#4B5563',
+    borderLight: '#374151',
+    disabled: '#6B7280',
+    // Input specific
+    inputBackground: '#374151',
+    inputBorder: '#4B5563',
+    inputFocusBorder: '#6AA8F7',
+  },
+  
+  // Spacing system (multiply by 8)
+  spacing: {
+    xs: 4,
+    sm: 8,
+    md: 16,
+    lg: 24,
+    xl: 32,
+    xxl: 48,
+  },
+  
+  // Border radius
+  radius: {
+    sm: 4,
+    md: 8,
+    lg: 12,
+    xl: 16,
+    full: 9999,
+  },
+}
   },
   {
     whiteLabel: 'purpose',

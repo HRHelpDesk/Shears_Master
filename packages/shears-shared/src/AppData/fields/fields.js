@@ -10,6 +10,7 @@ import { DialogFields } from './types/shared/dialog-fields.js';
 import { SharedTextareaFields } from './types/shared/extended-text.js';
 import { SharedLinkField } from './types/shared/link.js';
 import { SharedNameFields } from './types/shared/name.js';
+import { PaymentFields } from './types/shared/payment-fields.js';
 
 export const Fields = [
  ...SharedNameFields,
@@ -22,8 +23,8 @@ export const Fields = [
  ...CommunicationFields,
  ...ProductCoreFields,
  ...ProductSupplierFields,
- ...ServiceCoreFields
-
+ ...ServiceCoreFields,
+  ...PaymentFields, 
 
  
 ];

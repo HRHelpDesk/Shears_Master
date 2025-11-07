@@ -10,6 +10,9 @@ import PlainTextInput from "../../components/SmartInputs/PlainTextInput";
 import DialogSelectInput from "../../components/SmartInputs/DialogSelectInput";
 import SmartDialogLinkSelectInput from "../../components/SmartInputs/SmartDialogLinkSelectInput";
 import PhoneTextInput from "../../components/SmartInputs/PhoneTextInput";
+import SmartCurrencyInput from "../../components/SmartInputs/SmartCurrencyInput";
+
+import PaymentButton from "../../components/SmartInputs/PaymentButton";
 
 export const FieldMap = {
   text: PlainTextInput,
@@ -19,5 +22,7 @@ export const FieldMap = {
   date: DatePickerInput, // replace with DatePickerInput
   number: PlainTextInput,
   time: TimePickerInput,
-  phone: PhoneTextInput
+  phone: PhoneTextInput,
+  paymentButton: PaymentButton,
+  currency: SmartCurrencyInput
 };

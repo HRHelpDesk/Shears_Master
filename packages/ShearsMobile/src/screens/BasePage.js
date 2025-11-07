@@ -18,12 +18,15 @@ const FallbackComponent = () => (
   </View>
 );
 
-export default function BasePage({ appConfig, name, viewData = [], displayName, settings = [] }) {
+export default function BasePage({ appConfig, name, viewData = [], displayName, settings = [], subNav }) {
   const isFocused = useIsFocused();
   const theme = useTheme();
   const { token, user } = useContext(AuthContext);
 
-  const route = appConfig.mainNavigation.find((r) => r.name === name);
+  const route = 
+  subNav ?
+  appConfig.subNavigation.find((r) => r.name === name): appConfig.mainNavigation.find((r) => r.name === name);
+  console.log('route', route)
   const views = route?.views || [];
 const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
@@ -35,15 +38,21 @@ const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   // Map view components safely
   const activeViews = views.map((view) => {
+
     const Component = COMPONENTS[view.mobileComponent];
     if (!Component) {
       console.warn(`⚠️ Missing component: ${view.mobileComponent}. Using fallback.`);
     }
     return { ...view, component: Component || FallbackComponent };
   });
-
+  
+console.log('activeView', activeViews)
   const activeView = activeViews[activeTab] || null;
-  const fieldsFromConfig = activeView?.fields || viewData[activeTab]?.fields || [];
+  console.log('activeView', activeView)
+
+  const fieldsFromConfig = route?.fields || viewData[activeTab]?.fields || [];
+    console.log('activeView', fieldsFromConfig)
+
   const mappedFields = mapFields(fieldsFromConfig);
 
   /**
@@ -70,6 +79,8 @@ const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
         subscriberId: user.subscriberId,
         userId: user.userId,
       });
+
+      console.log(response)
 
       setData(response || []);
       setError(null);
@@ -102,7 +113,7 @@ useEffect(() => {
   const dynamicProps = {
     name: activeView?.displayName || name,
     fields: mappedFields,
-    data,
+    data: data,
     appConfig,
     refreshing,
     onRefresh: () => fetchRecords(true),

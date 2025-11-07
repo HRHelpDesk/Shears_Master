@@ -11,8 +11,7 @@ import { getAppConfig } from 'shears-shared/src/config/getAppConfig';
 import { CURRENT_APP, CURRENT_WHITE_LABEL } from 'shears-shared/src/config/currentapp';
 import { AppLogos } from '../config/appLogos';
 import CalendarListView from '../components/Calendar/CalendarListView';
-import { StripeTerminalProvider } from '@stripe/stripe-terminal-react-native';
-import { BASE_URL } from 'shears-shared/src/config/api';
+import { useStripeTerminal } from '@stripe/stripe-terminal-react-native';
 
 const Stack = createNativeStackNavigator();
 const appConfig = getAppConfig(CURRENT_APP, CURRENT_WHITE_LABEL);
@@ -27,45 +26,21 @@ function AppRoutes() {
   useEffect(() => {
     userRef.current = user;
     console.log(user)
+    console.log(appConfig)
   }, [user]);
 
-  const fetchConnectionToken = async () => {
-    try {
-      const currentUser = userRef.current;
-      
-      if (!currentUser?.stripeAccountId) {
-        console.warn('⚠️ No Stripe Account ID available');
-        throw new Error('Missing Stripe Account ID');
-      }
+  // App.tsx
+    const { initialize } = useStripeTerminal();
 
-      const response = await fetch(`${BASE_URL}/v1/stripe/connection_token`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stripeAccountId: currentUser.stripeAccountId }),
-      });
+   useEffect(() => {
+    initialize();
+  }, [initialize])
 
-      // ⚠️ Don't call .json() twice! Store it first
-      const data = await response.json();
-      console.log('📡 Connection token response:', data);
-
-      if (!data?.secret) throw new Error('Missing connection token secret');
-      return data.secret;
-    } catch (err) {
-      console.error('❌ Error fetching connection token:', err);
-      throw err;
-    }
-  };
 
   if (loading) return <SplashScreen appConfig={appConfig} logo={logo} />;
 
   return (
-    <StripeTerminalProvider 
-    logLevel="verbose" 
-    tokenProvider={fetchConnectionToken} 
-    onUnexpectedReaderDisconnect={() => {
-    console.warn('⚠️ Reader disconnected unexpectedly');
-  }}
-    >
+
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!isLoggedIn ? (
           <Stack.Screen name="Login">
@@ -102,11 +77,13 @@ function AppRoutes() {
           </>
         )}
       </Stack.Navigator>
-    </StripeTerminalProvider>
   );
 }
 
 export default function AppNavigator() {
+
+
+
   return (
     <AuthProvider>    
       <NavigationContainer>

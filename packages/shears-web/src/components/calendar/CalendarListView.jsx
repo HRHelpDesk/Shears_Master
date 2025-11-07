@@ -18,8 +18,7 @@ import {
 } from '@mui/material';
 import { Search as SearchIcon, Add as AddIcon } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
-import { humanizeFieldName, singularize } from 'shears-shared/src/utils/stringHelpers';
-import ItemDrawer from '../BaseUI/ItemDrawer';
+import { humanizeFieldName } from 'shears-shared/src/utils/stringHelpers';
 import ListItemDetail from '../BaseUI/ListItemDetail';
 
 /* ------------------------------------------------------------------
@@ -44,56 +43,143 @@ const SearchField = styled(TextField)(({ theme }) => ({
 }));
 
 /* ------------------------------------------------------------------
-   Helper Functions
+   DATE HELPERS — FIX TIMEZONE SHIFT 100%
 ------------------------------------------------------------------ */
-const formatTime12 = (timeStr) => {
-  if (!timeStr) return '';
-  const [hours, minutes] = timeStr.split(':');
-  let h = parseInt(hours, 10);
-  const suffix = h >= 12 ? 'PM' : 'AM';
-  h = h % 12 || 12;
-  return `${h}:${minutes} ${suffix}`;
+
+// ✅ Convert ANY input into YYYY-MM-DD (safe)
+const toYMD = (value) => {
+  if (!value) return '';
+
+  // already correct format
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+
+  const d = new Date(value);
+  if (isNaN(d)) return '';
+
+  // ISO → YMD
+  return d.toISOString().slice(0, 10);
 };
 
-const formatDatePretty = (dateStr) => {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString(undefined, {
+// ✅ Convert YYYY-MM-DD to pretty display without shift
+const formatDatePretty = (value) => {
+  if (!value) return '';
+
+  // ✅ Handle simple YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [y, m, d] = value.split('-').map(Number);
+
+    // ✅ Construct UTC date to avoid timezone shifts
+    const date = new Date(Date.UTC(y, m - 1, d));
+
+    return date.toLocaleDateString(undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      timeZone: 'UTC',   // ✅ CRITICAL — forces correct display
+    });
+  }
+
+  // ✅ If it's a full ISO timestamp, use the previous safe handler
+  const date = new Date(value);
+  if (isNaN(date)) return value;
+
+  return date.toLocaleDateString(undefined, {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
   });
 };
 
-const renderObjectAsString = (obj, fieldName) => {
-  if (!obj || typeof obj !== 'object') return obj ?? '';
 
+// ✅ Sorting key for YMD date (UTC midnight)
+const dateSortKey = (value) => {
+  const ymd = toYMD(value);
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd);
+  if (!match) return Number.NEGATIVE_INFINITY;
+
+  const [_, y, m, d] = match;
+  return Date.UTC(Number(y), Number(m) - 1, Number(d));
+};
+
+/* ------------------------------------------------------------------
+   Other helpers
+------------------------------------------------------------------ */
+const formatTime12 = (t) => {
+  if (!t) return '';
+  const [h, m] = t.split(':');
+  let hour = Number(h);
+  const suffix = hour >= 12 ? 'PM' : 'AM';
+  hour = hour % 12 || 12;
+  return `${hour}:${m} ${suffix}`;
+};
+
+const renderObjectAsString = (obj, fieldName) => {
+  if (!obj) return '';
+
+  // ✅ Direct scalar or string
+  if (typeof obj !== 'object') return obj;
+
+  // ✅ TIME FIELD
   if (fieldName === 'time' && obj.startTime) {
     const start = formatTime12(obj.startTime);
     const end = obj.endTime ? ` – ${formatTime12(obj.endTime)}` : '';
     return `${start}${end}`;
   }
 
+  // ✅ DURATION FIELD
   if (fieldName === 'duration' && (obj.hours || obj.minutes)) {
-    const h = obj.hours && obj.hours !== '0' ? `${obj.hours}h ` : '';
+    const h = obj.hours && obj.hours !== '0' ? `${obj.hours}h` : '';
     const m = obj.minutes && obj.minutes !== '0' ? `${obj.minutes}m` : '';
-    return `${h}${m}`.trim() || '0m';
+    return [h, m].filter(Boolean).join(' ') || '0m';
   }
 
+  // ✅ ARRAY OF LINKED RECORDS (SERVICES, PRODUCTS, CONTACTS, ETC.)
+  if (Array.isArray(obj)) {
+    if (obj.length === 0) return '—';
+
+    // ✅ If every item has a name → render names cleanly
+    const allHaveName = obj.every(
+      (i) => i && typeof i === 'object' && i.name
+    );
+    if (allHaveName) {
+      return obj.map((i) => i.name).join(', ');
+    }
+
+    // ✅ Generic fallback for objects with value or label
+    const allHaveLabelOrValue = obj.every(
+      (i) =>
+        i &&
+        typeof i === 'object' &&
+        (i.label || i.value)
+    );
+
+    if (allHaveLabelOrValue) {
+      return obj
+        .map((i) => {
+          if (i.label && i.value) return `${i.label}: ${i.value}`;
+          return i.value || i.label || '';
+        })
+        .filter(Boolean)
+        .join(', ');
+    }
+
+    // ✅ FINAL fallback for odd arrays
+    return obj.map((i) => JSON.stringify(i)).join(', ');
+  }
+
+  // ✅ SINGLE LINKED RECORD
   if (obj.name) return obj.name;
   if (obj.label && obj.value) return `${obj.label}: ${obj.value}`;
-  if (Array.isArray(obj))
-    return obj
-      .map((i) =>
-        typeof i === 'object' && i.value ? `${i.label || ''}: ${i.value}` : String(i)
-      )
-      .join(', ');
 
-  return Object.values(obj).join(', ');
+  // ✅ Generic object fallback
+  return Object.values(obj)
+    .map((v) => (typeof v === 'object' ? JSON.stringify(v) : String(v)))
+    .join(', ');
 };
 
+
 /* ------------------------------------------------------------------
-   Component
+   COMPONENT
 ------------------------------------------------------------------ */
 export default function CalendarListView({
   data = [],
@@ -101,7 +187,7 @@ export default function CalendarListView({
   name = 'Calendar',
   refreshing = false,
   onRefresh,
-  fields
+  fields,
 }) {
   const [search, setSearch] = useState('');
   const [sortField, setSortField] = useState('date');
@@ -109,7 +195,7 @@ export default function CalendarListView({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState('read');
   const [selectedItem, setSelectedItem] = useState(null);
-  
+
   const displayFields = [
     { field: 'contact', label: 'Client' },
     { field: 'service', label: 'Service' },
@@ -126,32 +212,43 @@ export default function CalendarListView({
       setSortOrder('asc');
     }
   };
-    console.log("data")
-
 
   /* --------------------------------------------------------------
      Filtering + Sorting
   -------------------------------------------------------------- */
   const filteredData = useMemo(() => {
-    let filtered = data.filter((item) => {
+    const filtered = data.filter((item) => {
       const fd = item.fieldsData || {};
-      const contactName = fd.contact?.name?.toLowerCase() || '';
-      const serviceName = fd.service?.name?.toLowerCase() || '';
-      const date = fd.date?.toLowerCase() || '';
       const searchTerm = search.toLowerCase();
 
+      const contact = fd.contact?.name?.toLowerCase() || '';
+      const service = fd.service?.name?.toLowerCase() || '';
+      const date = fd.date?.toLowerCase() || '';
+
       return (
-        contactName.includes(searchTerm) ||
-        serviceName.includes(searchTerm) ||
+        contact.includes(searchTerm) ||
+        service.includes(searchTerm) ||
         date.includes(searchTerm)
       );
     });
 
+    // ✅ Date-safe sorting
     filtered.sort((a, b) => {
       const aValue = a.fieldsData?.[sortField];
       const bValue = b.fieldsData?.[sortField];
+
+      if (sortField === 'date') {
+        const aKey = dateSortKey(aValue);
+        const bKey = dateSortKey(bValue);
+
+        if (aKey < bKey) return sortOrder === 'asc' ? -1 : 1;
+        if (aKey > bKey) return sortOrder === 'asc' ? 1 : -1;
+        return 0;
+      }
+
       const aStr = renderObjectAsString(aValue, sortField).toLowerCase();
       const bStr = renderObjectAsString(bValue, sortField).toLowerCase();
+
       if (aStr < bStr) return sortOrder === 'asc' ? -1 : 1;
       if (aStr > bStr) return sortOrder === 'asc' ? 1 : -1;
       return 0;
@@ -188,13 +285,7 @@ export default function CalendarListView({
       }}
     >
       {/* Header Section */}
-      <Grid
-        container
-        spacing={2}
-        alignItems="center"
-        justifyContent="space-between"
-        sx={{ mb: 2, flexShrink: 0 }}
-      >
+      <Grid container spacing={2} alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
         <Grid item xs={12} sm={8} md={9}>
           <SearchField
             fullWidth
@@ -233,6 +324,7 @@ export default function CalendarListView({
           <TableHead>
             <TableRow>
               <TableCell></TableCell>
+
               {displayFields.map((field) => (
                 <TableCell key={field.field}>
                   <TableSortLabel
@@ -250,6 +342,7 @@ export default function CalendarListView({
           <TableBody>
             {filteredData.map((item, index) => {
               const fd = item.fieldsData || {};
+
               const initials = fd.contact?.name
                 ? fd.contact.name
                     .split(' ')
@@ -259,12 +352,7 @@ export default function CalendarListView({
                 : '?';
 
               return (
-                <TableRow
-                  key={index}
-                  hover
-                  sx={{ cursor: 'pointer' }}
-                  onClick={() => handleRowClick(item)}
-                >
+                <TableRow key={index} hover sx={{ cursor: 'pointer' }} onClick={() => handleRowClick(item)}>
                   <TableCell>
                     <Avatar>{initials}</Avatar>
                   </TableCell>
@@ -286,20 +374,20 @@ export default function CalendarListView({
       </Box>
 
       {/* Drawer */}
-     {drawerOpen && (
-    <ListItemDetail
-      open={drawerOpen} 
-      onClose={() => {
-      setDrawerOpen(false);
-      if (onRefresh) onRefresh(); // ✅ Refresh list data when modal closes
-    }}
-      item={selectedItem}
-      appConfig={appConfig}
-      fields={fields}
-      mode={drawerMode}
-      name={data[0].recordType}
-      />
-)}
+      {drawerOpen && (
+        <ListItemDetail
+          open={drawerOpen}
+          onClose={() => {
+            setDrawerOpen(false);
+            if (onRefresh) onRefresh();
+          }}
+          item={selectedItem}
+          appConfig={appConfig}
+          fields={fields}
+          mode={drawerMode}
+          name={data[0]?.recordType}
+        />
+      )}
     </TableContainerStyled>
   );
 }

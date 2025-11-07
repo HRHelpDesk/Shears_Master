@@ -2,6 +2,7 @@
 import React from 'react';
 import { Box, Typography, TextField } from '@mui/material';
 import { useTheme, alpha } from '@mui/material/styles';
+import { formatAsLocalDate } from 'shears-shared/src/utils/stringHelpers';
 
 /* ------------------------------------------------------------------
    📅 SmartDateInput
@@ -16,17 +17,33 @@ export function SmartDateInput({
   const theme = useTheme();
 
   // format date for display
-  const formatDateDisplay = (val) => {
-    if (!val) return '';
-    const date = new Date(val);
-    return !isNaN(date)
-      ? date.toLocaleDateString([], {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric',
-        })
-      : val;
-  };
+const formatDateDisplay = (val) => {
+  if (!val) return '';
+
+  // ✅ Handle plain YYYY-MM-DD strings — NO timezone shift
+  if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+    const [y, m, d] = val.split('-').map(Number);
+
+    const date = new Date(Date.UTC(y, m - 1, d));
+    return date.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      timeZone: 'UTC',
+    });
+  }
+
+  // ✅ Fallback for full timestamps
+  const date = new Date(val);
+  return !isNaN(date)
+    ? date.toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      })
+    : val;
+};
+
 
   /** READ MODE */
   if (mode === 'read') {
@@ -68,7 +85,7 @@ export function SmartDateInput({
         fullWidth
         variant="outlined"
         type="date"
-        value={value ? new Date(value).toISOString().split('T')[0] : ''}
+        value={value ? formatAsLocalDate(value) : ''}
         onChange={(e) => onChangeText(e.target.value)}
         placeholder={placeholder || `Select ${label}`}
         sx={{

@@ -1,31 +1,41 @@
-/** @module fields/types/contact/address */
 export const AddressFields = [
   {
     field: 'address',
-    type: 'Array',
+    type: 'array',
     label: 'Addresses',
-    displayInList: false,
-    required: false,
+    input: 'array',
     arrayConfig: {
       object: [
         {
           field: 'label',
           type: 'string',
           label: 'Label',
-          defaultValue: 'Home',
           input: 'select',
           inputConfig: {
             options: ['Home', 'Work', 'Billing', 'Shipping', 'Other'],
           },
+          layout: { row: 1, span: 1 },
         },
-        { field: 'street', type: 'string', label: 'Street', required: false, input: 'text' },
-        { field: 'city', type: 'string', label: 'City', required: false, input: 'text' },
+        {
+          field: 'street',
+          type: 'string',
+          label: 'Street',
+          input: 'text',
+          layout: { row: 2, span: 3 }, // full-width
+        },
+        {
+          field: 'city',
+          type: 'string',
+          label: 'City',
+          input: 'text',
+          layout: { row: 3, span: 1 },
+        },
         {
           field: 'state',
           type: 'string',
           label: 'State',
-          required: false,
           input: 'select',
+          layout: { row: 3, span: 1 },
           inputConfig: {
             options: [
               'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA',
@@ -40,8 +50,8 @@ export const AddressFields = [
           field: 'zip',
           type: 'string',
           label: 'ZIP Code',
-          validations: { pattern: /^\d{5}(-\d{4})?$/ },
           input: 'zipCode',
+          layout: { row: 3, span: 1 },
           inputConfig: { mask: '#####-####' },
         },
       ],
@@ -49,6 +59,5 @@ export const AddressFields = [
       maxItems: 5,
     },
     display: { order: 5 },
-    input: 'array',
   },
 ];

@@ -1,16 +1,18 @@
-// packages/web/src/pages/LoginPage.js
 import React, { useState, useContext } from 'react';
 import { Box, TextField, Button, Typography, Paper } from '@mui/material';
 import { useNavigate } from 'react-router';
-import { AuthContext } from '../../context/AuthContext'; // import your context
+import { useTheme } from '@mui/material/styles';
+import { AuthContext } from '../../context/AuthContext';
 
 export default function LoginPage({ appConfig, logo }) {
+  const theme = useTheme();
+  const navigate = useNavigate();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { login } = useContext(AuthContext); // grab login function from context
-  const navigate = useNavigate();
+  const { login } = useContext(AuthContext);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -20,10 +22,10 @@ export default function LoginPage({ appConfig, logo }) {
 
     setLoading(true);
     try {
-      await login(email, password); // call context login
-      navigate('/dashboard', { replace: true }); // redirect after successful login
+      await login(email, password);
+      navigate('/dashboard', { replace: true });
     } catch (err) {
-      alert(err.message); // show backend error
+      alert(err.message);
     } finally {
       setLoading(false);
     }
@@ -36,28 +38,49 @@ export default function LoginPage({ appConfig, logo }) {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        background: `linear-gradient(to bottom right, ${appConfig.themeColors.primary}, ${appConfig.themeColors.secondary})`,
+
+        /* ✅ Theme-based gradient */
+        background: `linear-gradient(
+          to bottom right,
+          ${theme.palette.primary.main},
+          ${theme.palette.secondary.main}
+        )`,
+
         p: 2,
       }}
     >
       <Paper
-        elevation={6}
+        elevation={theme.palette.mode === 'light' ? 6 : 3}
         sx={{
           p: 4,
           width: '100%',
-          maxWidth: 400,
+          maxWidth: 420,
           borderRadius: 3,
+
+          /* ✅ Theme-based surface */
+          backgroundColor: theme.palette.background.paper,
+
+          /* ✅ Subtle blur if in light mode */
+          backdropFilter: theme.palette.mode === 'light' ? 'blur(12px)' : 'none',
+
           textAlign: 'center',
-          backgroundColor: 'rgba(255, 255, 255, 0.95)',
-          backdropFilter: 'blur(10px)',
         }}
       >
         {/* Logo */}
         <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-          <img src={logo} alt="App Logo" style={{ width: 140, objectFit: 'contain' }} />
+          <img
+            src={logo}
+            alt="App Logo"
+            style={{ width: 140, height: 'auto', objectFit: 'contain' }}
+          />
         </Box>
 
-        <Typography variant="h5" fontWeight={600} mb={3}>
+        <Typography
+          variant="h5"
+          fontWeight={600}
+          mb={3}
+          sx={{ color: theme.palette.text.primary }}
+        >
           Sign In
         </Typography>
 
@@ -69,7 +92,12 @@ export default function LoginPage({ appConfig, logo }) {
           variant="outlined"
           margin="normal"
           required
+
+          /* ✅ Theme input styling */
+          InputLabelProps={{ style: { color: theme.palette.text.secondary } }}
+          inputProps={{ style: { color: theme.palette.text.primary } }}
         />
+
         <TextField
           fullWidth
           label="Password"
@@ -79,6 +107,8 @@ export default function LoginPage({ appConfig, logo }) {
           variant="outlined"
           margin="normal"
           required
+          InputLabelProps={{ style: { color: theme.palette.text.secondary } }}
+          inputProps={{ style: { color: theme.palette.text.primary } }}
         />
 
         <Button
@@ -92,17 +122,30 @@ export default function LoginPage({ appConfig, logo }) {
             fontWeight: 600,
             borderRadius: 2,
             textTransform: 'none',
-            background: `linear-gradient(to right, ${appConfig.themeColors.primary}, ${appConfig.themeColors.secondary})`,
+
+            /* ✅ Theme-based gradient button */
+            background: `linear-gradient(
+              to right,
+              ${theme.palette.primary.main},
+              ${theme.palette.secondary.main}
+            )`,
             '&:hover': {
-              background: `linear-gradient(to right, ${appConfig.themeColors.secondary}, ${appConfig.themeColors.primary})`,
+              background: `linear-gradient(
+                to right,
+                ${theme.palette.secondary.main},
+                ${theme.palette.primary.main}
+              )`,
             },
           }}
         >
           {loading ? 'Signing In...' : 'Login'}
         </Button>
 
-        <Typography variant="body2" mt={3} color="text.secondary">
-          Don't have an account? <a href="/register">Register</a>
+        <Typography variant="body2" mt={3} sx={{ color: theme.palette.text.secondary }}>
+          Don't have an account?{' '}
+          <a href="/register" style={{ color: theme.palette.primary.main }}>
+            Register
+          </a>
         </Typography>
       </Paper>
     </Box>

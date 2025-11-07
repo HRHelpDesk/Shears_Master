@@ -1,7 +1,3 @@
-//date
-//time
-//duration
-
 export const TimeDateFields = [
   {
     field: 'date',
@@ -16,33 +12,37 @@ export const TimeDateFields = [
     },
     display: { placeholder: 'Enter date', order: 1 },
     input: 'date',
+    layout: { row: 1, span: 3 }, // full-width single column row
   },
-   {
+  {
     field: 'time',
     type: 'object',
     label: 'Time Range',
     displayInList: true,
     required: true,
+    input: 'object',
+    columns: 2, // show start and end time side by side
+    display: { order: 2 },
     objectConfig: [
       {
         field: 'startTime',
-        type: 'number',
+        type: 'string',
         label: 'Start Time',
         validations: { min: 0, max: 23 },
         input: 'time',
         inputConfig: { step: 1, min: 0, max: 23 },
+        layout: { row: 1, span: 1 }, // left column
       },
       {
         field: 'endTime',
-        type: 'number',
+        type: 'string',
         label: 'End Time',
         validations: { min: 0, max: 59 },
         input: 'time',
         inputConfig: { step: 5, min: 0, max: 59 },
+        layout: { row: 1, span: 1 }, // right column
       },
     ],
-    display: { order: 3 },
-    input: 'object',
   },
   {
     field: 'duration',
@@ -50,6 +50,9 @@ export const TimeDateFields = [
     label: 'Duration',
     displayInList: true,
     required: true,
+    input: 'object',
+    columns: 2, // show hours and minutes side by side
+    display: { order: 3 },
     objectConfig: [
       {
         field: 'hours',
@@ -58,6 +61,7 @@ export const TimeDateFields = [
         validations: { min: 0, max: 23 },
         input: 'number',
         inputConfig: { step: 1, min: 0, max: 23 },
+        layout: { row: 1, span: 1 }, // left
       },
       {
         field: 'minutes',
@@ -66,9 +70,8 @@ export const TimeDateFields = [
         validations: { min: 0, max: 59 },
         input: 'number',
         inputConfig: { step: 5, min: 0, max: 59 },
+        layout: { row: 1, span: 1 }, // right
       },
     ],
-    display: { order: 2 },
-    input: 'object',
   },
 ];

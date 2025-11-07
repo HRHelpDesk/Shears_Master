@@ -45,7 +45,7 @@ export const login = async (email, password) => {
         recordType,
         fieldsData: record,
         tags: record.tags || [],
-        status: record.status || 'active',
+        status: 'active',
       },
       {
         headers: {

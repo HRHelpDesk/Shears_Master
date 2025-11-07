@@ -38,9 +38,10 @@ export default function ListView({
     console.log('ListView fiields:', fields);
     console.log('ListView appConfig:', appConfig);
     console.log('ListView name:', name);
+
   },[])
   React.useEffect(() => setLocalData(data), [data]);
-
+console.log("data",data)
   const normalizedData = useMemo(() => {
     return localData.map((item) =>
       item.fieldsData
@@ -76,32 +77,44 @@ export default function ListView({
   };
 
   const filteredData = useMemo(() => {
-    return normalizedData.filter((item) =>
-      keys.some((field) => {
-        const value = item[field];
-        if (Array.isArray(value))
-          return value.some((v) =>
-            String(v.value || v).toLowerCase().includes(search.toLowerCase())
-          );
-        return String(value || '').toLowerCase().includes(search.toLowerCase());
-      })
-    );
-  }, [normalizedData, search, keys]);
+  // If no displayFields or keys, skip filtering and return everything
+  if (!keys.length) return normalizedData;
 
-  const sections = useMemo(() => {
-    if (!keys.length) return [{ title: '', data: filteredData }];
-    const grouped = {};
-    filteredData.forEach((item) => {
-      const val = item[keys[0]];
-      const key =
-        typeof val === 'string' && val.length ? val[0].toUpperCase() : '#';
-      if (!grouped[key]) grouped[key] = [];
-      grouped[key].push(item);
-    });
-    return Object.keys(grouped)
-      .sort()
-      .map((key) => ({ title: key, data: grouped[key] }));
-  }, [filteredData, keys]);
+  return normalizedData.filter((item) =>
+    keys.some((field) => {
+      const value = item[field];
+      if (Array.isArray(value))
+        return value.some((v) =>
+          String(v.value || v).toLowerCase().includes(search.toLowerCase())
+        );
+      return String(value || '').toLowerCase().includes(search.toLowerCase());
+    })
+  );
+}, [normalizedData, search, keys]);
+
+const sections = useMemo(() => {
+  if (!filteredData.length) return [{ title: '', data: [] }];
+
+  // fallback grouping if no keys
+  if (!keys.length) return [{ title: '', data: filteredData }];
+
+  const grouped = {};
+  filteredData.forEach((item) => {
+    const val = item[keys[0]];
+    const key =
+      typeof val === 'string' && val.length ? val[0].toUpperCase() : '#';
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(item);
+  });
+
+  const sectionArr = Object.keys(grouped)
+    .sort()
+    .map((key) => ({ title: key, data: grouped[key] }));
+
+  console.log('📦 Sections:', sectionArr);
+  return sectionArr;
+}, [filteredData, keys]);
+
 
   // Swipe delete
   const handleDelete = (id) => {
@@ -144,99 +157,136 @@ export default function ListView({
   );
 
   const renderItem = ({ item }) => {
-    const nameFields = Object.keys(item).filter((k) => k.toLowerCase().includes('name'));
-    let primaryText = nameFields.map((k) => item[k]).filter(Boolean).join(' ');
+    console.log("item", item)
+  let primaryText = '';
 
-    if (!primaryText)
-      primaryText =
-        item.title ||
-        item.serviceName ||
-        item.description ||
-        item.email ||
-        'Untitled';
+  // 🧩 1. Contact-style: combine firstName + lastName if available
+  if (item.firstName || item.lastName) {
+    primaryText = [item.firstName, item.lastName].filter(Boolean).join(' ');
+  }
 
-    const orderedFields = displayFields
-      .filter((f) => !['firstName', 'lastName'].includes(f.field))
-      .sort((a, b) => (a.display?.order || 0) - (b.display?.order || 0));
-
-    const subTexts = [];
-
-    for (const field of orderedFields) {
-      const value = item[field.field];
-      if (!value && value !== 0) continue;
-
-      if (Array.isArray(value) && value.length > 0) {
-        const firstItem = value[0];
-        if (firstItem && typeof firstItem === 'object') {
-          subTexts.push(
-            Object.values(firstItem)
-              .filter(Boolean)
-              .join(' • ')
-          );
-        } else {
-          subTexts.push(String(firstItem));
-        }
-      } else if (field.type === 'object' && field.objectConfig) {
-        const parts = field.objectConfig
-          .map((sub) => {
-            const val = value?.[sub.field];
-            return val ? `${val} ${sub.label.toLowerCase()}` : null;
-          })
-          .filter(Boolean);
-        if (parts.length) subTexts.push(parts.join(' '));
-      } else {
-        subTexts.push(String(value));
-      }
-    }
-
-    const subText = subTexts.join('\n');
-    const initials =
-      !item.avatar &&
-      (primaryText
-        .split(' ')
-        .map((part) => part[0])
-        .join('')
-        .substring(0, 2)
-        .toUpperCase() || '?');
-
-    return (
-      <Swipeable renderRightActions={() => renderRightActions(item)}>
-        <TouchableOpacity
-          style={[
-            styles.card,
-            {
-              backgroundColor: theme.colors.surface,
-              shadowColor: theme.colors.onSurface,
-            },
-          ]}
-          onPress={() =>
-            navigation.navigate('ListItemDetail', { item, name, appConfig, fields: finalFields })
-          }
-        >
-          {item.avatar ? (
-            <Avatar.Image size={48} source={{ uri: item.avatar }} />
-          ) : (
-            <Avatar.Text
-              size={48}
-              label={initials}
-              style={{ backgroundColor: theme.colors.primary }}
-              color={theme.colors.onPrimary}
-            />
-          )}
-          <View style={styles.textContainer}>
-            <Text style={[styles.name, { color: theme.colors.onSurface }]}>
-              {primaryText}
-            </Text>
-            {!!subText && (
-              <Text style={[styles.subText, { color: theme.colors.onSurfaceVariant }]}>
-                {subText}
-              </Text>
-            )}
-          </View>
-        </TouchableOpacity>
-      </Swipeable>
+  // 🧩 2. Otherwise, look for any top-level property that includes 'name'
+  if (!primaryText) {
+    const nameFields = Object.keys(item).filter((k) =>
+      k.toLowerCase().includes('name')
     );
-  };
+    primaryText = nameFields.map((k) => item[k]).filter(Boolean).join(' ');
+  }
+
+  // 🧩 3. Still no name? look inside nested objects (like product.name)
+  if (!primaryText) {
+    const nested = Object.values(item).find(
+      (v) =>
+        v &&
+        typeof v === 'object' &&
+        !Array.isArray(v) &&
+        (v.name || (v.raw && (v.raw.name || v.raw.productName)))
+    );
+
+    if (nested) {
+      primaryText =
+        nested.name ||
+        nested.raw?.name ||
+        nested.raw?.productName ||
+        nested.raw?.serviceName ||
+        '';
+    }
+  }
+
+  // 🧩 4. Final fallback
+  if (!primaryText)
+    primaryText =
+      item.title ||
+      item.serviceName ||
+      item.description ||
+      item.email ||
+      'Untitled';
+
+  // ---- existing logic below ----
+  const orderedFields = displayFields
+    .filter((f) => !['firstName', 'lastName'].includes(f.field))
+    .sort((a, b) => (a.display?.order || 0) - (b.display?.order || 0));
+
+  const subTexts = [];
+  for (const field of orderedFields) {
+    const value = item[field.field];
+    if (!value && value !== 0) continue;
+
+    if (Array.isArray(value) && value.length > 0) {
+      const firstItem = value[0];
+      if (firstItem && typeof firstItem === 'object') {
+        subTexts.push(
+          Object.values(firstItem)
+            .filter(Boolean)
+            .join(' • ')
+        );
+      } else {
+        subTexts.push(String(firstItem));
+      }
+    } else if (field.type === 'object' && field.objectConfig) {
+      const parts = field.objectConfig
+        .map((sub) => {
+          const val = value?.[sub.field];
+          return val ? `${val} ${sub.label.toLowerCase()}` : null;
+        })
+        .filter(Boolean);
+      if (parts.length) subTexts.push(parts.join(' '));
+    } else {
+      subTexts.push(String(value));
+    }
+  }
+
+  const subText = subTexts.join('\n');
+const safePrimary = typeof primaryText === 'string' ? primaryText : '';
+
+const initials =
+  !item.avatar &&
+  (safePrimary
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .substring(0, 2)
+    .toUpperCase() || '?');
+
+  return (
+    <Swipeable renderRightActions={() => renderRightActions(item)}>
+      <TouchableOpacity
+        style={[
+          styles.card,
+          {
+            backgroundColor: theme.colors.surface,
+            shadowColor: theme.colors.onSurface,
+          },
+        ]}
+        onPress={() =>
+          navigation.navigate('ListItemDetail', { item, name, appConfig, fields: finalFields })
+        }
+      >
+        {item.avatar ? (
+          <Avatar.Image size={48} source={{ uri: item.avatar }} />
+        ) : (
+          <Avatar.Text
+            size={48}
+            label={initials}
+            style={{ backgroundColor: theme.colors.primary }}
+            color={theme.colors.onPrimary}
+          />
+        )}
+        <View style={styles.textContainer}>
+          <Text style={[styles.name, { color: theme.colors.onSurface }]}>
+            {primaryText}
+          </Text>
+          {!!subText && (
+            <Text style={[styles.subText, { color: theme.colors.onSurfaceVariant }]}>
+              {subText}
+            </Text>
+          )}
+        </View>
+      </TouchableOpacity>
+    </Swipeable>
+  );
+};
+
 
   const renderSectionHeader = ({ section: { title } }) => (
     <View style={[styles.sectionHeader]}>

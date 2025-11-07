@@ -9,6 +9,8 @@ import { getAppConfig } from 'shears-shared/src/config/getAppConfig';
 import { AppLogos } from '../config/appLogos';
 import { AuthProvider, AuthContext } from '../context/AuthContext';
 import { useContext } from 'react';
+import StripeSuccess from '../components/Stripe/StripeSuccess';
+import StripeReauth from '../components/Stripe/StripeReauth';
 
 function AppRoutes() {
   const { isLoggedIn } = useContext(AuthContext); // ✅ get login state
@@ -21,6 +23,8 @@ function AppRoutes() {
       <Route path="/" element={<SplashPage appConfig={appConfig} logo={logo} />} />
       <Route path="/login" element={<LoginPage appConfig={appConfig} logo={logo} />} />
       <Route path="/register" element={<Register appConfig={appConfig} logo={logo} />} />
+  <Route path="/stripe/success" element={<StripeSuccess />} />
+  <Route path="/stripe/reauth" element={<StripeReauth />} />
 
       {/* Protected Routes */}
       {isLoggedIn ? (

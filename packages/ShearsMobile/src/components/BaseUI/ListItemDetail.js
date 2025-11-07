@@ -1,4 +1,6 @@
-import React, { useContext, useEffect, useMemo, useState } from 'react';
+// src/components/BaseUI/ListItemDetail/ListItemDetailScreen.jsx
+
+import React, { useContext, useEffect, useMemo, useState, useRef } from 'react';
 import {
   ScrollView,
   View,
@@ -9,23 +11,31 @@ import {
   Dimensions,
 } from 'react-native';
 import { useTheme, Text, Divider, Button, Portal } from 'react-native-paper';
-import { singularize } from 'shears-shared/src/utils/stringHelpers';
+import { currencyToNumber, formatCurrency, singularize } from 'shears-shared/src/utils/stringHelpers';
 import { FieldMap } from '../../config/component-mapping/FieldMap';
 import { createRecord, updateRecord } from 'shears-shared/src/Services/Authentication';
 import { AuthContext } from '../../context/AuthContext';
 import PlainTextInput from '../../components/SmartInputs/PlainTextInput';
 import { GlassActionButton } from '../UI/GlassActionButton';
 import { getDisplayTitle } from 'shears-shared/src/utils/stringHelpers';
+import LinearGradient from 'react-native-linear-gradient';
+import ActionMenu from "../BaseUI/ActionMenu/ActionMenu";
 
+// ✅ NEW — extracted actions for array entries
+import FieldActionsForEntry from "../BaseUI/ActionMenu/FieldActionsForEntry";
+
+/* ============================================================
+   ✅ Utility
+============================================================ */
 const getValue = (source, path) => {
   if (!source || !path) return '';
   const normalized = path.replace(/\[(\d+)\]/g, '.$1');
   return normalized.split('.').reduce((acc, key) => acc?.[key], source) ?? '';
 };
 
-/* -------------------------------------------------------------------------- */
-/*                       Helper: Render Nested Fields (Grid)                  */
-/* -------------------------------------------------------------------------- */
+/* ============================================================
+   ✅ Render Nested Fields
+============================================================ */
 const RenderNestedFields = ({ nestedFields, item, handleChange, mode, theme, parentPath, columns = 3 }) => {
   const groupedByRow = nestedFields.reduce((acc, f) => {
     const row = f.layout?.row || 1;
@@ -36,7 +46,6 @@ const RenderNestedFields = ({ nestedFields, item, handleChange, mode, theme, par
 
   const screenWidth = Dimensions.get('window').width;
   const isSmallScreen = screenWidth < 400;
-  const effectiveColumns = isSmallScreen ? 1 : columns;
 
   return (
     <>
@@ -58,7 +67,6 @@ const RenderNestedFields = ({ nestedFields, item, handleChange, mode, theme, par
                     handleChange={handleChange}
                     mode={mode}
                     theme={theme}
-                    level={0}
                     parentPath={parentPath}
                   />
                 </View>
@@ -71,27 +79,31 @@ const RenderNestedFields = ({ nestedFields, item, handleChange, mode, theme, par
   );
 };
 
-/* -------------------------------------------------------------------------- */
-/*                           Render Field Component                           */
-/* -------------------------------------------------------------------------- */
-const RenderField = ({ fieldDef, item, handleChange, mode, theme, level = 0, parentPath = '' }) => {
+/* ============================================================
+   ✅ RenderField
+============================================================ */
+const RenderField = ({ fieldDef, item, handleChange, mode, theme, parentPath = '' }) => {
   const inputType = fieldDef.input || fieldDef.type || 'text';
   const nestedFields = fieldDef.objectConfig || fieldDef.arrayConfig?.object || [];
   const FieldComponent = FieldMap[inputType] || PlainTextInput;
   const fieldPath = parentPath ? `${parentPath}.${fieldDef.field}` : fieldDef.field;
   const value = getValue(item, fieldPath);
 
+  // Initialize missing array/object structures
   if (fieldDef.arrayConfig?.object && !Array.isArray(value)) handleChange(fieldPath, []);
   else if (fieldDef.objectConfig && (value === undefined || typeof value !== 'object'))
     handleChange(fieldPath, {});
 
-  /* ----------------------------- ARRAY FIELDS ----------------------------- */
+  /* ============================================================
+     ✅ ARRAY FIELDS
+  ============================================================ */
   if (Array.isArray(value)) {
     const handleAddArrayItem = () => {
       const newItem =
         fieldDef.input === 'linkSelect'
           ? { _id: '', name: '' }
           : Object.fromEntries((nestedFields || []).map((nf) => [nf.field, '']));
+
       handleChange(fieldPath, [...value, newItem]);
     };
 
@@ -102,24 +114,28 @@ const RenderField = ({ fieldDef, item, handleChange, mode, theme, level = 0, par
     };
 
     return (
-      <View style={[styles.arraySection, { marginLeft: level * 16 }]}>
+      <View style={[styles.arraySection]}>
         <View style={styles.sectionHeader}>
           <Text variant="titleMedium" style={{ color: theme.colors.primary }}>
             {fieldDef.label || fieldDef.field}
           </Text>
+
           {(mode === 'edit' || mode === 'add') && (
             <Button mode="text" onPress={handleAddArrayItem} icon="plus" compact textColor={theme.colors.primary}>
               Add
             </Button>
           )}
         </View>
+
         <Divider style={{ marginBottom: 12 }} />
 
         {value.length === 0 ? (
           <View style={styles.emptyState}>
             {mode === 'edit' ? (
               <TouchableOpacity onPress={handleAddArrayItem}>
-                <Text style={{ color: theme.colors.textSecondary, fontStyle: 'italic' }}>Tap to add first entry</Text>
+                <Text style={{ color: theme.colors.textSecondary, fontStyle: 'italic' }}>
+                  Tap to add first entry
+                </Text>
               </TouchableOpacity>
             ) : (
               <Text style={{ color: theme.colors.textSecondary, fontStyle: 'italic' }}>No entries</Text>
@@ -138,11 +154,24 @@ const RenderField = ({ fieldDef, item, handleChange, mode, theme, level = 0, par
                 },
               ]}
             >
-              <View style={styles.arrayItemHeader}>
-                <Text variant="labelLarge" style={{ color: theme.colors.text }}>
+              {/* ✅ INLINE HEADER: Title + Actions + Remove Button */}
+              <View style={[styles.arrayItemHeader, { alignItems: "center" }]}>
+                
+                {/* LEFT: Title + Actions */}
+                <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+                <Text
+                  variant="labelLarge"
+                  style={{ color: theme.colors.text, marginRight: 8 }}
+                >
                   {singularize(fieldDef.label || fieldDef.field)} #{idx + 1}
                 </Text>
 
+                {/* ✅ Only show actions in READ mode */}
+                {mode === "read" && <FieldActionsForEntry entry={entry} />}
+              </View>
+
+
+                {/* RIGHT: Remove */}
                 {(mode === 'edit' || mode === 'add') && (
                   <Button
                     mode="text"
@@ -156,15 +185,14 @@ const RenderField = ({ fieldDef, item, handleChange, mode, theme, level = 0, par
                 )}
               </View>
 
+              {/* ✅ Content */}
               <View style={styles.arrayItemContent}>
                 {fieldDef.input === 'linkSelect' ? (
                   <FieldMap.linkSelect
                     label={fieldDef.label || fieldDef.field}
                     value={entry}
                     mode={mode}
-                    recordTypeName={
-                      fieldDef.inputConfig?.recordType || fieldDef.recordTypeName || 'contacts'
-                    }
+                    recordTypeName={fieldDef.inputConfig?.recordType || fieldDef.recordTypeName || 'contacts'}
                     onChangeText={(newVal) => {
                       const updated = [...value];
                       updated[idx] = newVal;
@@ -190,30 +218,33 @@ const RenderField = ({ fieldDef, item, handleChange, mode, theme, level = 0, par
     );
   }
 
-  /* ----------------------------- LINK SELECT ----------------------------- */
+  /* ============================================================
+     ✅ LINK SELECT (single)
+  ============================================================ */
   if (fieldDef.input === 'linkSelect' && !Array.isArray(value)) {
     return (
-      <View style={[styles.fieldWrapper, { marginLeft: level * 16 }]}>
+      <View style={styles.fieldWrapper}>
         <FieldMap.linkSelect
           label={fieldDef.label || fieldDef.field}
           value={value}
           mode={mode}
-          recordTypeName={
-            fieldDef.inputConfig?.recordType || fieldDef.recordTypeName || 'contacts'
-          }
+          recordTypeName={fieldDef.inputConfig?.recordType || fieldDef.recordTypeName || 'contacts'}
           onChangeText={(newVal) => handleChange(fieldPath, newVal)}
         />
       </View>
     );
   }
 
-  /* ----------------------------- OBJECT FIELDS ---------------------------- */
+  /* ============================================================
+     ✅ OBJECT FIELDS
+  ============================================================ */
   if (value && typeof value === 'object' && !Array.isArray(value) && fieldDef.objectConfig) {
     return (
-      <View style={[styles.objectSection, { marginLeft: level * 16 }]}>
+      <View style={[styles.objectSection]}>
         <Text variant="titleSmall" style={{ color: theme.colors.textSecondary, marginBottom: 8 }}>
           {fieldDef.label || fieldDef.field}
         </Text>
+
         <View
           style={[
             styles.objectContent,
@@ -225,7 +256,7 @@ const RenderField = ({ fieldDef, item, handleChange, mode, theme, level = 0, par
           ]}
         >
           <RenderNestedFields
-            nestedFields={nestedFields}
+            nestedFields={fieldDef.objectConfig}
             item={item}
             handleChange={handleChange}
             mode={mode}
@@ -238,9 +269,11 @@ const RenderField = ({ fieldDef, item, handleChange, mode, theme, level = 0, par
     );
   }
 
-  /* ----------------------------- SIMPLE FIELDS ---------------------------- */
+  /* ============================================================
+     ✅ BASIC FIELD
+  ============================================================ */
   return (
-    <View style={[styles.fieldWrapper, { marginLeft: level * 16 }]}>
+    <View style={styles.fieldWrapper}>
       <FieldComponent
         label={fieldDef.label || fieldDef.field}
         value={value}
@@ -254,9 +287,9 @@ const RenderField = ({ fieldDef, item, handleChange, mode, theme, level = 0, par
   );
 };
 
-/* -------------------------------------------------------------------------- */
-/*                             Main Component                                 */
-/* -------------------------------------------------------------------------- */
+/* ============================================================
+   ✅ MAIN COMPONENT
+============================================================ */
 export default function ListItemDetailScreen({ route, navigation }) {
   const { item = {}, name, fields = [], mode: initialMode = 'read' } = route.params;
   const theme = useTheme();
@@ -281,33 +314,59 @@ export default function ListItemDetailScreen({ route, navigation }) {
   const [localItem, setLocalItem] = useState(initialData);
   const [mode, setMode] = useState(initialMode);
 
-  /* ------------------- Auto Duration + End Time Logic --------------------- */
+  const lastAutoAmountRef = useRef(0);
+
+  /* Init baseline */
+  useEffect(() => {
+    const initial = currencyToNumber(localItem?.payment?.amount || "0");
+    lastAutoAmountRef.current = isNaN(initial) ? 0 : initial;
+  }, []);
+
+  const autoCalcKey = JSON.stringify({
+    service: localItem?.service,
+    product: localItem?.product,
+  });
+
+  /* ============================================================
+     ✅ Auto-calc duration + end time + payment
+  ============================================================ */
   useEffect(() => {
     if (!localItem) return;
-    let totalMinutes = 0;
 
-    const findDurations = (obj) => {
+    let totalMinutes = 0;
+    let totalAmount = 0;
+
+    const findValues = (obj) => {
       if (!obj || typeof obj !== 'object') return;
+
       if (obj.raw?.duration) {
         const { hours = '0', minutes = '0' } = obj.raw.duration;
         totalMinutes += parseInt(hours || 0) * 60 + parseInt(minutes || 0);
       }
-      if (Array.isArray(obj)) obj.forEach((item) => findDurations(item));
-      else Object.values(obj).forEach((val) => findDurations(val));
+
+      if (obj.raw?.price) {
+        const priceNum = parseFloat(obj.raw.price);
+        if (!isNaN(priceNum)) totalAmount += priceNum;
+      }
+
+      if (Array.isArray(obj)) obj.forEach(findValues);
+      else Object.values(obj).forEach(findValues);
     };
 
-    findDurations(localItem);
+    findValues(localItem);
 
-    if (totalMinutes > 0) {
-      const hours = Math.floor(totalMinutes / 60);
-      const minutes = totalMinutes % 60;
+    setLocalItem((prev) => {
+      const updated = { ...prev };
 
-      setLocalItem((prev) => {
-        const updated = { ...prev };
+      if (totalMinutes > 0) {
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+
         updated.duration = {
           hours: hours.toString(),
           minutes: minutes.toString().padStart(2, '0'),
         };
+
         if (updated.time?.startTime) {
           const [h, m] = updated.time.startTime.split(':').map(Number);
           const start = new Date(0, 0, 0, h, m);
@@ -316,11 +375,25 @@ export default function ListItemDetailScreen({ route, navigation }) {
             end.getMinutes()
           ).padStart(2, '0')}`;
         }
-        return updated;
-      });
-    }
-  }, [localItem?._id, localItem.service]);
+      }
 
+      if (!updated.payment) updated.payment = { amount: '', status: 'Open', action: {} };
+
+      const currentAmount = currencyToNumber(updated.payment.amount);
+      const lastAutoAmount = lastAutoAmountRef.current;
+
+      if (!updated.payment.amount || currentAmount === lastAutoAmount) {
+        updated.payment.amount = formatCurrency(String(totalAmount));
+        lastAutoAmountRef.current = totalAmount;
+      }
+
+      return updated;
+    });
+  }, [autoCalcKey]);
+
+  /* ============================================================
+     ✅ Handle Change
+  ============================================================ */
   const handleChange = (path, value) => {
     setLocalItem((prev) => {
       const updated = { ...prev };
@@ -336,79 +409,111 @@ export default function ListItemDetailScreen({ route, navigation }) {
     });
   };
 
+  /* ============================================================
+     ✅ Save
+  ============================================================ */
   const handleSave = async () => {
     try {
-      if (mode === 'edit' && item._id) await updateRecord(item._id, localItem, token);
-      else await createRecord(localItem, name.toLowerCase(), token, user.subscriberId, user.userId);
-      setMode('read');
+      if (mode === 'edit' && item._id) {
+        await updateRecord(item._id, localItem, token);
+        setMode('read');
+        return;
+      }
+
+      await createRecord(localItem, name.toLowerCase(), token, user.subscriberId, user.userId);
       navigation.goBack();
     } catch (error) {
       console.error('Save failed:', error);
     }
   };
 
+  /* ============================================================
+     ✅ Render
+  ============================================================ */
   return (
     <Portal.Host>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View
-          style={[
-            styles.headerContainer,
-            { backgroundColor: theme.colors.background, zIndex: 10, paddingHorizontal: 15, paddingTop: 25 },
+        <LinearGradient
+          colors={[
+            theme.dark ? 'rgba(20,20,20,1)' : '#ffffffff',
+            theme.dark ? 'rgba(40,40,40,1)' : '#ffffffff',
           ]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={{ flex: 1 }}
         >
-          <View style={styles.titleRow}>
-            <View style={{ flex: 1 }}>
-              <Text variant="headlineMedium" style={{ color: theme.colors.text, fontWeight: '600' }}>
-                {getDisplayTitle(localItem, name, mode)}
-              </Text>
-              {mode === 'read' && localItem?.createdAt && (
-                <Text variant="bodySmall" style={{ color: theme.colors.textSecondary, marginTop: 4 }}>
-                  Created {new Date(localItem.createdAt).toLocaleDateString()}
+          {/* HEADER */}
+          <View style={[styles.headerContainer, { paddingHorizontal: 15, paddingTop: 25 }]}>
+            <View style={styles.titleRow}>
+              <View style={{ flex: 1 }}>
+                <Text variant="headlineMedium" style={{ color: theme.colors.text, fontWeight: '600' }}>
+                  {getDisplayTitle(localItem, name, mode)}
                 </Text>
-              )}
+
+                {mode === 'read' && localItem?.createdAt && (
+                  <Text variant="bodySmall" style={{ color: theme.colors.textSecondary, marginTop: 4 }}>
+                    Created {new Date(localItem.createdAt).toLocaleDateString()}
+                  </Text>
+                )}
+              </View>
+
+              <View style={styles.headerActions}>
+                {mode === 'read' ? (
+                  <>
+                    <GlassActionButton icon="pencil" onPress={() => setMode('edit')} color={theme.colors.primary} theme={theme} />
+                    <GlassActionButton icon="close" onPress={() => navigation.goBack()} theme={theme} />
+                  </>
+                ) : (
+                  <>
+                    <GlassActionButton icon="check" onPress={handleSave} color={theme.colors.primary} theme={theme} />
+                    <GlassActionButton
+                      icon="close"
+                      onPress={() => (mode === 'add' ? navigation.goBack() : setMode('read'))}
+                      theme={theme}
+                    />
+                  </>
+                )}
+              </View>
             </View>
-            <View style={styles.headerActions}>
-              {mode === 'read' ? (
-                <>
-                  <GlassActionButton icon="pencil" onPress={() => setMode('edit')} color={theme.colors.primary} theme={theme} />
-                  <GlassActionButton icon="close" onPress={() => navigation.goBack()} theme={theme} />
-                </>
-              ) : (
-                <>
-                  <GlassActionButton icon="check" onPress={handleSave} color={theme.colors.primary} theme={theme} />
-                  <GlassActionButton
-                    icon="close"
-                    onPress={() => (mode === 'add' ? navigation.goBack() : setMode('read'))}
+
+            {/* ✅ Top-level action menu */}
+            {/* <ActionMenu item={localItem} /> */}
+
+            <Divider style={{ marginTop: 12, marginBottom: 4, opacity: 0.4 }} />
+          </View>
+
+          {/* CONTENT */}
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent}>
+            <View style={styles.fieldsContainer}>
+              {fields.map((field, index) => (
+                <React.Fragment key={field.field}>
+                  <RenderField
+                    fieldDef={field}
+                    item={localItem}
+                    handleChange={handleChange}
+                    mode={mode}
                     theme={theme}
                   />
-                </>
-              )}
+                  {index < fields.length - 1 && (
+                    <Divider style={{ marginVertical: 12, opacity: 0.3 }} />
+                  )}
+                </React.Fragment>
+              ))}
             </View>
-          </View>
-          <Divider style={{ marginTop: 12, marginBottom: 4, opacity: 0.4 }} />
-        </View>
+          </ScrollView>
 
-        <ScrollView style={{ flex: 1, backgroundColor: theme.colors.background }} contentContainerStyle={styles.scrollContent}>
-          <View style={styles.fieldsContainer}>
-            {fields.map((field, index) => (
-              <React.Fragment key={field.field}>
-                <RenderField fieldDef={field} item={localItem} handleChange={handleChange} mode={mode} theme={theme} />
-                {index < fields.length - 1 && <Divider style={{ marginVertical: 12, opacity: 0.3 }} />}
-              </React.Fragment>
-            ))}
-          </View>
-        </ScrollView>
+        </LinearGradient>
       </KeyboardAvoidingView>
     </Portal.Host>
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/*                                   STYLES                                   */
-/* -------------------------------------------------------------------------- */
+/* ============================================================
+   ✅ Styles
+============================================================ */
 const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 60 },
-  headerContainer: { marginBottom: 8 },
+  headerContainer: { marginBottom: 0 },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   headerActions: { flexDirection: 'row', gap: 12, marginLeft: 16, alignItems: 'center' },
   fieldWrapper: { marginBottom: 16 },
@@ -416,9 +521,10 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   emptyState: { paddingVertical: 24, alignItems: 'center' },
   arrayItemCard: { marginBottom: 12, borderRadius: 8, padding: 12 },
-  arrayItemHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  arrayItemHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
   objectSection: { marginBottom: 5 },
   objectContent: { padding: 12, borderRadius: 8 },
   columnsContainer: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12 },
   columnItem: { marginBottom: 8 },
+  fieldsContainer: {},
 });

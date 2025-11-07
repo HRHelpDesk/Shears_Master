@@ -54,7 +54,7 @@ export const CommunicationFields = [
           type: 'string',
           label: 'Phone Number',
           validations: { pattern: /^\+?[1-9]\d{1,14}$/ },
-          input: 'phoneNumber',
+          input: 'phone',
           inputConfig: { mask: '+1 (###) ###-####', countryCode: true },
         },
       ],

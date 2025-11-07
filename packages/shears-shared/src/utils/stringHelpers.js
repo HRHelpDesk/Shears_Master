@@ -104,3 +104,169 @@ const formatTime12 = (time24) => {
 };
 
 export default formatTime12;
+
+
+// shears-shared/src/utils/displayHelpers.js (or wherever you keep shared functions)
+
+
+/**
+ * Dynamically generates a display title from an item's name fields
+ * @param {Object} item - The data object to extract name from
+ * @param {string} recordTypeName - The type of record (e.g., 'contacts', 'services')
+ * @param {string} mode - Current mode: 'add', 'edit', or 'read'
+ * @returns {string} Display title for the item
+ */
+export const getDisplayTitle = (item, recordTypeName, mode = 'read') => {
+  // Mode override
+  if (mode === 'add') {
+    return `Add ${singularize(recordTypeName)}`;
+  }
+
+  if (!item) return 'Item Detail';
+
+  // Step 1️⃣: Flatten potential name sources
+  const sources = [item, ...(Object.values(item) || [])];
+
+  // Step 2️⃣: Collect all valid name fields (like firstName, lastName, fullName)
+  for (const src of sources) {
+    if (!src || typeof src !== 'object') continue;
+
+    const nameFields = Object.keys(src)
+      .filter(
+        key =>
+          key.toLowerCase().includes('name') &&
+          src[key] &&
+          typeof src[key] === 'string' &&
+          src[key].trim() !== ''
+      )
+      .sort((a, b) => {
+        const aLower = a.toLowerCase();
+        const bLower = b.toLowerCase();
+
+        // Prioritize fullName > firstName > lastName
+        const rank = key => {
+          if (key.includes('full')) return 0;
+          if (key.includes('first')) return 1;
+          if (key.includes('last')) return 2;
+          return 3;
+        };
+        return rank(aLower) - rank(bLower);
+      });
+
+    if (nameFields.length > 0) {
+      // Handle combined first + last
+      if (
+        nameFields.length > 1 &&
+        nameFields.some(f => f.toLowerCase().includes('first')) &&
+        nameFields.some(f => f.toLowerCase().includes('last'))
+      ) {
+        const first = nameFields.find(f => f.toLowerCase().includes('first'));
+        const last = nameFields.find(f => f.toLowerCase().includes('last'));
+        return `${src[first]} ${src[last]}`.trim();
+      }
+
+      // Prefer fullName if available
+      const preferred =
+        nameFields.find(f => f.toLowerCase().includes('full')) ||
+        nameFields[0];
+      return src[preferred].toString().trim();
+    }
+  }
+
+  // Step 3️⃣: Handle known connected types (contact, service, product)
+  const knownKeys = ['contact', 'service', 'product', 'client', 'customer'];
+  for (const key of knownKeys) {
+    const val = item[key];
+    if (!val) continue;
+
+    // Handle arrays like service[]
+    if (Array.isArray(val) && val.length > 0 && val[0]?.name) {
+      return val[0].name.toString();
+    }
+
+    // Handle objects with .name
+    if (val?.name) {
+      return val.name.toString();
+    }
+  }
+
+  // Step 4️⃣: Fallback
+  return 'Item Detail';
+};
+
+
+  export const formatPhoneNumber = (input = '') => {
+    const digits = input.replace(/\D/g, '').slice(0, 10);
+    const len = digits.length;
+
+    if (len === 0) return '';
+    if (len < 4) return `(${digits}`;
+    if (len < 7) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  };
+
+
+  /** Strip non-digits except decimal */
+export const cleanCurrencyString = (value = '') => {
+  if (!value) return '';
+  return value.replace(/[^0-9.]/g, '');
+};
+
+/** Format input as currency ($1,234.56) */
+export const formatCurrency = (input = '') => {
+  if (!input) return '';
+
+  // Remove unwanted chars
+  let numeric = cleanCurrencyString(input);
+
+  // Avoid multiple decimals
+  const parts = numeric.split('.');
+  if (parts.length > 2) {
+    numeric = parts[0] + '.' + parts[1];
+  }
+
+  // Format dollars
+  let [dollars, cents] = numeric.split('.');
+
+  // Add commas
+  dollars = dollars.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+  if (cents !== undefined) {
+    cents = cents.slice(0, 2); // max 2 decimals
+    return `$${dollars}.${cents}`;
+  }
+
+  return `$${dollars}`;
+};
+
+
+export const currencyToNumber = (input = '') => {
+  if (!input) return 0;
+
+  // Remove currency symbol, commas, spaces, etc.
+  const cleaned = input.replace(/[^0-9.]/g, '');
+
+  // Multiple decimal safety (e.g., "10.2.3")
+  const parts = cleaned.split('.');
+  if (parts.length > 2) {
+    return parseFloat(parts[0] + '.' + parts[1]);
+  }
+
+  return parseFloat(cleaned) || 0;
+};
+
+// ✅ Fix for YYYY-MM-DD timezone shift
+export function formatAsLocalDate(val) {
+  if (!val) return '';
+  
+  // If already in YYYY-MM-DD, do NOT convert to UTC
+  if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+    return val;
+  }
+
+  // Otherwise treat normally
+  const d = new Date(val);
+  if (isNaN(d)) return val;
+
+  return d.toISOString().split('T')[0];
+}
