@@ -44,7 +44,7 @@ const parseYMD = (value) => {
   return new Date(Number(y), Number(m) - 1, Number(d), 0, 0, 0, 0); // ✅ LOCAL midnight
 };
 
-export default function CalendarView({ data = [], appConfig }) {
+export default function CalendarView({ data = [], appConfig, onRefresh }) {
   const theme = useTheme();
   const navigation = useNavigation();
   const [containerWidth, setContainerWidth] = useState(WINDOW_WIDTH - 20);
@@ -137,10 +137,13 @@ export default function CalendarView({ data = [], appConfig }) {
     if (dayEvents.length === 0) return;
 
     navigation.navigate('CalendarListView', {
+      mode: 'day',
       selectedDate: day,
       data: dayEvents,
       appConfig,
       header: true,
+      onRefresh: onRefresh,   // Must forward this EXACT function
+      refreshing: false
     });
   };
 

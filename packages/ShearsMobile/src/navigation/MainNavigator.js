@@ -1,5 +1,5 @@
 // src/navigation/MainNavigator.js
-import React from 'react';
+import React, { useContext } from 'react';
 import { Platform } from 'react-native';
 import { useTheme } from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -13,6 +13,7 @@ import {
 } from '@bottom-tabs/react-navigation';
 
 import BasePage from '../screens/BasePage';
+import { AuthContext } from '../context/AuthContext';
 
 // ✅ Platform-specific Tab Navigator
 const Tab =
@@ -33,6 +34,7 @@ const getTabIcon = (iosIcon, androidIcon) => {
 const MainNavigator = ({ appConfig }) => {
   const theme = useTheme();
   const { colors } = theme;
+  const {token, user} = useContext(AuthContext);
 console.log('MainNavigator appConfig:', appConfig);
   // ✅ Process all view data dynamically from appConfig
   const viewData = appConfig.mainNavigation.reduce((acc, route) => {
@@ -101,7 +103,13 @@ console.log('MainNavigator appConfig:', appConfig);
             }),
       }}
     >
-      {appConfig.mainNavigation.map((route) => (
+      {appConfig.mainNavigation.filter(item => {
+        // If no permissions array → allow it
+        if (!item.permissions) return true;
+
+        // If permissions exist, check user.role
+        return item.permissions.includes(user.role);
+      }).map((route) => (
         <Tab.Screen
           key={route.name}
           name={route.name}

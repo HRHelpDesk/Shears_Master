@@ -2,6 +2,7 @@
 
 import React, { useContext, useEffect, useMemo, useState, useRef } from 'react';
 import {
+  Alert,
   ScrollView,
   View,
   TouchableOpacity,
@@ -13,13 +14,14 @@ import {
 import { useTheme, Text, Divider, Button, Portal } from 'react-native-paper';
 import { currencyToNumber, formatCurrency, singularize } from 'shears-shared/src/utils/stringHelpers';
 import { FieldMap } from '../../config/component-mapping/FieldMap';
-import { createRecord, updateRecord } from 'shears-shared/src/Services/Authentication';
+import { createRecord, deleteRecord, updateRecord } from 'shears-shared/src/Services/Authentication';
 import { AuthContext } from '../../context/AuthContext';
 import PlainTextInput from '../../components/SmartInputs/PlainTextInput';
 import { GlassActionButton } from '../UI/GlassActionButton';
 import { getDisplayTitle } from 'shears-shared/src/utils/stringHelpers';
 import LinearGradient from 'react-native-linear-gradient';
 import ActionMenu from "../BaseUI/ActionMenu/ActionMenu";
+import SubtitleText from "../UI/SubtitleText";
 
 // ✅ NEW — extracted actions for array entries
 import FieldActionsForEntry from "../BaseUI/ActionMenu/FieldActionsForEntry";
@@ -294,7 +296,8 @@ export default function ListItemDetailScreen({ route, navigation }) {
   const { item = {}, name, fields = [], mode: initialMode = 'read' } = route.params;
   const theme = useTheme();
   const { token, user } = useContext(AuthContext);
-
+console.log('item',item)
+console.log('fields',fields)
   const initializeItemFromFields = (fields) => {
     const obj = {};
     fields.forEach((f) => {
@@ -410,22 +413,123 @@ export default function ListItemDetailScreen({ route, navigation }) {
   };
 
   /* ============================================================
-     ✅ Save
-  ============================================================ */
-  const handleSave = async () => {
-    try {
-      if (mode === 'edit' && item._id) {
-        await updateRecord(item._id, localItem, token);
-        setMode('read');
-        return;
+   ✅ Save — FULL WEB PARITY LOGIC
+============================================================ */
+const handleSave = async () => {
+  try {
+    console.log("name",name)
+
+    const isUser = name?.toLowerCase() === "users";
+    console.log("Saving record for:", name, "isUser:", isUser);
+    console.log("localItem:", localItem);
+
+    /* ----------------------------------------------------------
+       ✅ USER LOGIC — EXACT WEB PARITY
+    ---------------------------------------------------------- */
+    if (isUser) {
+      if (mode === "add") {
+        console.log("➡ Creating NEW USER…");
+
+        await createRecord(
+          localItem,
+          "user",
+          token,
+          user.userId,        // createdById
+          user.subscriberId,  // subscriber
+          user                // owner info
+        );
+
+      } else {
+        console.log("➡ Updating EXISTING USER…");
+
+        const userIdToUpdate = item?.userId || item?._id;
+
+        if (!userIdToUpdate) {
+          throw new Error("Cannot update: user has no userId/_id");
+        }
+
+        // Mark as a true user update for updateRecord routing
+        localItem.__isUser = true;
+
+        await updateRecord(userIdToUpdate, localItem, token);
       }
 
-      await createRecord(localItem, name.toLowerCase(), token, user.subscriberId, user.userId);
       navigation.goBack();
-    } catch (error) {
-      console.error('Save failed:', error);
+      return;
     }
-  };
+
+    /* ----------------------------------------------------------
+       ✅ NORMAL NON-USER DATA RECORDS — EXACT WEB PARITY
+    ---------------------------------------------------------- */
+    if (mode === "edit" && item._id) {
+      await updateRecord(item._id, localItem, token);
+
+    } else {
+      await createRecord(
+        localItem,
+        name.toLowerCase(),
+        token,
+        user.userId,       // createdById
+        user.subscriberId, // subscriberId
+        user               // owner info
+      );
+    }
+
+    navigation.goBack();
+
+  } catch (err) {
+    console.error("Save failed:", err);
+  }
+};
+
+/* ============================================================
+   ✅ Delete — FULL WEB PARITY
+============================================================ */
+const handleDelete = async () => {
+  const isUser = name?.toLowerCase() === "users";
+
+  const idToDelete = isUser
+    ? item?.userId || item?._id
+    : item?._id;
+
+  if (!idToDelete) return;
+
+  const message = isUser
+    ? "Are you sure you want to delete this user? This will permanently delete their account and all associated records."
+    : "Are you sure you want to delete this item?";
+
+  // ----- MOBILE CONFIRM -----
+  const confirmNative = () =>
+    new Promise((resolve) => {
+      Alert.alert(
+        "Confirm Delete",
+        message,
+        [
+          { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+          { text: "Delete", style: "destructive", onPress: () => resolve(true) },
+        ]
+      );
+    });
+
+  // ----- WEB CONFIRM -----
+  const confirmWeb = () => Promise.resolve(window.confirm(message));
+
+  const confirmed = Platform.OS === "web"
+    ? await confirmWeb()
+    : await confirmNative();
+
+  if (!confirmed) return;
+
+  try {
+    await deleteRecord(idToDelete, token, isUser);
+    navigation.goBack({shouldRefresh: true});
+  } catch (err) {
+    console.error("Delete failed:", err);
+  }
+};
+
+
+
 
   /* ============================================================
      ✅ Render
@@ -449,6 +553,8 @@ export default function ListItemDetailScreen({ route, navigation }) {
                 <Text variant="headlineMedium" style={{ color: theme.colors.text, fontWeight: '600' }}>
                   {getDisplayTitle(localItem, name, mode)}
                 </Text>
+                <SubtitleText name={name} item={localItem} />
+
 
                 {mode === 'read' && localItem?.createdAt && (
                   <Text variant="bodySmall" style={{ color: theme.colors.textSecondary, marginTop: 4 }}>
@@ -457,13 +563,34 @@ export default function ListItemDetailScreen({ route, navigation }) {
                 )}
               </View>
 
-              <View style={styles.headerActions}>
+             <View style={styles.headerActions}>
                 {mode === 'read' ? (
                   <>
-                    <GlassActionButton icon="pencil" onPress={() => setMode('edit')} color={theme.colors.primary} theme={theme} />
-                    <GlassActionButton icon="close" onPress={() => navigation.goBack()} theme={theme} />
+                    {/* DELETE BUTTON — SAME POSITION AS WEB */}
+                    {item?._id && (
+                      <GlassActionButton
+                        icon="trash-can-outline"
+                        color={theme.colors.error}
+                        onPress={handleDelete}
+                        theme={theme}
+                      />
+                    )}
+
+                    <GlassActionButton
+                      icon="pencil"
+                      onPress={() => setMode('edit')}
+                      color={theme.colors.primary}
+                      theme={theme}
+                    />
+
+                    <GlassActionButton
+                      icon="close"
+                      onPress={() => navigation.goBack()}
+                      theme={theme}
+                    />
                   </>
                 ) : (
+
                   <>
                     <GlassActionButton icon="check" onPress={handleSave} color={theme.colors.primary} theme={theme} />
                     <GlassActionButton

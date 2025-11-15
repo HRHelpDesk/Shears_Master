@@ -270,3 +270,11 @@ export function formatAsLocalDate(val) {
 
   return d.toISOString().split('T')[0];
 }
+
+
+export const parseYMD = (value) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return new Date(value);
+  const [_, y, m, d] = match;
+  return new Date(Number(y), Number(m) - 1, Number(d), 0, 0, 0, 0);
+};

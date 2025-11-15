@@ -15,11 +15,13 @@ import {
   InputAdornment,
   Button,
   Grid,
+  IconButton,
 } from '@mui/material';
-import { Search as SearchIcon, Add as AddIcon } from '@mui/icons-material';
+import { Search as SearchIcon, Add as AddIcon, ChevronLeft } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { humanizeFieldName } from 'shears-shared/src/utils/stringHelpers';
 import ListItemDetail from '../BaseUI/ListItemDetail';
+import { useNavigate } from 'react-router';
 
 /* ------------------------------------------------------------------
    Styled Components
@@ -188,7 +190,10 @@ export default function CalendarListView({
   refreshing = false,
   onRefresh,
   fields,
+  backButton = false,
+  setSelectedDate
 }) {
+  const {navigate} = useNavigate();
   const [search, setSearch] = useState('');
   const [sortField, setSortField] = useState('date');
   const [sortOrder, setSortOrder] = useState('asc');
@@ -285,38 +290,63 @@ export default function CalendarListView({
       }}
     >
       {/* Header Section */}
-      <Grid container spacing={2} alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-        <Grid item xs={12} sm={8} md={9}>
-          <SearchField
-            fullWidth
-            size="small"
-            variant="outlined"
-            placeholder="Search appointments..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-          />
-        </Grid>
+    <Grid
+  container
+  spacing={2}
+  alignItems="center"
+  justifyContent="space-between"
+  sx={{ mb: 2 }}
+>
 
-        <Grid item xs={12} sm={4} md="auto">
-          <Button
-            fullWidth
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleAddClick}
-            disabled={refreshing}
-            sx={{ height: '40px', whiteSpace: 'nowrap' }}
-          >
-            Add Appointment
-          </Button>
-        </Grid>
-      </Grid>
+  {/* Back Button + Search Field INLINE */}
+  <Grid item xs={12} sm={8} md={9}>
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        gap: 1, // space between back button and search
+      }}
+    >
+      {backButton && (
+     <IconButton onClick={() => setSelectedDate(null)}>
+        <ChevronLeft />
+      </IconButton>
+      )}
+ 
+
+      <SearchField
+        fullWidth
+        size="small"
+        variant="outlined"
+        placeholder="Search appointments..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchIcon />
+            </InputAdornment>
+          ),
+        }}
+      />
+    </Box>
+  </Grid>
+
+  {/* Add Appointment Button */}
+  <Grid item xs={12} sm={4} md={3}>
+    <Button
+      fullWidth
+      variant="contained"
+      startIcon={<AddIcon />}
+      onClick={handleAddClick}
+      disabled={refreshing}
+      sx={{ height: "40px", whiteSpace: "nowrap" }}
+    >
+      Add Appointment
+    </Button>
+  </Grid>
+</Grid>
+
 
       {/* Scrollable Table */}
       <Box sx={{ flex: 1, overflowY: 'auto' }}>
@@ -385,7 +415,7 @@ export default function CalendarListView({
           appConfig={appConfig}
           fields={fields}
           mode={drawerMode}
-          name={data[0]?.recordType}
+          name={'calendar'}
         />
       )}
     </TableContainerStyled>

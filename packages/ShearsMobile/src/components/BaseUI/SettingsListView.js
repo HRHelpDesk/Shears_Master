@@ -1,14 +1,17 @@
-import React, { useEffect } from 'react';
+import React, { useContext, useEffect } from 'react';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { FlatList, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Divider, useTheme } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { LiquidGlassView } from '@callstack/liquid-glass';
+import { AuthContext } from '../../context/AuthContext';
 
 const SettingsListView = ({appConfig}) => {
   const theme = useTheme();
   const colors = theme.colors;
   const navigation = useNavigation();
+    const {user} = useContext(AuthContext);
+
 console.log('SettingsListView route.params:', appConfig);
   const flattenedSettings = Array.isArray(appConfig.settings[0]) ? appConfig.settings.flat() : appConfig.settings;
 
@@ -17,6 +20,7 @@ console.log('SettingsListView route.params:', appConfig);
   }, [flattenedSettings]);
 
   const renderItem = ({ item }) => (
+    
     <TouchableOpacity
       style={[styles.itemContainer, { backgroundColor: colors.surface }]}
       onPress={() =>
@@ -65,7 +69,13 @@ console.log('SettingsListView route.params:', appConfig);
 
 
       <FlatList
-        data={flattenedSettings}
+        data={flattenedSettings.filter(item => {
+        // If no permissions array → allow it
+        if (!item.permissions) return true;
+
+        // If permissions exist, check user.role
+        return item.permissions.includes(user.role);
+      })}
         keyExtractor={(item, index) => item.name || index.toString()}
         renderItem={renderItem}
         ItemSeparatorComponent={() => <Divider style={{ backgroundColor: colors.border }} />}

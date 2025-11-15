@@ -30,10 +30,14 @@ import {
 import {
   createRecord,
   deleteRecord,
+  registerUser,
   updateRecord,
 } from 'shears-shared/src/Services/Authentication';
+import FieldActionsForEntry from '../BaseUI/ActionMenu/FieldActionsForEntry';
 
 import { AuthContext } from '../../context/AuthContext';
+import SubtitleText from '../UI/SubtitleText';
+import GlassActionButtonWeb from '../UI/GlassActionButton';
 
 /* -------------------------------------------------------------- */
 /* ✅ Helper — safe nested accessor                                */
@@ -202,25 +206,41 @@ const renderField = (
                     : 'rgba(74,144,226,0.04)',
               }}
             >
-              {/* Item header */}
-              <Box
-                sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}
-              >
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                  {singularize(fieldDef.label || fieldDef.field)} #{idx + 1}
-                </Typography>
+           {/* ✅ Updated item header with inline actions */}
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              mb: 1,
+            }}
+          >
+            {/* LEFT: Title + Actions */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                {singularize(fieldDef.label || fieldDef.field)} #{idx + 1}
+              </Typography>
 
-                {(mode === 'edit' || mode === 'add') && (
-                  <MuiButton
-                    size="small"
-                    startIcon={<DeleteOutlineIcon />}
-                    sx={{ textTransform: 'none', color: theme.palette.error.main }}
-                    onClick={() => deleteItem(idx)}
-                  >
-                    Remove
-                  </MuiButton>
-                )}
-              </Box>
+              {/* ✅ Show quick action icons ONLY in read mode */}
+              {mode === 'read' && (
+                <FieldActionsForEntry entry={entry} />
+              )}
+            </Box>
+
+            {/* RIGHT: Remove button */}
+            {(mode === 'edit' || mode === 'add') && (
+              <MuiButton
+                size="small"
+                startIcon={<DeleteOutlineIcon />}
+                sx={{ textTransform: 'none', color: theme.palette.error.main }}
+                onClick={() => deleteItem(idx)}
+              >
+                Remove
+              </MuiButton>
+            )}
+          </Box>
+
+
 
               {/* Item content */}
               {fieldDef.input === 'linkSelect' ? (
@@ -313,17 +333,33 @@ const renderField = (
   /* -------------------------------------------------------------- */
   /* ✅ SIMPLE FIELD                                                */
   /* -------------------------------------------------------------- */
+
+  const isSelectInput =
+  fieldDef.input === "select" ||
+  inputType === "select" ||
+  (fieldDef.inputConfig && Array.isArray(fieldDef.inputConfig.options));
+
+const selectOptions = isSelectInput
+  ? fieldDef.inputConfig?.options || []
+  : undefined;
+
+
   return (
-    <Box key={fieldPath} sx={{ mb: 2 }}>
-      <FieldComponent
-        label={fieldDef.label}
-        value={value}
-        mode={mode}
-        onChangeText={(nv) => handleChange(fieldPath, nv)}
-        multiline={fieldDef.input === 'textarea'}
-        keyboardType={fieldDef.input === 'number' ? 'numeric' : 'default'}
-      />
-    </Box>
+   <Box key={fieldPath} sx={{ mb: 2 }}>
+    <FieldComponent
+      label={fieldDef.label}
+      value={value}
+      mode={mode}
+      onChangeText={(nv) => handleChange(fieldPath, nv)}
+      options={selectOptions}      // ✅ ✅ ✅ FIX ADDED
+      placeholder={fieldDef.placeholder}
+      multiline={fieldDef.input === 'textarea'}
+      keyboardType={fieldDef.input === 'number' ? 'numeric' : 'default'}
+      inputConfig={fieldDef.inputConfig}
+      error={fieldDef.error}
+      helperText={fieldDef.helperText}
+    />
+  </Box>
   );
 };
 
@@ -341,7 +377,7 @@ export default function ListItemDetail({
 }) {
   const theme = useTheme();
   const { token, user } = useContext(AuthContext);
-
+console.log("fields", fields)
   /* -------------------------------------------------------------- */
   /* ✅ Initialize object from schema                               */
   /* -------------------------------------------------------------- */
@@ -404,10 +440,11 @@ export default function ListItemDetail({
     let totalAmount = 0;
 
     const walk = (obj) => {
+      console.log('obj',obj)
       if (!obj || typeof obj !== 'object') return;
 
-      if (obj.raw?.duration) {
-        const { hours = '0', minutes = '0' } = obj.raw.duration;
+      if (obj.duration) {
+        const { hours = '0', minutes = '0' } = obj.duration;
         totalMinutes += (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0);
       }
 
@@ -480,48 +517,105 @@ export default function ListItemDetail({
       }
 
       t[keys[0]] = value;
+      console.log("updated", updated)
       return updated;
     });
   };
 
   /* -------------------------------------------------------------- */
-  /* ✅ Save                                                        */
-  /* -------------------------------------------------------------- */
-  const handleSave = async () => {
-    try {
-      if (mode === 'edit' && item._id) {
-        await updateRecord(item._id, localItem, token);
-        setMode('read');
-      } else {
+/* ✅ Save — FULL WEB PARITY (matches mobile & backend)           */
+/* -------------------------------------------------------------- */
+const handleSave = async () => {
+  try {
+    const isUser = name?.toLowerCase() === "users";
+
+    console.log("Saving record for:", name, "isUser:", isUser);
+    console.log("localItem:", localItem);
+
+    /* ----------------------------------------------------------
+       ✅ USER LOGIC — SAME AS MOBILE
+    ---------------------------------------------------------- */
+    if (isUser) {
+      if (mode === "add") {
+        console.log("➡ Creating NEW USER…");
+
         await createRecord(
           localItem,
-          name.toLowerCase(),
+          "user",
           token,
-          user.subscriberId,
-          user.userId
+          user.userId,        // createdById
+          user.subscriberId,  // subscriber
+          user                // owner info for inheritance
         );
+
+      } else {
+        console.log("➡ Updating EXISTING USER…");
+
+        const userIdToUpdate = item?.userId || item?._id;
+
+        if (!userIdToUpdate) {
+          throw new Error("Cannot update: user has no userId/_id");
+        }
+
+        // Required so updateRecord routes to updateUser()
+        localItem.__isUser = true;
+
+        await updateRecord(userIdToUpdate, localItem, token);
       }
+
       onClose();
-    } catch (err) {
-      console.error(err);
-      alert(err.message);
+      return;
     }
-  };
 
-  const handleDelete = async () => {
-  if (!item?._id) return;
+    /* ----------------------------------------------------------
+       ✅ NORMAL NON-USER DATA RECORDS — SAME AS MOBILE
+    ---------------------------------------------------------- */
+    if (mode === "edit" && item._id) {
+      await updateRecord(item._id, localItem, token);
 
-  const confirmed = window.confirm(
-    "Are you sure you want to delete this item? This action cannot be undone."
-  );
+    } else {
+      await createRecord(
+        localItem,
+        name.toLowerCase(),
+        token,
+        user.userId,       // createdById
+        user.subscriberId, // subscriber
+        user               // owner info
+      );
+    }
+
+    onClose();
+
+  } catch (err) {
+    console.error("Save failed:", err);
+    alert(err.message);
+  }
+};
+
+
+
+const handleDelete = async () => {
+  const isUser = name?.toLowerCase() === "users";
+
+  const idToDelete = isUser
+    ? item?.userId || item?._id
+    : item?._id;
+
+  if (!idToDelete) return;
+
+  const message = isUser
+    ? "Are you sure you want to delete this user? This will disable their login and reassign their records."
+    : "Are you sure you want to delete this item?";
+
+  const confirmed = window.confirm(message);
   if (!confirmed) return;
 
   try {
-    await deleteRecord(item._id, token);
-    onClose(); // ✅ closes modal (parent already refreshes list)
+    await deleteRecord(idToDelete, token, isUser);
+    onClose();
   } catch (err) {
     console.error(err);
-    alert("Error deleting record: " + err.message);
+    alert("Delete failed: " + err.message);
   }
 };
 
@@ -529,6 +623,7 @@ export default function ListItemDetail({
   /* Reset when parent changes */
   useEffect(() => {
     setLocalItem(initialData);
+    console.log("initialData", initialData)
     setMode(initialMode);
   }, [item, initialMode, initialData]);
 
@@ -557,6 +652,9 @@ export default function ListItemDetail({
                 {getDisplayTitle(localItem, name, mode)}
               </Typography>
 
+              <SubtitleText name={name} item={localItem} />
+
+
               {mode === 'read' && localItem?.createdAt && (
                 <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                   Created {new Date(localItem.createdAt).toLocaleDateString()}
@@ -565,38 +663,48 @@ export default function ListItemDetail({
             </Box>
 
             <Stack direction="row" spacing={1.5}>
-              {mode === 'read' ? (
-                <>
-                  {/* ✅ DELETE BUTTON */}
-                  {item?._id && (
-                    <IconButton onClick={handleDelete}>
-                      <DeleteOutlineIcon sx={{ color: theme.palette.error.main }} />
-                    </IconButton>
-                  )}
+  {mode === 'read' ? (
+    <>
+      {item?._id && (
+        <GlassActionButtonWeb
+          icon={<DeleteOutlineIcon />}
+          onClick={handleDelete}
+          color={theme.palette.error.main}
+          theme={theme}
+        />
+      )}
 
-                  <IconButton onClick={() => setMode('edit')}>
-                    <EditIcon color="primary" />
-                  </IconButton>
-                  <IconButton onClick={onClose}>
-                    <CloseIcon />
-                  </IconButton>
-                </>
-              ) : (
+      <GlassActionButtonWeb
+        icon={<EditIcon />}
+        onClick={() => setMode('edit')}
+        color={theme.palette.primary.main}
+        theme={theme}
+      />
 
-                <>
-                  <IconButton onClick={handleSave}>
-                    <CheckIcon color="primary" />
-                  </IconButton>
-                  <IconButton
-                    onClick={() =>
-                      mode === 'add' ? onClose() : setMode('read')
-                    }
-                  >
-                    <CloseIcon />
-                  </IconButton>
-                </>
-              )}
-            </Stack>
+      <GlassActionButtonWeb
+        icon={<CloseIcon />}
+        onClick={onClose}
+        theme={theme}
+      />
+    </>
+  ) : (
+    <>
+      <GlassActionButtonWeb
+        icon={<CheckIcon />}
+        onClick={handleSave}
+        color={theme.palette.primary.main}
+        theme={theme}
+      />
+
+      <GlassActionButtonWeb
+        icon={<CloseIcon />}
+        onClick={() => (mode === 'add' ? onClose() : setMode('read'))}
+        theme={theme}
+      />
+    </>
+  )}
+</Stack>
+
           </Box>
         </Box>
 

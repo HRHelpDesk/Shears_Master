@@ -11,10 +11,9 @@ import {
   Alert,
 } from 'react-native';
 import { Avatar, useTheme, FAB } from 'react-native-paper';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { singularize } from 'shears-shared/src/utils/stringHelpers';
-import { mapFields } from 'shears-shared/src/config/fieldMapper';
 import { deleteRecord } from 'shears-shared/src/Services/Authentication';
 import { AuthContext } from '../../context/AuthContext';
 
@@ -30,30 +29,31 @@ export default function ListView({
   const theme = useTheme();
   const navigation = useNavigation();
   const [search, setSearch] = useState('');
-  const [finalFields, setFinalFields] = useState([])
+  const [finalFields, setFinalFields] = useState([]);
   const [localData, setLocalData] = useState(data);
-  const { token, user } = useContext(AuthContext);
-  // Keep local data in sync if props.data changes
-  useEffect(() => {
-    console.log('ListView fiields:', fields);
-    console.log('ListView appConfig:', appConfig);
-    console.log('ListView name:', name);
+  const { token } = useContext(AuthContext);
 
-  },[])
-  React.useEffect(() => setLocalData(data), [data]);
-console.log("data",data)
+  // Sync updates
+  useEffect(() => setLocalData(data), [data]);
+
   const normalizedData = useMemo(() => {
     return localData.map((item) =>
       item.fieldsData
-        ? { ...item.fieldsData, _id: item._id, recordType: item.recordType, subscriberId: item.subscriberId }
+        ? { ...item.fieldsData, _id: item._id, recordType: item.recordType }
         : item
     );
   }, [localData]);
 
+
+  /* -------------------------------------------------------------------------- */
+  /* ✅ Load Display Fields                                                     */
+  /* -------------------------------------------------------------------------- */
   const displayFields = useMemo(() => {
     let appFields = [];
-    if (fields?.length) appFields = fields;
-    else if (appConfig) {
+
+    if (fields?.length) {
+      appFields = fields;
+    } else if (appConfig) {
       const route = appConfig.mainNavigation.find(
         (r) =>
           r.displayName?.toLowerCase() === name.toLowerCase() ||
@@ -62,66 +62,58 @@ console.log("data",data)
       appFields = route?.fields || [];
     }
 
-    const normalized = mapFields(appFields);
-    console.log(normalized)
-    setFinalFields(normalized)
-    return normalized.filter((f) => f.displayInList === true);
+    setFinalFields(appFields);
+    return appFields.filter((f) => f.displayInList === true);
   }, [fields, appConfig, name]);
-
-      console.log(displayFields)
 
   const keys = displayFields.map((f) => f.field);
 
-  const handleRefresh = async () => {
-    if (onRefresh) await onRefresh();
-  };
-
+  /* -------------------------------------------------------------------------- */
+  /* ✅ Search Filter                                                           */
+  /* -------------------------------------------------------------------------- */
   const filteredData = useMemo(() => {
-  // If no displayFields or keys, skip filtering and return everything
-  if (!keys.length) return normalizedData;
+    if (!keys.length) return normalizedData;
 
-  return normalizedData.filter((item) =>
-    keys.some((field) => {
-      const value = item[field];
-      if (Array.isArray(value))
-        return value.some((v) =>
-          String(v.value || v).toLowerCase().includes(search.toLowerCase())
-        );
-      return String(value || '').toLowerCase().includes(search.toLowerCase());
-    })
-  );
-}, [normalizedData, search, keys]);
+    return normalizedData.filter((item) =>
+      keys.some((field) => {
+        const value = item[field];
+        if (Array.isArray(value))
+          return value.some((v) =>
+            String(v.value || v).toLowerCase().includes(search.toLowerCase())
+          );
+        return String(value || '').toLowerCase().includes(search.toLowerCase());
+      })
+    );
+  }, [normalizedData, search, keys]);
 
-const sections = useMemo(() => {
-  if (!filteredData.length) return [{ title: '', data: [] }];
+  /* -------------------------------------------------------------------------- */
+  /* ✅ Alphabetical Grouping                                                   */
+  /* -------------------------------------------------------------------------- */
+  const sections = useMemo(() => {
+    if (!filteredData.length) return [{ title: '', data: [] }];
+    if (!keys.length) return [{ title: '', data: filteredData }];
 
-  // fallback grouping if no keys
-  if (!keys.length) return [{ title: '', data: filteredData }];
+    const grouped = {};
+    filteredData.forEach((item) => {
+      const val = item[keys[0]];
+      const key =
+        typeof val === 'string' && val.length ? val[0].toUpperCase() : '#';
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(item);
+    });
 
-  const grouped = {};
-  filteredData.forEach((item) => {
-    const val = item[keys[0]];
-    const key =
-      typeof val === 'string' && val.length ? val[0].toUpperCase() : '#';
-    if (!grouped[key]) grouped[key] = [];
-    grouped[key].push(item);
-  });
+    return Object.keys(grouped)
+      .sort()
+      .map((k) => ({ title: k, data: grouped[k] }));
+  }, [filteredData, keys]);
 
-  const sectionArr = Object.keys(grouped)
-    .sort()
-    .map((key) => ({ title: key, data: grouped[key] }));
-
-  console.log('📦 Sections:', sectionArr);
-  return sectionArr;
-}, [filteredData, keys]);
-
-
-  // Swipe delete
+  /* -------------------------------------------------------------------------- */
+  /* ✅ Delete Action                                                            */
+  /* -------------------------------------------------------------------------- */
   const handleDelete = (id) => {
-    console.log(id)
     Alert.alert(
       'Delete record?',
-      'Are you sure you want to delete this record?',
+      'Are you sure?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -130,9 +122,9 @@ const sections = useMemo(() => {
           onPress: async () => {
             try {
               await deleteRecord(id, token);
-              setLocalData((prev) => prev.filter((item) => item._id !== id));
+              setLocalData((prev) => prev.filter((i) => i._id !== id));
             } catch (err) {
-              console.error('Failed to delete record:', err);
+              console.error('Delete failed', err);
             }
           },
         },
@@ -142,154 +134,166 @@ const sections = useMemo(() => {
 
   const renderRightActions = (item) => (
     <TouchableOpacity
-      style={{
-        backgroundColor: 'red',
-        justifyContent: 'center',
-        alignItems: 'center',
-        width: 80,
-        borderRadius: 12,
-        marginBottom: 8,
-      }}
+      style={styles.deleteBtn}
       onPress={() => handleDelete(item._id)}
     >
-      <Text style={{ color: 'white', fontWeight: 'bold' }}>Delete</Text>
+      <Text style={styles.deleteText}>Delete</Text>
     </TouchableOpacity>
   );
 
-  const renderItem = ({ item }) => {
-    console.log("item", item)
-  let primaryText = '';
+  /* -------------------------------------------------------------------------- */
+  /* ✅ 🧠 Smart SubText Builder (Clean Labels + Inline Arrays)                  */
+  /* -------------------------------------------------------------------------- */
+  const buildSubText = (item) => {
+    const orderedFields = displayFields
+      .filter((f) => !['firstName', 'lastName'].includes(f.field))
+      .sort((a, b) => (a.display?.order || 0) - (b.display?.order || 0));
 
-  // 🧩 1. Contact-style: combine firstName + lastName if available
-  if (item.firstName || item.lastName) {
-    primaryText = [item.firstName, item.lastName].filter(Boolean).join(' ');
-  }
+    const lines = [];
 
-  // 🧩 2. Otherwise, look for any top-level property that includes 'name'
-  if (!primaryText) {
+    for (const field of orderedFields) {
+      const val = item[field.field];
+      if (val === undefined || val === null || val === '') continue;
+
+      const label = field.label || field.field;
+
+      /* ✅ ARRAY FIELDS (phones, emails, addresses, tags, categories) */
+      if (field.type === 'array') {
+        if (Array.isArray(val) && val.length > 0) {
+          const formattedItems = val.map((entry) => {
+            if (typeof entry !== 'object') {
+              return String(entry);
+            }
+
+            const keys = Object.keys(entry);
+
+            const labelKey =
+              keys.find((k) => k.toLowerCase() === 'label') ||
+              keys.find((k) => k.toLowerCase().includes('label'));
+
+            const valueKey =
+              keys.find((k) => k.toLowerCase() === 'value') ||
+              keys.find((k) => k.toLowerCase().includes('phone')) ||
+              keys.find((k) => k.toLowerCase().includes('email')) ||
+              keys.find((k) => k.toLowerCase().includes('number'));
+
+            if (labelKey && valueKey) {
+              return `${entry[labelKey]} • ${entry[valueKey]}`;
+            }
+
+            const parts = keys
+              .map((k) => (entry[k] ? `${entry[k]}` : null))
+              .filter(Boolean);
+
+            return parts.join(' • ');
+          });
+
+          lines.push(formattedItems.join(', '));
+        }
+        continue;
+      }
+
+      /* ✅ OBJECT FIELDS (payment, duration, time, supplier) */
+      if (field.type === 'object' && field.objectConfig && typeof val === 'object') {
+        const parts = field.objectConfig
+          .map((sub) => {
+            const v = val[sub.field];
+            if (!v) return null;
+            return `${sub.label}: ${v}`;
+          })
+          .filter(Boolean);
+
+        if (parts.length) lines.push(`${label}: ${parts.join(', ')}`);
+        continue;
+      }
+
+      /* ✅ SCALAR FIELDS */
+      lines.push(`${label}: ${String(val)}`);
+    }
+
+    return lines.join('\n');
+  };
+
+  /* -------------------------------------------------------------------------- */
+  /* ✅ Smart Primary Title                                                      */
+  /* -------------------------------------------------------------------------- */
+  const getPrimaryText = (item) => {
+    if (item.firstName || item.lastName)
+      return [item.firstName, item.lastName].filter(Boolean).join(' ');
+
     const nameFields = Object.keys(item).filter((k) =>
       k.toLowerCase().includes('name')
     );
-    primaryText = nameFields.map((k) => item[k]).filter(Boolean).join(' ');
-  }
 
-  // 🧩 3. Still no name? look inside nested objects (like product.name)
-  if (!primaryText) {
+    const combined = nameFields.map((k) => item[k]).filter(Boolean).join(' ');
+    if (combined) return combined;
+
     const nested = Object.values(item).find(
       (v) =>
         v &&
         typeof v === 'object' &&
         !Array.isArray(v) &&
-        (v.name || (v.raw && (v.raw.name || v.raw.productName)))
+        (v.name || v.productName || v.serviceName)
     );
 
-    if (nested) {
-      primaryText =
-        nested.name ||
-        nested.raw?.name ||
-        nested.raw?.productName ||
-        nested.raw?.serviceName ||
-        '';
-    }
-  }
+    if (nested) return nested.name || nested.productName || nested.serviceName;
 
-  // 🧩 4. Final fallback
-  if (!primaryText)
-    primaryText =
-      item.title ||
-      item.serviceName ||
-      item.description ||
-      item.email ||
-      'Untitled';
+    return item.title || item.description || 'Untitled';
+  };
 
-  // ---- existing logic below ----
-  const orderedFields = displayFields
-    .filter((f) => !['firstName', 'lastName'].includes(f.field))
-    .sort((a, b) => (a.display?.order || 0) - (b.display?.order || 0));
+  /* -------------------------------------------------------------------------- */
+  /* ✅ Render Item                                                              */
+  /* -------------------------------------------------------------------------- */
+  const renderItem = ({ item }) => {
+    const primary = getPrimaryText(item);
+    const subText = buildSubText(item);
 
-  const subTexts = [];
-  for (const field of orderedFields) {
-    const value = item[field.field];
-    if (!value && value !== 0) continue;
+    const initials =
+      primary
+        .split(' ')
+        .map((p) => p[0])
+        .join('')
+        .substring(0, 2)
+        .toUpperCase() || '?';
 
-    if (Array.isArray(value) && value.length > 0) {
-      const firstItem = value[0];
-      if (firstItem && typeof firstItem === 'object') {
-        subTexts.push(
-          Object.values(firstItem)
-            .filter(Boolean)
-            .join(' • ')
-        );
-      } else {
-        subTexts.push(String(firstItem));
-      }
-    } else if (field.type === 'object' && field.objectConfig) {
-      const parts = field.objectConfig
-        .map((sub) => {
-          const val = value?.[sub.field];
-          return val ? `${val} ${sub.label.toLowerCase()}` : null;
-        })
-        .filter(Boolean);
-      if (parts.length) subTexts.push(parts.join(' '));
-    } else {
-      subTexts.push(String(value));
-    }
-  }
-
-  const subText = subTexts.join('\n');
-const safePrimary = typeof primaryText === 'string' ? primaryText : '';
-
-const initials =
-  !item.avatar &&
-  (safePrimary
-    .split(' ')
-    .map((part) => part[0])
-    .join('')
-    .substring(0, 2)
-    .toUpperCase() || '?');
-
-  return (
-    <Swipeable renderRightActions={() => renderRightActions(item)}>
-      <TouchableOpacity
-        style={[
-          styles.card,
-          {
-            backgroundColor: theme.colors.surface,
-            shadowColor: theme.colors.onSurface,
-          },
-        ]}
-        onPress={() =>
-          navigation.navigate('ListItemDetail', { item, name, appConfig, fields: finalFields })
-        }
-      >
-        {item.avatar ? (
-          <Avatar.Image size={48} source={{ uri: item.avatar }} />
-        ) : (
+    return (
+      <Swipeable renderRightActions={() => renderRightActions(item)}>
+        <TouchableOpacity
+          style={[styles.card, { backgroundColor: theme.colors.surface }]}
+          onPress={() =>
+            navigation.navigate('ListItemDetail', {
+              item,
+              name,
+              appConfig,
+              fields: finalFields,
+            })
+          }
+        >
           <Avatar.Text
             size={48}
             label={initials}
             style={{ backgroundColor: theme.colors.primary }}
             color={theme.colors.onPrimary}
           />
-        )}
-        <View style={styles.textContainer}>
-          <Text style={[styles.name, { color: theme.colors.onSurface }]}>
-            {primaryText}
-          </Text>
-          {!!subText && (
-            <Text style={[styles.subText, { color: theme.colors.onSurfaceVariant }]}>
-              {subText}
-            </Text>
-          )}
-        </View>
-      </TouchableOpacity>
-    </Swipeable>
-  );
-};
 
+          <View style={styles.textContainer}>
+            <Text style={[styles.name, { color: theme.colors.onSurface }]}>
+              {primary}
+            </Text>
+
+            {!!subText && (
+              <Text style={[styles.subText, { color: theme.colors.onSurfaceVariant }]}>
+                {subText}
+              </Text>
+            )}
+          </View>
+        </TouchableOpacity>
+      </Swipeable>
+    );
+  };
 
   const renderSectionHeader = ({ section: { title } }) => (
-    <View style={[styles.sectionHeader]}>
+    <View style={styles.sectionHeader}>
       <Text style={[styles.sectionHeaderText, { color: theme.colors.primary }]}>
         {title}
       </Text>
@@ -303,8 +307,8 @@ const initials =
           styles.searchInput,
           {
             borderColor: theme.colors.primary,
-            color: theme.colors.onSurface,
             backgroundColor: theme.colors.surface,
+            color: theme.colors.onSurface,
           },
         ]}
         placeholder={`Search ${singularize(name)}...`}
@@ -315,11 +319,11 @@ const initials =
 
       <SectionList
         sections={sections}
-        keyExtractor={(item, index) => item._id?.toString() || index.toString()}
+        keyExtractor={(item, index) => item._id ?? index.toString()}
         renderItem={renderItem}
         renderSectionHeader={renderSectionHeader}
         stickySectionHeadersEnabled
-        contentContainerStyle={{ paddingBottom: 80, paddingTop: 5, flexGrow: 1 }}
+        contentContainerStyle={{ paddingBottom: 80 }}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={{ color: theme.colors.onSurfaceVariant }}>
@@ -328,7 +332,7 @@ const initials =
           </View>
         }
         refreshing={refreshing}
-        onRefresh={handleRefresh}
+        onRefresh={onRefresh}
       />
 
       <FAB
@@ -339,11 +343,9 @@ const initials =
           navigation.navigate('ListItemDetail', {
             item: {},
             name,
-            appConfig,
             mode: 'add',
-            settingFields: fields,
-            fields: finalFields
-
+            appConfig,
+            fields: finalFields,
           })
         }
       />
@@ -351,6 +353,9 @@ const initials =
   );
 }
 
+/* -------------------------------------------------------------------------- */
+/* ✅ Styles                                                                   */
+/* -------------------------------------------------------------------------- */
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 10 },
   searchInput: {
@@ -360,30 +365,34 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginBottom: 10,
     fontSize: 16,
-    elevation: 1,
   },
   card: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     padding: 14,
     marginBottom: 8,
-    borderRadius: 12,
-    elevation: 2,
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
+    borderRadius: 14,
+    elevation: 3,
   },
+  deleteBtn: {
+    backgroundColor: 'red',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  deleteText: { color: 'white', fontWeight: 'bold' },
   textContainer: { marginLeft: 12, flex: 1 },
-  name: { fontSize: 16, fontWeight: '600' },
-  subText: { fontSize: 13, marginTop: 2 },
+  name: { fontSize: 16, fontWeight: '700', marginBottom: 4 },
+  subText: { fontSize: 13, lineHeight: 18 },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 50 },
-  sectionHeader: { paddingBottom: 6, paddingHorizontal: 10, borderRadius: 6, marginTop: 12 },
+  sectionHeader: { paddingBottom: 6, paddingHorizontal: 10, marginTop: 12 },
   sectionHeaderText: { fontWeight: 'bold', fontSize: 14 },
   fab: {
     position: 'absolute',
     right: 20,
     bottom: Platform.OS === 'ios' ? 100 : 20,
     borderRadius: 30,
-    elevation: 5,
   },
 });

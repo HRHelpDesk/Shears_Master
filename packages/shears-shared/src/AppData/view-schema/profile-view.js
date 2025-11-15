@@ -2,6 +2,6 @@ export const ProfileView = {
     name: 'ProfileView',
     displayName: 'Profile',
     component: 'BaseUI/ProfileView',
-    mobileComponent:'ProfileView',
+    mobileComponent:'BasicLayoutPage',
     display:4
 }

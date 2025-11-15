@@ -11,6 +11,7 @@ import { AuthProvider, AuthContext } from '../context/AuthContext';
 import { useContext } from 'react';
 import StripeSuccess from '../components/Stripe/StripeSuccess';
 import StripeReauth from '../components/Stripe/StripeReauth';
+import ResetPasswordPage from '../screens/auth/ResetPasswordPage';
 
 function AppRoutes() {
   const { isLoggedIn } = useContext(AuthContext); // ✅ get login state
@@ -23,6 +24,7 @@ function AppRoutes() {
       <Route path="/" element={<SplashPage appConfig={appConfig} logo={logo} />} />
       <Route path="/login" element={<LoginPage appConfig={appConfig} logo={logo} />} />
       <Route path="/register" element={<Register appConfig={appConfig} logo={logo} />} />
+      <Route path="/reset-password" element={<ResetPasswordPage appConfig={appConfig} logo={logo} />} />
   <Route path="/stripe/success" element={<StripeSuccess />} />
   <Route path="/stripe/reauth" element={<StripeReauth />} />
 

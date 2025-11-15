@@ -11,8 +11,11 @@ import DialogSelectInput from "../../components/SmartInputs/DialogSelectInput";
 import SmartDialogLinkSelectInput from "../../components/SmartInputs/SmartDialogLinkSelectInput";
 import PhoneTextInput from "../../components/SmartInputs/PhoneTextInput";
 import SmartCurrencyInput from "../../components/SmartInputs/SmartCurrencyInput";
-
+import SmartSwitchInput from "../../components/SmartInputs/SmartSwitchInput";
 import PaymentButton from "../../components/SmartInputs/PaymentButton";
+import SmartImageInput from "../../components/SmartInputs/SmartImageInput";
+import SmartAvatarInput from "../../components/SmartWidgets/SmartAvatarInput";
+import SmartSemiCircleGauge from "../../components/SmartWidgets/SmartSemiCircleGauge";
 
 export const FieldMap = {
   text: PlainTextInput,
@@ -24,5 +27,9 @@ export const FieldMap = {
   time: TimePickerInput,
   phone: PhoneTextInput,
   paymentButton: PaymentButton,
-  currency: SmartCurrencyInput
+  currency: SmartCurrencyInput,
+  boolean: SmartSwitchInput,
+  image:SmartImageInput,
+  avatar: SmartAvatarInput,
+  earnings:SmartSemiCircleGauge
 };

@@ -1,5 +1,5 @@
 // src/components/SmartInputs/DialogSelectInput.jsx
-import React, { useState } from 'react';
+import React, { useState, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -13,101 +13,92 @@ import {
   ListItemText,
   TextField,
   Divider,
-} from '@mui/material';
-import { useTheme } from '@mui/material/styles';
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import AddIcon from '@mui/icons-material/Add';
+} from "@mui/material";
+import { useTheme } from "@mui/material/styles";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import AddIcon from "@mui/icons-material/Add";
 
-const INPUT_PADDING = '10px'; // Match PlainTextInput
+const INPUT_PADDING = "10px";
 
 export default function DialogSelectInput({
   label,
   value,
-  onChangeText,
   options = [],
-  placeholder,
-  mode = 'edit',
+  onChangeText,
+  placeholder = "Select...",
   allowCustom = true,
+  mode = "edit",
   error,
   helperText,
 }) {
   const theme = useTheme();
+
   const [open, setOpen] = useState(false);
-  const [customValue, setCustomValue] = useState('');
-  const [selectingOther, setSelectingOther] = useState(false);
+  const [isCustom, setIsCustom] = useState(false);
+  const [customValue, setCustomValue] = useState("");
 
-  // Find display label from options
-  const displayLabel = Array.isArray(options)
-    ? options.find((opt) => {
-        const optValue = typeof opt === 'object' ? opt.value : opt;
-        return optValue === value;
-      })
-    : null;
+  /* -------------------------------------------------------------------------- */
+  /* ✅ Normalize value consistently (string)                                   */
+  /* -------------------------------------------------------------------------- */
+  const normalizedValue = useMemo(() => {
+    if (value == null) return "";
+    if (typeof value === "string") return value;
+    if (typeof value === "object" && value.value) return value.value;
+    if (typeof value === "object" && value.label) return value.label;
+    return "";
+  }, [value]);
 
-  const displayText = displayLabel
-    ? typeof displayLabel === 'object'
-      ? displayLabel.label
-      : displayLabel
-    : value || '';
+  /* -------------------------------------------------------------------------- */
+  /* ✅ Pick the correct label to show                                         */
+  /* -------------------------------------------------------------------------- */
+  const displayText = useMemo(() => {
+    if (!normalizedValue) return "";
 
-  const handleOpen = () => {
-    setOpen(true);
-    setSelectingOther(false);
-  };
+    const match = options.find((opt) => {
+      if (typeof opt === "string") return opt === normalizedValue;
+      if (typeof opt === "object") return opt.value === normalizedValue;
+      return false;
+    });
 
-  const handleClose = () => {
-    setOpen(false);
-    setSelectingOther(false);
-    setCustomValue('');
-  };
+    if (!match) return normalizedValue; // custom value
 
-  const handleSelect = (selectedValue) => {
-    if (selectedValue === 'Other') {
-      setSelectingOther(true);
-      setCustomValue('');
+    return typeof match === "object" ? match.label : match;
+  }, [normalizedValue, options]);
+
+  const handleSelect = (val) => {
+    if (val === "Other" && allowCustom) {
+      setIsCustom(true);
+      setCustomValue("");
       return;
     }
-    onChangeText(selectedValue);
-    handleClose();
+
+    onChangeText(val);
+    setOpen(false);
   };
 
-  const handleCustomSave = () => {
-    if (customValue.trim()) {
-      onChangeText(customValue.trim());
-      handleClose();
-    }
+  const handleAddCustom = () => {
+    if (!customValue.trim()) return;
+    onChangeText(customValue.trim());
+    setIsCustom(false);
+    setOpen(false);
   };
 
   /* -------------------------------------------------------------------------- */
-  /*                                 READ MODE                                  */
+  /* ✅ READ MODE                                                               */
   /* -------------------------------------------------------------------------- */
-  if (mode === 'read') {
+  if (mode === "read") {
     return (
-      <Box sx={{ mb: 0.5 }}>
-        <Typography
-          variant="body2"
-          sx={{
-            fontWeight: 500,
-            color: theme.palette.primary.main,
-            mb: 0.5,
-          }}
-        >
+      <Box sx={{ mb: 1 }}>
+          <Typography variant="subtitle1" sx={{ color: theme.palette.primary.main, fontWeight: 500 }}>    
+        
           {label}
         </Typography>
 
-        <Typography
-          variant="body1"
-          sx={{
-            color: theme.palette.text.primary,
-            lineHeight: 1.6,
-          }}
-        >
-          {displayText && displayText.toString().trim() !== '' ? (
-            displayText.toString()
+        <Typography variant="body1">
+          {displayText ? (
+            displayText
           ) : (
-            <span style={{ color: theme.palette.text.disabled, fontStyle: 'italic' }}>
-              Not set
-            </span>
+            <em style={{ color: theme.palette.text.disabled }}>Not set</em>
           )}
         </Typography>
       </Box>
@@ -115,7 +106,7 @@ export default function DialogSelectInput({
   }
 
   /* -------------------------------------------------------------------------- */
-  /*                                 EDIT MODE                                  */
+  /* ✅ EDIT MODE                                                               */
   /* -------------------------------------------------------------------------- */
 
   const borderColor = error
@@ -125,118 +116,88 @@ export default function DialogSelectInput({
     : theme.palette.divider;
 
   return (
-    <Box sx={{ mb: 0.5 }}>
-      {/* Label */}
-      <Typography
-        variant="body2"
-        sx={{
-          fontWeight: 500,
-          color: error ? theme.palette.error.main : theme.palette.text.primary,
-          mb: 0.75,
-        }}
-      >
+    <Box sx={{ mb: 2 }}>
+    <Typography variant="subtitle1" sx={{ color: theme.palette.primary.main, fontWeight: 500 }}>    
         {label}
       </Typography>
 
-      {/* Selector Button */}
       <Button
         variant="outlined"
         fullWidth
-        onClick={handleOpen}
+        onClick={() => {
+          setOpen(true);
+          setIsCustom(false);
+        }}
         endIcon={<KeyboardArrowDownIcon />}
         sx={{
-          justifyContent: 'space-between',
-          textTransform: 'none',
+          justifyContent: "space-between",
+          textTransform: "none",
           backgroundColor: theme.palette.background.paper,
-          color: displayText ? theme.palette.text.primary : theme.palette.text.disabled,
+          color: displayText
+            ? theme.palette.text.primary
+            : theme.palette.text.disabled,
           borderColor: borderColor,
-          borderWidth: open ? '2px' : '1px',
-          padding: INPUT_PADDING, // Match PlainTextInput padding
-          fontSize: '16px',
+          borderWidth: open ? "2px" : "1px",
+          padding: INPUT_PADDING,
+          fontSize: "16px",
           borderRadius: 1,
-          minHeight: '45px', // Match PlainTextInput height
-          
-          transition: 'border-color 150ms ease-in-out, border-width 150ms ease-in-out',
-          '&:hover': {
-            borderColor: error ? theme.palette.error.main : theme.palette.primary.main,
-            borderWidth: '1px',
+          minHeight: "45px",
+          "&:hover": {
+            borderColor: theme.palette.primary.main,
             backgroundColor: theme.palette.background.paper,
-          },
-          '& .MuiButton-endIcon': {
-            color: theme.palette.text.disabled,
           },
         }}
       >
-        <Box component="span" sx={{ textAlign: 'left', flex: 1 }}>
-          {displayText || placeholder || `Select ${label.toLowerCase()}`}
-        </Box>
+        {displayText || placeholder}
       </Button>
 
-      {/* Helper Text or Error */}
-      {(helperText || error) && (
+      {(error || helperText) && (
         <Typography
           variant="caption"
           sx={{
-            color: error ? theme.palette.error.main : theme.palette.text.secondary,
             mt: 0.5,
-            ml: 0.25,
-            display: 'block',
+            color: error ? theme.palette.error.main : theme.palette.text.secondary,
           }}
         >
           {error || helperText}
         </Typography>
       )}
 
-      {/* Dialog */}
+      {/* ============================================================ */}
+      {/* ✅ DIALOG */}
+      {/* ============================================================ */}
       <Dialog
         open={open}
-        onClose={handleClose}
+        onClose={() => {
+          setOpen(false);
+          setIsCustom(false);
+          setCustomValue("");
+        }}
         fullWidth
         maxWidth="sm"
-        PaperProps={{
-          sx: {
-            bgcolor: theme.palette.background.paper,
-            borderRadius: 2,
-          },
-        }}
       >
-        <DialogTitle
-          sx={{
-            borderBottom: `1px solid ${theme.palette.divider}`,
-            fontWeight: 600,
-          }}
-        >
-          Select {label}
-        </DialogTitle>
+        <DialogTitle>Select {label}</DialogTitle>
 
-        <DialogContent dividers sx={{ p: 0 }}>
-          {!selectingOther ? (
-            <List sx={{ py: 0 }}>
-              {options.map((opt, index) => {
-                const optValue = typeof opt === 'object' ? opt.value : opt;
-                const optLabel = typeof opt === 'object' ? opt.label : opt;
+        <DialogContent dividers>
+          {!isCustom ? (
+            <List>
+              {options.map((opt, idx) => {
+                const optValue = typeof opt === "object" ? opt.value : opt;
+                const optLabel = typeof opt === "object" ? opt.label : opt;
+
+                const isSelected = optValue === normalizedValue;
 
                 return (
                   <ListItemButton
-                    key={index}
+                    key={idx}
                     onClick={() => handleSelect(optValue)}
-                    selected={optValue === value}
+                    selected={isSelected}
                     sx={{
-                      borderBottom:
-                        index < options.length - 1
-                          ? `1px solid ${theme.palette.divider}`
-                          : 'none',
-                      '&.Mui-selected': {
-                        bgcolor:
-                          theme.palette.mode === 'dark'
-                            ? 'rgba(74, 144, 226, 0.15)'
-                            : 'rgba(74, 144, 226, 0.08)',
-                        '&:hover': {
-                          bgcolor:
-                            theme.palette.mode === 'dark'
-                              ? 'rgba(74, 144, 226, 0.2)'
-                              : 'rgba(74, 144, 226, 0.12)',
-                        },
+                      "&.Mui-selected": {
+                        backgroundColor:
+                          theme.palette.mode === "dark"
+                            ? "rgba(74,144,226,0.15)"
+                            : "rgba(74,144,226,0.08)",
                       },
                     }}
                   >
@@ -245,67 +206,52 @@ export default function DialogSelectInput({
                 );
               })}
 
-              {allowCustom && !options.some((opt) => opt === 'Other' || opt.value === 'Other') && (
+              {/* ✅ Add "Other" option */}
+              {allowCustom && (
                 <>
-                  <Divider />
-                  <ListItemButton
-                    onClick={() => handleSelect('Other')}
-                    sx={{
-                      color: theme.palette.primary.main,
-                    }}
-                  >
-                    <AddIcon sx={{ mr: 1, fontSize: 20 }} />
+                  <Divider sx={{ my: 1 }} />
+                  <ListItemButton onClick={() => handleSelect("Other")}>
+                    <AddIcon sx={{ mr: 1 }} />
                     <ListItemText primary="Other" />
                   </ListItemButton>
                 </>
               )}
             </List>
           ) : (
-            <Box sx={{ p: 3 }}>
-              <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 500 }}>
-                Enter custom value:
+            <Box sx={{ p: 1 }}>
+              <Typography sx={{ mb: 1.5, fontWeight: 500 }}>
+                Enter custom value
               </Typography>
+
               <TextField
                 fullWidth
+                autoFocus
                 value={customValue}
                 onChange={(e) => setCustomValue(e.target.value)}
-                placeholder="Type your custom option..."
-                autoFocus
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' && customValue.trim()) {
-                    handleCustomSave();
-                  }
-                }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 1,
-                    '& fieldset': {
-                      borderColor: theme.palette.divider,
-                    },
-                    '&:hover fieldset': {
-                      borderColor: theme.palette.primary.main,
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: theme.palette.primary.main,
-                      borderWidth: '2px',
-                    },
-                  },
+                placeholder="Type your option..."
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAddCustom();
                 }}
               />
             </Box>
           )}
         </DialogContent>
 
-        <DialogActions sx={{ borderTop: `1px solid ${theme.palette.divider}`, p: 2 }}>
-          <Button onClick={handleClose} sx={{ textTransform: 'none' }}>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setIsCustom(false);
+              setOpen(false);
+            }}
+          >
             Cancel
           </Button>
-          {selectingOther && (
+
+          {isCustom && (
             <Button
-              onClick={handleCustomSave}
               variant="contained"
               disabled={!customValue.trim()}
-              sx={{ textTransform: 'none' }}
+              onClick={handleAddCustom}
             >
               Add
             </Button>

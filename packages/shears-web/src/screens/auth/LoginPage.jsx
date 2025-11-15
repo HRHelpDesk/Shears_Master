@@ -147,6 +147,13 @@ export default function LoginPage({ appConfig, logo }) {
             Register
           </a>
         </Typography>
+        <Typography variant="body2" mt={3} sx={{ color: theme.palette.text.secondary }}>
+   
+          <a href="/reset-password" style={{ color: theme.palette.primary.main }}>
+            Reset Password
+          </a>
+        </Typography>
+
       </Paper>
     </Box>
   );

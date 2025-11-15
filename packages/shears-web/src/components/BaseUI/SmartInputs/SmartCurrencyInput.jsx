@@ -24,14 +24,7 @@ export default function SmartCurrencyInput({
   if (mode === 'read') {
     return (
       <Box sx={{ mb: 0.5 }}>
-        <Typography
-          variant="body2"
-          sx={{
-            fontWeight: 500,
-            color: theme.palette.primary.main,
-            mb: 0.5,
-          }}
-        >
+      <Typography variant="subtitle1" sx={{ color: theme.palette.primary.main, fontWeight: 500 }}>    
           {label}
         </Typography>
 
@@ -50,14 +43,7 @@ export default function SmartCurrencyInput({
 
   return (
     <Box sx={{ mb: 0.5 }}>
-      <Typography
-        variant="body2"
-        sx={{
-          fontWeight: 500,
-          color: error ? theme.palette.error.main : theme.palette.text.primary,
-          mb: 0.75,
-        }}
-      >
+      <Typography variant="subtitle1" sx={{ color: theme.palette.primary.main, fontWeight: 500 }}>    
         {label}
       </Typography>
 

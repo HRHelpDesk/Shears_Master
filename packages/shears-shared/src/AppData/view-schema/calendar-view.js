@@ -2,7 +2,7 @@ export const CalendarMonthView = {
     parent:'Calendar',
     name: 'Calendar',
     displayName: 'Calendar',
-    component: 'calendar/CalendarView',
+    component: 'calendar/CalendarPage',
     mobileComponent: 'CalendarView',
 }
 

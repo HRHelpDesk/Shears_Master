@@ -12,7 +12,7 @@ const Drawer = createDrawerNavigator();
 
 export default function RootDrawer({ appConfig }) {
     const theme = useTheme();
-    const {logout} = useContext(AuthContext);
+    const {logout, user} = useContext(AuthContext);
 
     useEffect(()=>{console.log(appConfig)},[])
   return (
@@ -38,7 +38,16 @@ export default function RootDrawer({ appConfig }) {
         {() => <MainNavigator appConfig={appConfig} />}
       </Drawer.Screen>
 
-      {appConfig.subNavigation.map((route) => (
+      {appConfig.subNavigation.filter(item => {
+        // If no permissions array → allow it
+        console.log("item.permissions", item.permissions)
+                console.log("user.role", user.role)
+
+        if (!item.permissions) return true;
+
+        // If permissions exist, check user.role
+        return item.permissions.includes(user.role);
+      }).map((route) => (
         <Drawer.Screen
           key={route.name}
           name={route.name}

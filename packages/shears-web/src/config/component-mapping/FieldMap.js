@@ -5,6 +5,9 @@ import { SmartDateInput, SmartTimeInput } from "../../components/BaseUI/SmartInp
 import SmartDialogLinkSelectInput from "../../components/BaseUI/SmartInputs/SmartDialogLinkSelectInput";
 import SmartDialogSelect from "../../components/BaseUI/SmartInputs/SmartDialogSelect";
 import SmartTextAreaInput from "../../components/BaseUI/SmartInputs/SmartTextAreaInput";
+import SmartCurrencyInput from "../../components/BaseUI/SmartInputs/SmartCurrencyInput";
+import SmartSwitchInput from "../../components/BaseUI/SmartInputs/SmartSwitchInput";
+import SmartImageInput from "../../components/BaseUI/SmartInputs/SmartImageInput";
 
 export const FieldMap = {
    text: PlainTextInput,
@@ -14,6 +17,10 @@ export const FieldMap = {
   date: SmartDateInput, // replace with DatePickerInput
   phone:PhoneTextInput,
   paymentButton: PaymentButton,
-//   number: PlainTextInput,
+  currency: SmartCurrencyInput,
+  number: PlainTextInput,
   time: SmartTimeInput,
+  boolean: SmartSwitchInput,
+  image: SmartImageInput
+
 };

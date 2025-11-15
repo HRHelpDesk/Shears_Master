@@ -9,7 +9,7 @@ export const CurrencyFields = [
     required: true,
     validations: { min: 0, max: 100000 },
     display: { placeholder: 'Enter selling price', order: 5 },
-    input: 'number',
+    input: 'currency',
     inputConfig: { prefix: '$', step: 0.01 },
   },
     {
@@ -20,7 +20,7 @@ export const CurrencyFields = [
     required: true,
     validations: { min: 0, max: 100000 },
     display: { placeholder: 'Enter product cost', order: 4 },
-    input: 'number',
+    input: 'currency',
     inputConfig: { prefix: '$', step: 0.01 },
   },
 

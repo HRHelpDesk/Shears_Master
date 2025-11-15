@@ -21,7 +21,7 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { useTheme, alpha } from '@mui/material/styles';
 import { AuthContext } from '../../../context/AuthContext';
 import { getRecords } from 'shears-shared/src/Services/Authentication';
-
+import FieldActionsForEntry from '../ActionMenu/FieldActionsForEntry'
 /* ============================================================
    ✅ Helper: Format special fields dynamically
 ============================================================ */
@@ -51,16 +51,22 @@ const getLinkedDisplayFields = (raw) => {
 
   const fields = [];
 
-  // Inline fields (right-side alignment)
+  // ✅ Price
   if (raw.price != null) {
     fields.push({ key: "price", label: "Price", layout: "inline" });
   }
 
+  // ✅ Duration
   if (raw.duration != null) {
     fields.push({ key: "duration", label: "Duration", layout: "inline" });
   }
 
-  // Full-width description
+  // ✅ Phone (mobile behavior)
+  if (Array.isArray(raw.phone) && raw.phone.length > 0) {
+    fields.push({ key: "phone", label: "Phone", layout: "inline" });
+  }
+
+  // ✅ Description (full width)
   if (raw.description) {
     fields.push({ key: "description", label: "Description", layout: "full" });
   }
@@ -152,71 +158,85 @@ export default function SmartDialogLinkSelectInput({
   };
 
   /* ============================================================
-     ✅ READ MODE — with collapsible details (web version)
-  ============================================================ */
-  if (mode === 'read') {
-    const raw = value?.raw || {};
-    const fields = getLinkedDisplayFields(raw);
+   ✅ READ MODE — with collapsible details + phone actions
+============================================================ */
+if (mode === 'read') {
+  const raw = value?.raw || {};
+  const fields = getLinkedDisplayFields(raw);
 
-    const compact = fields.filter((f) => f.key !== 'description');
-    const fullWidth = fields.filter((f) => f.key === 'description');
+  const compact = fields.filter((f) => f.layout === "inline");
+  const fullWidth = fields.filter((f) => f.layout === "full");
 
-    return (
-      <Box sx={{ my: 1 }}>
-        {/* Label */}
-        <Typography variant="subtitle2" color="text.primary" sx={{ mb: 0.5 }}>
-          {label}
+  // ✅ Extract phone entry like mobile
+  const phoneEntry =
+    Array.isArray(raw.phone) && raw.phone.length > 0
+      ? raw.phone[0] // { label, value }
+      : null;
+
+  return (
+    <Box sx={{ my: 1 }}>
+      {/* Label */}
+      <Typography variant="subtitle2" color="text.primary" sx={{ mb: 0.5 }}>
+        {label}
+      </Typography>
+
+      {/* Header (click-to-expand) */}
+      <Box
+        onClick={() => setExpanded(!expanded)}
+        sx={{
+          cursor: 'pointer',
+          bgcolor:
+            theme.palette.mode === 'dark'
+              ? alpha(theme.palette.background.paper, 0.6)
+              : theme.palette.grey[100],
+          borderRadius: 1,
+          p: 1.5,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          transition: 'all 0.2s ease',
+        }}
+      >
+        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+          {value?.name || (
+            <em style={{ color: theme.palette.text.secondary }}>Not set</em>
+          )}
         </Typography>
 
-        {/* Header – clickable */}
-        <Box
-          onClick={() => setExpanded(!expanded)}
+        <KeyboardArrowDownIcon
           sx={{
-            cursor: 'pointer',
-            bgcolor:
-              theme.palette.mode === 'dark'
-                ? alpha(theme.palette.background.paper, 0.6)
-                : theme.palette.grey[100],
-            borderRadius: 1,
-            p: 1.5,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            transition: 'all 0.2s ease',
+            transition: '0.3s',
+            transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+            color: theme.palette.text.secondary,
           }}
-        >
-          {/* Service Name */}
-          <Typography variant="body1" sx={{ fontWeight: 600 }}>
-            {value?.name || (
-              <em style={{ color: theme.palette.text.secondary }}>—</em>
-            )}
-          </Typography>
+        />
+      </Box>
 
-          {/* Arrow */}
-          <KeyboardArrowDownIcon
-            sx={{
-              transition: '0.3s',
-              transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
-              color: theme.palette.text.secondary,
-            }}
-          />
-        </Box>
+      {/* Collapsible Details */}
+      <Collapse in={expanded} timeout={250} unmountOnExit>
+        <Box sx={{ mt: 1, pl: 1 }}>
+          {/* ✅ Compact fields (Price, Duration, Phone) */}
+          {compact.length > 0 && (
+            <Box
+              sx={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 3,
+                mb: fullWidth.length ? 2 : 0,
+              }}
+            >
+              {compact.map((f) => {
+                const isPhoneField = f.key === "phone";
 
-        {/* Collapsible body */}
-        <Collapse in={expanded} timeout={250} unmountOnExit>
-          <Box sx={{ mt: 1, pl: 1 }}>
-            {/* Compact fields row */}
-            {compact.length > 0 && (
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: 3,
-                  mb: fullWidth.length ? 2 : 0,
-                }}
-              >
-                {compact.map((f) => (
-                  <Box key={f.key} sx={{ flex: '1 1 120px' }}>
+                let formattedValue = formatLinkedValue(f.key, raw[f.key]);
+
+                if (isPhoneField && phoneEntry) {
+                  formattedValue = phoneEntry.value;
+                }
+
+                return (
+                  <Box key={f.key} sx={{ flex: "1 1 150px" }}>
+                    {/* Small label */}
                     <Typography
                       variant="caption"
                       color="text.secondary"
@@ -224,34 +244,51 @@ export default function SmartDialogLinkSelectInput({
                     >
                       {f.label}
                     </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {formatLinkedValue(f.key, raw[f.key])}
-                    </Typography>
-                  </Box>
-                ))}
-              </Box>
-            )}
 
-            {/* Full-width fields */}
-            {fullWidth.map((f) => (
-              <Box key={f.key} sx={{ mb: 1.5 }}>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ display: 'block', mb: 0.25 }}
-                >
-                  {f.label}
-                </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                  {formatLinkedValue(f.key, raw[f.key])}
-                </Typography>
-              </Box>
-            ))}
-          </Box>
-        </Collapse>
-      </Box>
-    );
-  }
+                    {/* Value + phone action icons */}
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                      }}
+                    >
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {formattedValue}
+                      </Typography>
+
+                      {/* ✅ Inline actions (call, sms, email, maps) */}
+                      {isPhoneField && phoneEntry && (
+                        <FieldActionsForEntry entry={phoneEntry} />
+                      )}
+                    </Box>
+                  </Box>
+                );
+              })}
+            </Box>
+          )}
+
+          {/* ✅ Full-width fields (Description) */}
+          {fullWidth.map((f) => (
+            <Box key={f.key} sx={{ mb: 1.5 }}>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ display: 'block', mb: 0.25 }}
+              >
+                {f.label}
+              </Typography>
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                {formatLinkedValue(f.key, raw[f.key])}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      </Collapse>
+    </Box>
+  );
+}
+
 
   /* ============================================================
      ✅ EDIT MODE

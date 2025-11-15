@@ -95,7 +95,7 @@ export default function PlainTextInput({
         onChangeText={onChangeText}
         multiline={multiline}
         keyboardType={getInputType()}
-        placeholder={placeholder || `Enter ${label.toLowerCase()}`}
+        placeholder={placeholder || `Enter ${label?.toLowerCase()}`}
         placeholderTextColor={theme.colors.textLight}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}

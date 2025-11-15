@@ -1,66 +1,91 @@
 // src/screens/BasePage.js
-import React, { useState, lazy, Suspense, useEffect, useContext, useCallback } from 'react';
-import { Box, Typography, CircularProgress } from '@mui/material';
+import React, {
+  useState,
+  lazy,
+  Suspense,
+  useEffect,
+  useContext,
+  useCallback,
+} from 'react';
+import {
+  Box,
+  Typography,
+  CircularProgress,
+  Button,
+  Fade,
+} from '@mui/material';
 import TabBar from '../components/UI/TabBar';
-import { dummyUsers } from 'shears-shared/src/AppData/dummy-data/dummydata';
 import { mapFields } from 'shears-shared/src/config/fieldMapper';
-import { dummyServices } from 'shears-shared/src/AppData/dummy-data/dummyServices';
 import { AuthContext } from '../context/AuthContext';
 import { getRecords } from 'shears-shared/src/Services/Authentication';
+
+/* -------------------------------------------------------------
+   Local minimal fallback component
+------------------------------------------------------------- */
+function FallbackComponent({ name }) {
+  return (
+    <Box
+      sx={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: '100%',
+        p: 4,
+      }}
+    >
+      <Typography variant="h5" gutterBottom color="text.secondary">
+        {name}
+      </Typography>
+
+      <Typography variant="subtitle1" color="text.secondary">
+        Loading component…
+      </Typography>
+    </Box>
+  );
+}
+
 export default function BasePage({ appConfig, name, viewData = [] }) {
   const route = appConfig.mainNavigation.find((r) => r.name === name);
   const views = route?.views || [];
-  const [activeTab, setActiveTab] = useState(0);
-  const [data, setData] = useState([]); // Added data state
-  const [loading, setLoading] = useState(true); // Loading state
-  const [refreshing, setRefreshing] = useState(false); // Added refreshing state
-  const [error, setError] = useState(null); // Added error state    
 
+  const [activeTab, setActiveTab] = useState(0);
+
+  // Data, loading, error states
+  const [data, setData] = useState([]);
+  const [loadingData, setLoadingData] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Component dynamic loading
   const [ViewComponent, setViewComponent] = useState(() => FallbackComponent);
- const {user, token} = useContext(AuthContext);
+  const [loadingComponent, setLoadingComponent] = useState(true);
+
+  const { user, token } = useContext(AuthContext);
   const activeView = viewData[activeTab] || null;
 
-  function FallbackComponent() {
-    return (
-      <Box
-        sx={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          width: '100%',
-          p: 4,
-        }}
-      >
-        <Typography variant="h5" gutterBottom color="text.secondary">
-          {activeView?.displayName || name}
-        </Typography>
-        <Typography variant="subtitle1" color="text.secondary">
-          Component: {activeView?.component || 'None'}
-        </Typography>
-      </Box>
-    );
-  }
-
-  // 🔍 Debug logs
+  /* -------------------------------------------------------------
+     1. Reset activeTab when viewData changes
+  ------------------------------------------------------------- */
   useEffect(() => {
-  console.log("Active View")
-  console.log(activeView)
-  }, []);
+    setActiveTab(0);               // always start on the first tab
+  }, [viewData]);                  // <-- runs when a new field set is loaded
 
+  /* -------------------------------------------------------------
+     2. Fetch Records
+  ------------------------------------------------------------- */
   const fetchRecords = useCallback(
     async (isRefresh = false) => {
-      console.log(user)
       if (!token || !user?.subscriberId) {
-        alert('Authentication required');
-        setLoading(false);
+        setError('Authentication required');
+        setLoadingData(false);
         return;
       }
 
       try {
         if (isRefresh) setRefreshing(true);
-        else setLoading(true);
+        else setLoadingData(true);
 
         const response = await getRecords({
           recordType: name.toLowerCase(),
@@ -69,8 +94,6 @@ export default function BasePage({ appConfig, name, viewData = [] }) {
           userId: user.userId,
         });
 
-        console.log('Fetched records:', response);
-
         setData(response || []);
         setError(null);
       } catch (err) {
@@ -78,46 +101,59 @@ export default function BasePage({ appConfig, name, viewData = [] }) {
         setError(err.message || 'Failed to load data');
       } finally {
         if (isRefresh) setRefreshing(false);
-        else setLoading(false);
+        else setLoadingData(false);
       }
     },
     [token, user, name]
   );
 
-  // Initial fetch on mount
+  // Initial fetch
   useEffect(() => {
     fetchRecords(false);
   }, [fetchRecords]);
 
-  // Dynamic import of component
+  /* -------------------------------------------------------------
+     3. Load the dynamic view component
+  ------------------------------------------------------------- */
   useEffect(() => {
-     console.log("viewData Component")
-    console.log(activeView.component)
-    if (activeView?.component) {
-      import(`../components/${activeView.component}`)
-        .then((mod) => setViewComponent(() => mod.default))
-        .catch(() => setViewComponent(() => FallbackComponent));
-    } else {
+    if (!activeView?.component) {
       setViewComponent(() => FallbackComponent);
+      setLoadingComponent(false);
+      return;
     }
+
+    setLoadingComponent(true);
+
+    import(`../components/${activeView.component}`)
+      .then((mod) => {
+        setViewComponent(() => mod.default);
+      })
+      .catch((e) => {
+        console.warn('Dynamic import failed:', e);
+        setViewComponent(() => FallbackComponent);
+      })
+      .finally(() => setLoadingComponent(false));
   }, [activeView]);
 
-  // 🔹 Map fields through fieldMapper
-  
-
-
+  /* -------------------------------------------------------------
+     4. Props passed to the loaded view
+  ------------------------------------------------------------- */
   const dynamicProps = {
     name: activeView?.displayName || name,
-    fields: mapFields(activeView.fields),
-    refreshing, // Added for refresh state
-    onRefresh: () => fetchRecords(true), // Added for manual refresh
-    data: data,
+    fields: mapFields(activeView?.fields),
+    refreshing,
+    onRefresh: () => fetchRecords(true),
+    data,
     appConfig,
   };
 
+  /* -------------------------------------------------------------
+     5. UI: Loaders + retry handling
+  ------------------------------------------------------------- */
+  const showMainLoader = loadingComponent || loadingData;
+
   return (
     <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
-    
       {views.length > 0 && (
         <TabBar views={views} activeTab={activeTab} onTabChange={setActiveTab} />
       )}
@@ -131,15 +167,59 @@ export default function BasePage({ appConfig, name, viewData = [] }) {
           backgroundColor: '#fff',
           borderRadius: 2,
           boxShadow: 1,
+          position: 'relative',
           overflow: 'hidden',
         }}
       >
-        <Suspense fallback={<CircularProgress sx={{ m: 'auto' }} />}>
-          <ViewComponent
-            key={activeView?.component || 'fallback'}
-            {...dynamicProps}
-          />
-        </Suspense>
+        {/* MAIN LOADER OVERLAY */}
+        {showMainLoader && (
+          <Fade in={true}>
+            <Box
+              sx={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: 'rgba(255,255,255,0.8)',
+                zIndex: 10,
+              }}
+            >
+              <CircularProgress />
+            </Box>
+          </Fade>
+        )}
+
+        {/* Error State */}
+        {error && !showMainLoader && (
+          <Box
+            sx={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              p: 4,
+            }}
+          >
+            <Typography variant="h6" color="error" gutterBottom>
+              {error}
+            </Typography>
+            <Button variant="contained" onClick={() => fetchRecords(false)}>
+              Retry
+            </Button>
+          </Box>
+        )}
+
+        {/* MAIN COMPONENT WHEN READY */}
+        {!error && (
+          <Suspense fallback={<CircularProgress sx={{ m: 'auto' }} />}>
+            <ViewComponent
+              key={activeView?.component || 'fallback'}
+              {...dynamicProps}
+            />
+          </Suspense>
+        )}
       </Box>
     </Box>
   );

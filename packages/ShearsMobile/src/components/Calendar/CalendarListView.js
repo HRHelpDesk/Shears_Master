@@ -12,36 +12,42 @@ import {
 } from 'react-native';
 import { Avatar, useTheme, FAB } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { Swipeable } from 'react-native-gesture-handler';
-import { deleteRecord } from 'shears-shared/src/Services/Authentication';
+import { deleteRecord, getRecords } from 'shears-shared/src/Services/Authentication';
 import { mapFields } from 'shears-shared/src/config/fieldMapper';
 import { AuthContext } from '../../context/AuthContext';
 import formatTime12 from 'shears-shared/src/utils/stringHelpers';
 import { LiquidGlassView } from '@callstack/liquid-glass';
 
 /* --------------------------------------------------------------
-   Helper – pretty date (timezone-safe)
+   ⭐ FIX — SAFE LOCAL DATE PARSER (no timezone shift)
+-------------------------------------------------------------- */
+const parseYMD = (value) => {
+  if (!value) return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return new Date(value);
+  const [_, y, m, d] = match;
+  return new Date(Number(y), Number(m) - 1, Number(d), 0, 0, 0, 0);
+};
+
+/* --------------------------------------------------------------
+   Pretty date formatter (kept intact)
 -------------------------------------------------------------- */
 const formatDatePretty = (value) => {
   if (!value) return '';
 
-  // ✅ Handle pure YYYY-MM-DD strings (prevents timezone shift)
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     const [y, m, d] = value.split('-').map(Number);
-
-    // ✅ Build UTC date so it cannot shift around
     const date = new Date(Date.UTC(y, m - 1, d));
-
     return date.toLocaleDateString(undefined, {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
-      timeZone: 'UTC', // ✅ YES — required in RN too
+      timeZone: 'UTC',
     });
   }
 
-  // ✅ Otherwise handle full ISO timestamps
   const dateObj = new Date(value);
   if (isNaN(dateObj)) return value;
 
@@ -52,34 +58,36 @@ const formatDatePretty = (value) => {
   });
 };
 
-
+/* --------------------------------------------------------------
+   Render helper for nested objects
+-------------------------------------------------------------- */
 const renderObjectAsLines = (obj, fieldName) => {
   if (!obj || typeof obj !== 'object') return null;
 
-  // 🕐 Time range
   if (fieldName === 'time' && obj.startTime) {
     const start = formatTime12(obj.startTime);
     const end = obj.endTime ? ` – ${formatTime12(obj.endTime)}` : '';
     return `${start}${end}`;
   }
 
-  // ⏱ Duration (e.g., 1h 30m)
   if (fieldName === 'duration' && (obj.hours || obj.minutes)) {
     const h = obj.hours && obj.hours !== '0' ? `${obj.hours}h` : '';
     const m = obj.minutes && obj.minutes !== '0' ? `${obj.minutes}m` : '';
     return [h, m].filter(Boolean).join(' ') || '0m';
   }
 
-  // 🧾 Arrays
   if (Array.isArray(obj)) {
     if (obj.length === 0) return '—';
-    const hasNames = obj.every((item) => item && typeof item === 'object' && 'name' in item);
-    if (hasNames) return obj.map((item) => item.name).join(', ');
 
-    const hasLabels = obj.every(
-      (item) => item && typeof item === 'object' && ('label' in item || 'value' in item)
-    );
-    if (hasLabels) {
+    if (obj.every((item) => item && typeof item === 'object' && 'name' in item))
+      return obj.map((item) => item.name).join(', ');
+
+    if (
+      obj.every(
+        (item) =>
+          item && typeof item === 'object' && ('label' in item || 'value' in item)
+      )
+    ) {
       return obj
         .map((item) => {
           if (item.label && item.value) return `${item.label}: ${item.value}`;
@@ -88,6 +96,7 @@ const renderObjectAsLines = (obj, fieldName) => {
         .filter(Boolean)
         .join(' • ');
     }
+
     return obj.map((i) => String(i)).join(', ');
   }
 
@@ -105,13 +114,12 @@ export default function CalendarListView(props) {
   const theme = useTheme();
   const navigation = useNavigation();
   const route = useRoute();
-  const { token } = useContext(AuthContext);
+  const { token, user } = useContext(AuthContext);
 
   /* ----------------------------------------------------------------
-     1️⃣  Merge route params and props so it works in both cases
-     ---------------------------------------------------------------- */
-  const routeParams = route?.params ?? {};
-  const merged = { ...routeParams, ...props };
+     1️⃣ Merge route params + props
+  ---------------------------------------------------------------- */
+  const merged = { ...(route?.params ?? {}), ...props };
 
   const {
     data: propData = [],
@@ -120,50 +128,68 @@ export default function CalendarListView(props) {
     refreshing = false,
     name = 'Calendar',
     header: headerProp,
+    selectedDate, // ⭐ FIX — day passed in
+    mode,         // "day" mode
   } = merged;
 
   const [search, setSearch] = useState('');
-  const [header, setHeader] = useState(headerProp);
+  const [header] = useState(headerProp);
   const [localData, setLocalData] = useState(propData);
 
   useEffect(() => {
     setLocalData(propData);
-    if (!appConfig) console.warn('[CalendarListView] appConfig not provided — fallback mode active.');
-  }, [propData, appConfig]);
+  }, [propData]);
 
   /* ----------------------------------------------------------------
-     2️⃣  View configuration (safe access)
-     ---------------------------------------------------------------- */
+     2️⃣ Fetch ONLY when not in day mode
+  ---------------------------------------------------------------- */
+  const fetchLocalRecords = async () => {
+    try {
+      const resp = await getRecords({
+        recordType: 'calendar',
+        token,
+        subscriberId: user.subscriberId,
+        userId: user.userId,
+        limit: 200,
+      });
+      setLocalData(resp || []);
+    } catch (e) {
+      console.error('CalendarListView fetch error:', e);
+    }
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (mode !== 'day') {
+        fetchLocalRecords();
+      }
+    }, [mode])
+  );
+
+  /* ----------------------------------------------------------------
+     3️⃣ View + fields
+  ---------------------------------------------------------------- */
   const viewData = useMemo(() => {
-    if (!appConfig?.mainNavigation) return null;
-    return appConfig.mainNavigation.find((r) => r.name === name);
-  }, [appConfig, name]);
-
-  /* ----------------------------------------------------------------
-     3️⃣  Map list fields safely
-     ---------------------------------------------------------------- */
-  const listFields = useMemo(() => {
-    if (!appConfig?.mainNavigation) return [];
-    const routeConfig = appConfig.mainNavigation.find(
+    return appConfig?.mainNavigation?.find(
       (r) =>
         r.name?.toLowerCase() === 'calendar' ||
         r.displayName?.toLowerCase() === 'calendar'
     );
-    const rawFields = routeConfig?.fields || [];
-    return mapFields(rawFields).filter((f) => f.displayInList);
   }, [appConfig]);
 
+  const listFields = useMemo(() => {
+    const rawFields = viewData?.fields || [];
+    return mapFields(rawFields).filter((f) => f.displayInList);
+  }, [viewData]);
+
   /* ----------------------------------------------------------------
-     4️⃣  Normalize and group data
-     ---------------------------------------------------------------- */
+     4️⃣ Normalize + ⭐ FILTER BY DAY
+  ---------------------------------------------------------------- */
   const normalizedData = useMemo(() => {
-    return localData
+    let rows = localData
       .map((item) => {
         const fd = item.fieldsData || {};
         const dateStr = fd.date;
-        const startTime = fd.time?.startTime;
-        const dateObj = dateStr ? new Date(dateStr) : null;
-        const timeValue = startTime ? parseInt(startTime.replace(':', ''), 10) : 9999;
 
         return {
           _id: item._id,
@@ -177,21 +203,46 @@ export default function CalendarListView(props) {
           },
           contactName: fd.contact?.name ?? '—',
           serviceName: Array.isArray(fd.service)
-            ? fd.service.map((s) => s.name).filter(Boolean).join(', ')
+            ? fd.service.map((s) => s.name).join(', ')
             : fd.service?.name ?? '—',
           date: dateStr,
-          dateObj,
-          startTime,
+          dateObj: parseYMD(dateStr), // ⭐ FIX
+          startTime: fd.time?.startTime,
           endTime: fd.time?.endTime,
-          timeValue,
+          timeValue: fd.time?.startTime
+            ? parseInt(fd.time.startTime.replace(':', ''), 10)
+            : 9999,
         };
       })
       .filter((i) => i.dateObj);
-  }, [localData]);
 
+    /* --------------------------------------------------------------
+       ⭐ CRITICAL FIX — EXACT DAY MATCHING
+    -------------------------------------------------------------- */
+    if (selectedDate) {
+      const target = parseYMD(selectedDate);
+
+      rows = rows.filter((item) => {
+        const d = item.dateObj;
+        return (
+          d.getFullYear() === target.getFullYear() &&
+          d.getMonth() === target.getMonth() &&
+          d.getDate() === target.getDate()
+        );
+      });
+    }
+
+    return rows;
+  }, [localData, selectedDate]);
+
+  /* ----------------------------------------------------------------
+     5️⃣ Searching
+  ---------------------------------------------------------------- */
   const filteredData = useMemo(() => {
     if (!search) return normalizedData;
+
     const lower = search.toLowerCase();
+
     return normalizedData.filter((item) => {
       if (
         item.contactName.toLowerCase().includes(lower) ||
@@ -202,41 +253,36 @@ export default function CalendarListView(props) {
       return listFields.some((field) => {
         const val = item.flatItem[field.field];
         if (!val) return false;
+
         const str = renderObjectAsLines(val, field.field) || String(val);
         return str.toLowerCase().includes(lower);
       });
     });
   }, [normalizedData, search, listFields]);
 
+  /* ----------------------------------------------------------------
+     6️⃣ Group into sections (even in day mode)
+  ---------------------------------------------------------------- */
   const sections = useMemo(() => {
     const groups = {};
+
     filteredData.forEach((item) => {
       const key = item.dateObj.toISOString().split('T')[0];
       if (!groups[key]) groups[key] = [];
       groups[key].push(item);
     });
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
     return Object.keys(groups)
       .map((dateKey) => {
-        const date = new Date(dateKey);
-        let title = '';
-        if (date.getTime() === today.getTime()) title = 'Today';
-        else if (date.getTime() === tomorrow.getTime()) title = 'Tomorrow';
-        else title = formatDatePretty(dateKey);
         const sorted = groups[dateKey].sort((a, b) => a.timeValue - b.timeValue);
-        return { title, data: sorted, dateKey };
+        return { title: formatDatePretty(dateKey), data: sorted, dateKey };
       })
       .sort((a, b) => new Date(a.dateKey) - new Date(b.dateKey));
   }, [filteredData]);
 
   /* ----------------------------------------------------------------
-     5️⃣  Delete and render logic
-     ---------------------------------------------------------------- */
+     7️⃣ Delete + render logic
+  ---------------------------------------------------------------- */
   const handleDelete = (id) => {
     Alert.alert('Delete appointment?', 'This action cannot be undone.', [
       { text: 'Cancel', style: 'cancel' },
@@ -274,20 +320,18 @@ export default function CalendarListView(props) {
       .filter((f) => !['contact', 'service'].includes(f.field))
       .map((field) => {
         const raw = item.flatItem[field.field];
-        if (raw === null || raw === undefined) return null;
+        if (!raw) return null;
+
         let txt = renderObjectAsLines(raw, field.field);
         if (!txt && typeof raw !== 'object') txt = String(raw);
-        if (field.field === 'date' && raw) txt = formatDatePretty(raw);
+        if (field.field === 'date') txt = formatDatePretty(raw);
+
         return txt ? (
-          <Text
-            key={field.field}
-            style={[styles.tertiary, { color: theme.colors.onSurfaceVariant }]}
-          >
+          <Text key={field.field} style={[styles.tertiary, { color: theme.colors.onSurfaceVariant }]}>
             {txt}
           </Text>
         ) : null;
-      })
-      .filter(Boolean);
+      });
 
     return (
       <Swipeable renderRightActions={() => renderRightActions(item)}>
@@ -309,13 +353,16 @@ export default function CalendarListView(props) {
             style={{ backgroundColor: theme.colors.primary }}
             color={theme.colors.onPrimary}
           />
+
           <View style={styles.textContainer}>
             <Text style={[styles.primary, { color: theme.colors.onSurface }]}>
               {item.contactName}
             </Text>
+
             <Text style={[styles.secondary, { color: theme.colors.onSurfaceVariant }]}>
               {item.serviceName}
             </Text>
+
             {extraLines}
           </View>
         </TouchableOpacity>
@@ -332,13 +379,12 @@ export default function CalendarListView(props) {
   );
 
   /* ----------------------------------------------------------------
-     6️⃣  Render
-     ---------------------------------------------------------------- */
+     8️⃣ Render
+  ---------------------------------------------------------------- */
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {header && (
         <View style={styles.headerRow}>
-          <Text style={[styles.pageTitle, { color: theme.colors.primary }]}>{}</Text>
           <TouchableOpacity style={styles.editButton} onPress={() => navigation.goBack()}>
             <LiquidGlassView
               style={styles.editButtonGlass}
@@ -403,7 +449,7 @@ export default function CalendarListView(props) {
 
 /* -----------------------------------------------------------------
    Styles
-   ----------------------------------------------------------------- */
+----------------------------------------------------------------- */
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 10 },
   searchInput: {
@@ -457,14 +503,13 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     marginTop: 16,
     marginHorizontal: 16,
     marginBottom: 8,
-    paddingBottom: 20,
+    paddingBottom: 60,
   },
-  pageTitle: { fontSize: 22, fontWeight: 'bold' },
-  editButton: { position: 'absolute', top: 0, right: 10, zIndex: 2 },
+  editButton: { position: 'absolute', right: 10 },
   editButtonGlass: {
     paddingHorizontal: 6,
     paddingVertical: 6,

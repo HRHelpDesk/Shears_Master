@@ -18,6 +18,7 @@ export const AppData = [
 
       {
         name: 'Calendar',
+        permissions: ['owner', 'admin', 'barber', 'stylist'], 
         displayName: 'Appoinments',
         icon: { ios: 'calendar', android: 'calendar-today', web: 'fa fa-calendar-alt' },
         fields: [
@@ -59,6 +60,8 @@ export const AppData = [
               {
                 field: 'date',
                 override: {
+               
+                  type:'string',
                   required: true,
                   display: { order: 4 },
                   arrayConfig: { minItems: 1 },
@@ -68,6 +71,8 @@ export const AppData = [
                 field: 'duration',
                 override: {
                   required: true,
+                 
+                  type:'object',
                   display: { order: 3 },
                   arrayConfig: { minItems: 1 },
                 },
@@ -77,6 +82,8 @@ export const AppData = [
                 field: 'time',
                 override: {
                   required: true,
+              
+                  type:'object',
                   display: { order: 5 },
                   arrayConfig: { minItems: 1 },
                 },
@@ -105,6 +112,7 @@ export const AppData = [
       },
       {
         name: 'Contacts',
+        permissions: ['owner', 'admin', 'barber', 'stylist'], 
         actions:['phone'],
         displayName: 'Clients',
         icon: { ios: 'person.2.fill', android: 'contacts', web: 'fa fa-address-book' },
@@ -153,18 +161,25 @@ export const AppData = [
           },
           
          {
-            field: 'address',
-            override: {
-              required: true, // Require at least one phone number
-              display: { order: 5 },
-              arrayConfig: { minItems: 0 }, // Enforce at least one phone
-            },
+        field: 'address',
+        override: {
+          type: 'array',                 // ✅ Add this
+          input: 'array',                // ✅ Optional but recommended
+          required: true,
+          
+          display: { order: 5 },
+          arrayConfig: {
+            minItems: 1,
           },
+        },
+      },
+
         ],
         views: [ContactView],
       },
       {
         name: 'Transactions',
+        permissions: ['owner', 'admin', 'barber', 'stylist'], 
         displayName: 'Transactions',
         icon: { ios: 'dollarsign.circle', android: 'currency-usd', web: 'fa fa-dollar-sign' },
         views: [StripeCheckout, StripeTerminal],
@@ -176,7 +191,26 @@ export const AppData = [
         icon: { ios: 'person.crop.circle', android: 'account-circle', web: 'fa fa-user-circle' },
 
         views: [ProfileView],
-        fields: [],
+        fields: [
+              {
+      field: 'avatar',
+      override: {
+        field: 'userAvatar',
+        displayInList: false,
+        label: 'Avatar',
+        display: { order: 11 },
+      },
+    },
+    {
+      field: 'earnings',
+      override: {
+        field: 'userEarnings',
+        displayInList: false,
+        label: 'Earnings',
+        display: { order: 11 },
+      },
+    },
+        ],
       },
       
     ],
@@ -184,24 +218,24 @@ export const AppData = [
     subNavigation: [{
         name: 'Inventory',
         displayName: 'Inventory',
-        icon: { ios: 'cube.box.fill', android: 'truck', web: 'fa fa-user-circle' },
+        permissions: ['owner', 'admin', 'barber', 'stylist'], 
+        icon: { ios: 'cube.box.fill', android: 'truck', web: 'fa fa-box' },
         views: [InventoryList],
         fields: [{
-                field: 'linkField',
+                field: 'linkField', // reference the generic base field
                 override: {
-                  field: 'product',
-                  label: 'Product',
+                  field: 'product',        // actual key in the formValues
+                  label: 'Product',         // custom label for this usage
                   type: 'object', // optional explicit
-
                   inputConfig: {
-                    recordType: 'products',
+                    recordType: 'products', // optional override
                     searchField: 'productName',
                   },
-                  display: { order: 2 },
+                  display: { order: 1 },
                 },
               },
                {
-              field: 'quantityInStock', // refers to base field in SharedNameFields
+              field: 'name', // refers to base field in SharedNameFields
               override: {
                 field: 'quantityInStock', // ← This changes the actual output key
                 label: 'Quantity In Stock',
@@ -211,24 +245,29 @@ export const AppData = [
               
             },
                {
-              field: 'reorderLevel', // refers to base field in SharedNameFields
+              field: 'name', // refers to base field in SharedNameFields
               override: {
+               field: 'reorderLevel', 
                 label: 'Reorder Level',
                 required: true,
                 
               },
             },
             {
-              field: 'reorderQuantity', // refers to base field in SharedNameFields
+              field: 'name', // refers to base field in SharedNameFields
               override: {
+              field: 'reorderQuantity',
                label: 'Reorder Quantity',
                 required: true,
                 
               },
             },
              {
-              field: 'location', // refers to base field in SharedNameFields
+              field: 'address', // refers to base field in SharedNameFields
               override: {
+                type:'object',
+                input:'object',
+                field: 'location',
               label: 'Storage Location',
                 required: true,
                 

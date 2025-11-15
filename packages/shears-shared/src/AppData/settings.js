@@ -1,28 +1,38 @@
 import { ProductsList } from "./view-schema/products-view";
 import { ServicesList } from "./view-schema/services-view";
 import { PaymentSetup } from "./view-schema/stripe-setup-view";
+import { Users } from "./view-schema/user-view";
 
 export const shearSettings = [
      {
   name: 'Products',
+  permissions: ['owner', 'admin', 'barber', 'stylist'], 
   displayName: 'Add Products',
 icon: { ios: 'add-circle', android: 'plus-circle', web: 'fa fa-plus' },
   views: [ProductsList],
   fields: [
+   
     {
-      field: 'productName',
-      override: {
-        required: true,
-        label: 'Product Name',
-        display: { order: 1 },
+    field: 'name', // refers to base field in SharedNameFields
+    override: {
+      field: 'productName', // ← This changes the actual output key
+      label: 'Product Name',
+      display: { placeholder: 'Enter Product Name', order: 1 },
+      required: true,
+      validations: {
+        minLength: 2,
+        maxLength: 50,
       },
     },
+  },
     {
       field: 'productSKU',
       override: {
-        required: true,
+        required: false,
+        displayInList:false,
         label: 'SKU / Barcode',
-        display: { order: 2 },
+        display: { placeholder: 'Enter Product SKU/Barcode', order: 2 },
+
       },
     },
     {
@@ -30,18 +40,24 @@ icon: { ios: 'add-circle', android: 'plus-circle', web: 'fa fa-plus' },
       override: {
         label: 'Category',
         inputConfig: {
-          options: ['Haircare', 'Styling Tools', 'Accessories', 'Gift Sets', 'Other'],
+          options: ['Haircare', 'Styling Tools', 'Accessories', 'Gift Sets'],
         },
         display: { order: 3 },
       },
     },
-    {
-      field: 'brand',
-      override: {
-        label: 'Brand',
-        display: { order: 4 },
+  {
+    field: 'name', // refers to base field in SharedNameFields
+    override: {
+      field: 'brand', // ← This changes the actual output key
+      label: 'Brand',
+      display: { placeholder: 'Enter the Brand Name', order: 1 },
+      required: true,
+      validations: {
+        minLength: 2,
+        maxLength: 50,
       },
     },
+  },
     {
       field: 'description',
       override: {
@@ -85,23 +101,12 @@ icon: { ios: 'add-circle', android: 'plus-circle', web: 'fa fa-plus' },
         display: { order: 9 },
       },
     },
-    {
-      field: 'supplierContact',
-      override: {
-        field: 'supplierContact',
-        label: 'Supplier Contact',
-        type: 'object',
-        inputConfig: {
-          recordType: 'contacts',
-          searchField: 'firstName',
-        },
-        display: { order: 10 },
-      },
-    },
+    
     {
       field: 'image',
       override: {
         field: 'productImage',
+        displayInList: false,
         label: 'Product Image',
         display: { order: 11 },
       },
@@ -119,17 +124,24 @@ icon: { ios: 'add-circle', android: 'plus-circle', web: 'fa fa-plus' },
 },
 {
   name: 'Services',
+  permissions: ['owner', 'admin', 'barber', 'stylist'], 
   displayName: 'Add Services',
   icon: { ios: 'scissors', android: 'content-cut', web: 'fa fa-cut' },
   views: [ServicesList],
   fields: [
     {
-      field: 'serviceName',
-      override: {
-        required: true,
-        display: { order: 1 },
+    field: 'name', // refers to base field in SharedNameFields
+    override: {
+      field: 'serviceName', // ← This changes the actual output key
+      label: 'Service Name',
+      display: { placeholder: 'Enter Service Name', order: 1 },
+      required: true,
+      validations: {
+        minLength: 2,
+        maxLength: 50,
       },
     },
+  },
     {
       field: 'description',
       override: {
@@ -147,6 +159,7 @@ icon: { ios: 'add-circle', android: 'plus-circle', web: 'fa fa-plus' },
     {
       field: 'duration',
       override: {
+        type:'object',
         required: true,
         display: { order: 4 },
         arrayConfig: { minItems: 1 },
@@ -167,6 +180,67 @@ icon: { ios: 'add-circle', android: 'plus-circle', web: 'fa fa-plus' },
   icon: { ios: 'creditcard', android: 'credit-card', web: 'fa fa-credit-card' },
   views: [PaymentSetup],
   fields: [],
+},
+{
+  name: 'Users',
+  displayName: 'Add Users',
+  permissions: ['owner', 'admin'], 
+  icon: { ios: 'people', android: 'account-group', web: 'fa fa-users' },
+  views: [Users],
+  fields: [
+      {
+    field: 'name', // refers to base field in SharedNameFields
+    override: {
+      field: 'firstName', // ← This changes the actual output key
+      label: 'First Name',
+      display: { placeholder: "Enter User's First Name", order: 1 },
+      required: true,
+      validations: {
+        minLength: 2,
+        maxLength: 50,
+      },
+    },
+  },
+  {
+    field: 'name', // refers to base field in SharedNameFields
+    override: {
+      field: 'lastName', // ← This changes the actual output key
+      label: 'Last Name',
+      display: { placeholder: "Enter User's Last Name", order: 1 },
+      required: true,
+      validations: {
+        minLength: 2,
+        maxLength: 50,
+      },
+    },
+  },
+
+     {
+    field: 'name', // refers to base field in SharedNameFields
+    override: {
+      field: 'email', // ← This changes the actual output key
+      label: 'Email Address',
+      display: { placeholder: 'Enter the Brand Name', order: 1 },
+      required: true,
+      validations: {
+        minLength: 2,
+        maxLength: 50,
+      },
+    },
+  },
+  {
+      field: 'category',
+      override: {
+        field:'role',
+        label: 'User Role',
+        inputConfig: {
+
+          options: ['owner', 'admin', 'barber', 'stylist'],
+        },
+        display: { order: 3 },
+      },
+    },
+  ],
 },
 
 ]

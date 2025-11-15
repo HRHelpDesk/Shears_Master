@@ -1,13 +1,14 @@
 // src/components/BaseUI/SettingsBasePage.js
 import React, { useState, useEffect, useContext, useCallback } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, KeyboardAvoidingView } from 'react-native';
-import { useTheme, Divider } from 'react-native-paper';
+import { View, Text, StyleSheet, ActivityIndicator, KeyboardAvoidingView, TouchableOpacity } from 'react-native';
+import { useTheme, Divider, Icon } from 'react-native-paper';
 import { useIsFocused } from '@react-navigation/native';
 import PageHeader from '../components/UI/PageHeader';
 import COMPONENTS from '../config/component-mapping/ComponentMap';
 import { mapFields } from 'shears-shared/src/config/fieldMapper';
 import { getRecords } from 'shears-shared/src/Services/Authentication';
 import { AuthContext } from '../context/AuthContext';
+import { LiquidGlassView } from '@callstack/liquid-glass';
 
 const FallbackComponent = () => (
   <View style={styles.fallback}>
@@ -17,7 +18,7 @@ const FallbackComponent = () => (
   </View>
 );
 
-export default function SettingsBasePage({ route }) {
+export default function SettingsBasePage({ route , navigation}) {
   const theme = useTheme();
   const isFocused = useIsFocused();
   const { token, user } = useContext(AuthContext);
@@ -109,7 +110,23 @@ console.log("SettingsBasePage mappedFields:", mappedFields);
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
-      <PageHeader title={displayName} appConfig={appConfig} settings={[]} />
+         <View style={styles.headerRow}>
+        <Text style={[styles.pageTitle, { color: theme.colors.primary }]}>{name}</Text>
+        
+        <TouchableOpacity
+          style={styles.editButton} // absolute positioning
+          onPress={() => navigation.goBack()}
+        >
+          <LiquidGlassView
+            style={styles.editButtonGlass} // your glass styling
+            tintColor="rgba(255,255,255,0.1)"
+            effect="clear"
+            interactive
+          >
+            <Icon source="close" size={28} color={theme.colors.primary} />
+          </LiquidGlassView>
+        </TouchableOpacity>
+      </View>
       <Divider />
 
       {activeViews.length > 1 ? (
@@ -130,4 +147,30 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   fallback: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 16,
+    paddingVertical:10,
+    paddingHorizontal:10,
+    marginHorizontal: 16,
+    marginBottom: 8,
+  },
+  pageTitle: { fontSize: 22, fontWeight: 'bold', },
+   editButton: { position: 'absolute', top: 0, right: 10, zIndex: 2 },
+  editButtonGlass: {
+    paddingHorizontal: 6,
+    paddingVertical: 6,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  glassButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });

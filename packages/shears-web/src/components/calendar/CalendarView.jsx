@@ -1,9 +1,21 @@
+// src/components/CalendarView.jsx
 import React, { useState } from 'react';
 import { Box, Typography, IconButton, Paper } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, addMonths, subMonths, isSameDay } from 'date-fns';
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  isToday,
+  addMonths,
+  subMonths,
+  isSameDay
+} from 'date-fns';
 
-// Styled components
+/* ------------------------------------------------------------------
+   Styled Components
+------------------------------------------------------------------ */
 const CalendarContainer = styled(Paper)(({ theme }) => ({
   flex: 1,
   display: 'flex',
@@ -28,7 +40,7 @@ const DayGrid = styled(Box)(({ theme }) => ({
   display: 'grid',
   gridTemplateColumns: 'repeat(7, 1fr)',
   gap: theme.spacing(0.5),
-  flexGrow: 0, // prevent stretching
+  flexGrow: 0,
 }));
 
 const DayCell = styled(Box)(({ theme, today, event }) => ({
@@ -52,7 +64,7 @@ const DayCell = styled(Box)(({ theme, today, event }) => ({
   minHeight: 60,
   display: 'flex',
   flexDirection: 'column',
-  justifyContent: 'center', // Center the number vertically
+  justifyContent: 'center',
   alignItems: 'center',
 }));
 
@@ -63,7 +75,10 @@ const WeekdayLabel = styled(Typography)(({ theme }) => ({
   padding: theme.spacing(1),
 }));
 
-const CalendarView = ({ events = [] }) => {
+/* ------------------------------------------------------------------
+   Component
+------------------------------------------------------------------ */
+export default function CalendarView({ events = [], onDayClick }) {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const start = startOfMonth(currentDate);
@@ -77,31 +92,33 @@ const CalendarView = ({ events = [] }) => {
 
   const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-  const hasEvent = (day) => events.some((event) => isSameDay(new Date(event.date), day));
+  const hasEvent = (day) =>
+    events.some((ev) => isSameDay(new Date(ev.fieldsData.date), day));
 
   return (
     <CalendarContainer>
-      {/* Header */}
       <CalendarHeader>
         <IconButton onClick={handlePrevMonth}>
           <i className="fa fa-chevron-left" />
         </IconButton>
+
         <Typography variant="h6">{format(currentDate, 'MMMM yyyy')}</Typography>
+
         <IconButton onClick={handleNextMonth}>
           <i className="fa fa-chevron-right" />
         </IconButton>
       </CalendarHeader>
 
-      {/* Weekday labels */}
+      {/* Weekdays */}
       <DayGrid>
         {weekdays.map((day) => (
           <WeekdayLabel key={day}>{day}</WeekdayLabel>
         ))}
       </DayGrid>
 
-      {/* Calendar days */}
+      {/* Calendar Days */}
       <DayGrid>
-        {/* Empty cells for offset */}
+        {/* offset */}
         {Array.from({ length: firstDayOfMonth }).map((_, i) => (
           <Box key={`empty-${i}`} />
         ))}
@@ -111,9 +128,10 @@ const CalendarView = ({ events = [] }) => {
             key={day.toString()}
             today={isToday(day)}
             event={hasEvent(day)}
-            onClick={() => alert(`Clicked on ${format(day, 'MMMM d, yyyy')}`)}
+            onClick={() => onDayClick(day)}
           >
             <Typography variant="body2">{format(day, 'd')}</Typography>
+
             {hasEvent(day) && (
               <Box
                 sx={{
@@ -130,6 +148,4 @@ const CalendarView = ({ events = [] }) => {
       </DayGrid>
     </CalendarContainer>
   );
-};
-
-export default CalendarView;
+}

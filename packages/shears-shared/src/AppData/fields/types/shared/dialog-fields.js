@@ -13,7 +13,7 @@ export const DialogFields = [
       pattern: /^[A-Za-z\s-]+$/,
     },
     display: { placeholder: 'Enter category', order: 10 },
-    input: 'text',
+    input: 'select',
   },
   {
   field: 'status',

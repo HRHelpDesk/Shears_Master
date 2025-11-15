@@ -4,6 +4,7 @@ import { CURRENT_APP, CURRENT_WHITE_LABEL } from '../config/currentapp';
 const API_URL = `${BASE_URL}/v1/data-records`;
 
 export const registerUser = async (formData) => {
+  console.log('register user')
   try {
     console.log('Registering user with data:', formData);
     const response = await axios.post(`${BASE_URL}/v1/auth/register`, formData);
@@ -22,6 +23,34 @@ export const registerUser = async (formData) => {
 
 };
 
+export async function updateUser(userId, updates, token) {
+  try {
+    if (!token) throw new Error("No authentication token found");
+    if (!userId) throw new Error("Missing userId");
+
+    console.log("Updating USER:", userId, updates);
+
+    const response = await axios.put(
+      `${BASE_URL}/v1/auth/update/${userId}`,
+      updates,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    return response.data;
+
+  } catch (err) {
+    console.error("Error updating user:", err);
+    throw err.response?.data || err;
+  }
+}
+
+
+
+
 export const login = async (email, password) => {
     try {
       const response = await axios.post(`${BASE_URL}/v1/auth/login`, { email, password });
@@ -32,11 +61,74 @@ export const login = async (email, password) => {
     }
   };
 
+// ✅ Helper: Get defaults from owner user
+function inheritBusinessFields(ownerUser, newUser) {
+  return {
+    ...newUser,
+    // ✅ REQUIRED → Inherit same subscriberId as owner
+    subscriberId: ownerUser.subscriberId,
 
-  export async function createRecord(record, recordType, token, userId, subscriberId) {
+    // ✅ Use owner business info (for non-owners)
+    businessName: ownerUser.businessName || null,
+    businessWebsite: ownerUser.businessWebsite || null,
+    businessAddress: ownerUser.businessAddress || null,
+    membershipPlan: ownerUser.membershipPlan || null,
+
+    // ✅ Track parent creator
+    parentUserId: ownerUser.userId,
+    parentSubscriberId: ownerUser.subscriberId,
+  };
+}
+
+export async function createRecord(record, recordType, token, userId, subscriberId, ownerUser) {
   try {
-    if (!token) throw new Error('No authentication token found');
-    console.log(token)
+    if (!token) throw new Error("No authentication token found");
+console.log(record)
+    /* ------------------------------------------------------------
+       ✅ SPECIAL CASE: Creating a USER
+    ------------------------------------------------------------ */
+    if (recordType === "user") {
+      if (!ownerUser) {
+        throw new Error("Owner user context is required to create sub-users.");
+      }
+
+      // ✅ Build basic user object
+      let newUser = {
+        firstName: record.firstName,
+        lastName: record.lastName,
+        fullName: `${record.firstName} ${record.lastName}`.trim(),
+        email: record.email,
+        role: record.role || "barber",
+        password: record.password || "Temp123!", // ✅ Temporary password
+        phone: record.phone || null,
+      };
+
+      // ✅ OWNER role stays standalone
+        if (newUser.role !== "owner") {
+    newUser = inheritBusinessFields(ownerUser, newUser);
+
+    // ✅ REQUIRED → match backend expectations
+    newUser.parentSubscriberId = ownerUser.subscriberId;
+    newUser.parentUserId = ownerUser.userId;
+  }
+
+      console.log("✅ Creating USER payload:", newUser);
+
+      // ✅ Call backend user registration
+      const response = await axios.post(
+        `${BASE_URL}/v1/auth/register`,
+        newUser,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      return response.data;
+    }
+
+    /* ------------------------------------------------------------
+       ✅ DEFAULT: Create a normal DataRecord
+    ------------------------------------------------------------ */
     const { data } = await axios.post(
       API_URL,
       {
@@ -45,7 +137,7 @@ export const login = async (email, password) => {
         recordType,
         fieldsData: record,
         tags: record.tags || [],
-        status: 'active',
+        status: "active",
       },
       {
         headers: {
@@ -53,9 +145,11 @@ export const login = async (email, password) => {
         },
       }
     );
+
     return data;
+
   } catch (err) {
-    console.error('Error creating record:', err);
+    console.error("❌ Error creating record:", err.response?.data || err);
     throw err.response?.data || err;
   }
 }
@@ -99,6 +193,7 @@ console.log(CURRENT_APP === CURRENT_WHITE_LABEL ? CURRENT_APP : CURRENT_WHITE_LA
         Authorization: `Bearer ${token}`,
       },
     });
+    console.log("data",data)
     return data;
   } catch (err) {
     console.error('Error fetching records:', err);
@@ -129,39 +224,141 @@ export const getRecordById = async (id, token) => {
 
 // --- UPDATE a record by ID
 export const updateRecord = async (id, updates, token) => {
-  console.log('Updating record ID:', id, 'with updates:', updates);
   try {
-    if (!token) {
-      throw new Error('No authentication token found');
+    if (!token) throw new Error("No authentication token found");
+console.log("__isUser", updates.__isUser)
+    // ✅ If this is a REAL user update → go to user API
+    if (updates && updates.__isUser === true) {
+      return await updateUser(id, updates, token);
     }
+
     const { data } = await axios.put(`${API_URL}/${id}`, updates, {
       headers: {
-        'X-App-Name': CURRENT_APP === CURRENT_WHITE_LABEL ? CURRENT_APP : CURRENT_WHITE_LABEL,
         Authorization: `Bearer ${token}`,
       },
     });
+
     return data;
+
   } catch (err) {
-    console.error('Error updating record:', err);
+    console.error("Error updating record:", err);
     throw err.response?.data || err;
   }
 };
-
 // --- HARD DELETE a record by ID
-export const deleteRecord = async (id, token) => {
+export const deleteRecord = async (id, token, isUser = false) => {
   try {
-    if (!token) {
-      throw new Error('No authentication token found');
+    if (!token) throw new Error("No authentication token found");
+
+    if (isUser) {
+      // Route user deletion to proper API
+      return await deleteUser(id, token);
     }
+
     const { data } = await axios.delete(`${API_URL}/${id}`, {
       headers: {
         'X-App-Name': CURRENT_APP === CURRENT_WHITE_LABEL ? CURRENT_APP : CURRENT_WHITE_LABEL,
         Authorization: `Bearer ${token}`,
       },
     });
+
     return data;
+
   } catch (err) {
-    console.error('Error deleting record:', err);
+    console.error("Error deleting:", err);
     throw err.response?.data || err;
   }
 };
+
+
+// ✅ GET sub-users by subscriberId
+export async function getSubUsers(subscriberId, token) {
+  try {
+    if (!subscriberId) throw new Error("Missing subscriberId.");
+    if (!token) throw new Error("Missing authentication token.");
+
+    const res = await axios.get(
+      `${BASE_URL}/v1/auth/subusers/${subscriberId}`,
+      {
+        headers: { Authorization: `Bearer ${token}` }
+      }
+    );
+
+    return res.data || [];
+  } catch (err) {
+    console.error("Error getting sub-users:", err);
+    throw err.response?.data || err;
+  }
+}
+
+
+export async function deleteUser(userId, token) {
+  try {
+    if (!token) throw new Error("No authentication token found");
+    if (!userId) throw new Error("Missing userId");
+
+    console.log("Deleting USER:", userId);
+
+    const response = await axios.delete(
+      `${BASE_URL}/v1/auth/delete/${userId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    return response.data;
+
+  } catch (err) {
+    console.error("Error deleting user:", err);
+    throw err.response?.data || err;
+  }
+}
+
+
+// ✅ REQUEST RESET PASSWORD (send OTP)
+export async function requestPasswordReset(email) {
+  try {
+    const res = await axios.post(`${BASE_URL}/v1/auth/reset-password-request`, {
+      email,
+    });
+
+    return res.data;
+  } catch (err) {
+    console.error("Error requesting password reset:", err);
+    throw err.response?.data || err;
+  }
+}
+
+// ✅ VERIFY OTP
+export async function verifyResetOtp(email, otp) {
+  try {
+    const res = await axios.post(`${BASE_URL}/v1/auth/reset-password-verify`, {
+      email,
+      otp,
+    });
+
+    return res.data;
+  } catch (err) {
+    console.error("Error verifying OTP:", err);
+    throw err.response?.data || err;
+  }
+}
+
+// ✅ RESET PASSWORD
+export async function resetPassword(email, otp, newPassword, confirmPassword) {
+  try {
+    const res = await axios.post(`${BASE_URL}/v1/auth/reset-password`, {
+      email,
+      otp,
+      newPassword,
+      confirmPassword,
+    });
+
+    return res.data;
+  } catch (err) {
+    console.error("Error resetting password:", err);
+    throw err.response?.data || err;
+  }
+}

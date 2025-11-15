@@ -14,7 +14,7 @@ export const CommunicationFields = [
           label: 'Label',
           defaultValue: 'Primary',
           input: 'select',
-          inputConfig: { options: ['Primary', 'Work', 'Personal', 'Other'] },
+          inputConfig: { options: ['Primary', 'Work', 'Personal'] },
         },
         {
           field: 'value',
@@ -47,7 +47,7 @@ export const CommunicationFields = [
           label: 'Label',
           defaultValue: 'Mobile',
           input: 'select',
-          inputConfig: { options: ['Mobile', 'Work', 'Home', 'Other'] },
+          inputConfig: { options: ['Mobile', 'Work', 'Home'] },
         },
         {
           field: 'value',

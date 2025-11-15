@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useContext, useEffect } from 'react';
 import {
   Drawer,
   List,
@@ -12,7 +12,8 @@ import {
   IconButton,
 } from '@mui/material';
 import { styled, useTheme } from '@mui/material/styles';
-import { Close as CloseIcon } from '@mui/icons-material';
+import { Close as CloseIcon, Logout } from '@mui/icons-material';
+import { AuthContext } from '../../context/AuthContext';
 
 const DrawerHeader = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -30,6 +31,7 @@ export default function SettingsDrawer({
   onSelectSetting
 }) {
   const theme = useTheme();
+    const {user, logout} = useContext(AuthContext);
 
   useEffect(() => {
     console.log('Settings data:', settings);
@@ -39,7 +41,6 @@ export default function SettingsDrawer({
   const flattenedSettings = Array.isArray(settings[0])
     ? settings.flat()
     : settings;
-
       useEffect(() => {
     console.log('Settings data:', settings);
     console.log("Flattended:", flattenedSettings)
@@ -71,8 +72,16 @@ export default function SettingsDrawer({
       {/* Settings List */}
       <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
         <List>
-          {flattenedSettings.map((item, index) => {
+          {flattenedSettings.filter(item => {
+        // If no permissions array → allow it
+        if (!item.permissions) return true;
+
+        // If permissions exist, check user.role
+        return item.permissions.includes(user.role);
+      }).map((item, index) => {
           console.log(item)
+        //  if(item.permissions.includes(user.role)) {
+            
            return (
             <React.Fragment key={index}>
               <ListItem disablePadding>
@@ -102,8 +111,29 @@ export default function SettingsDrawer({
               </ListItem>
               {item.divider && <Divider />}
             </React.Fragment>
-          )})}
+          )
+          //}
+          })}
         </List>
+      </Box>
+
+       {/* Bottom Logout Section */}
+      <Divider />
+      <Box>
+        <ListItem disablePadding>
+          <ListItemButton onClick={logout}>
+            <ListItemIcon sx={{ minWidth: 40 }}>
+              <Logout sx={{ color: theme.palette.error.main }} />
+            </ListItemIcon>
+            <ListItemText
+              primary="Logout"
+              primaryTypographyProps={{
+                fontWeight: 600,
+                color: theme.palette.error.main,
+              }}
+            />
+          </ListItemButton>
+        </ListItem>
       </Box>
     </Drawer>
   );

@@ -1,5 +1,5 @@
 // packages/web/src/navigation/MainNavigator.js
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import {
   Link,
   Routes,
@@ -28,6 +28,7 @@ import { styled, useTheme } from '@mui/material/styles';
 import SettingsDrawer from '../components/BaseUI/SettingsDrawer';
 import StripeSuccess from '../components/Stripe/StripeSuccess';
 import StripeReauth from '../components/Stripe/StripeReauth';
+import { AuthContext } from '../context/AuthContext';
 
 const drawerWidth = 250;
 const collapsedWidth = 72;
@@ -51,7 +52,7 @@ export default function MainNavigator({ appConfig, logo }) {
   const theme = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
-
+  const {user, token} = useContext(AuthContext);
   const [open, setOpen] = useState(true);
   const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
 
@@ -180,7 +181,74 @@ export default function MainNavigator({ appConfig, logo }) {
 
         {/* NAVIGATION LIST */}
         <List sx={{ mt: 1 }}>
-          {appConfig.mainNavigation.map((route) => {
+          {appConfig.mainNavigation.filter(item => {
+        // If no permissions array → allow it
+        if (!item.permissions) return true;
+
+        // If permissions exist, check user.role
+        return item.permissions.includes(user.role);
+      }).map((route) => {
+            const routePath = `/${route.name.toLowerCase()}`;
+            const selected = location.pathname === routePath;
+
+            return (
+              <Tooltip
+                key={route.name}
+                title={!open ? route.displayName : ''}
+                placement="right"
+              >
+                <ListItemButton
+                  component={Link}
+                  to={routePath}
+                  selected={selected}
+                  sx={{
+                    borderRadius: 1,
+                    mx: 1,
+                    mb: 0.5,
+                    justifyContent: open ? 'initial' : 'center',
+                    px: open ? 2 : 1.5,
+                    '&.Mui-selected': {
+                      backgroundColor: theme.palette.action.selected,
+                    },
+                    '&:hover': {
+                      backgroundColor: theme.palette.action.hover,
+                    },
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      color: theme.palette.primary.contrastText,
+                      minWidth: 0,
+                      mr: open ? 1.5 : 0,
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {route.icon.web ? (
+                      <i className={route.icon.web} style={{ fontSize: 18 }} />
+                    ) : (
+                      <span />
+                    )}
+                  </ListItemIcon>
+
+                  {open && (
+                    <ListItemText
+                      primary={route.displayName}
+                      primaryTypographyProps={{ fontWeight: 500 }}
+                    />
+                  )}
+                </ListItemButton>
+              </Tooltip>
+            );
+          })}
+          {appConfig.subNavigation.filter(item => {
+        // If no permissions array → allow it
+        if (!item.permissions) return true;
+
+        // If permissions exist, check user.role
+        return item.permissions.includes(user.role);
+      }).map((route) => {
+            console.log(route)
+            console.log(route.name)
             const routePath = `/${route.name.toLowerCase()}`;
             const selected = location.pathname === routePath;
 
@@ -236,7 +304,7 @@ export default function MainNavigator({ appConfig, logo }) {
         </List>
       </DrawerContainer>
 
-      {/* ====================== MAIN CONTENT ================================ */}
+     {/* ====================== MAIN CONTENT ================================ */}
       <Box
         component="main"
         sx={{
@@ -254,20 +322,59 @@ export default function MainNavigator({ appConfig, logo }) {
         }}
       >
         <Routes>
-          {appConfig.mainNavigation.map((route) => (
-            <Route
-              key={route.name}
-              path={`/${route.name.toLowerCase()}`}
-              element={
-                <BasePage
-                  appConfig={appConfig}
-                  name={route.name}
-                  viewData={mainViewData[route.name]}
-                />
-              }
-            />
-          ))}
 
+          {/* ✅ MAIN NAVIGATION ROUTES */}
+          {appConfig.mainNavigation.filter(item => {
+        // If no permissions array → allow it
+        if (!item.permissions) return true;
+
+        // If permissions exist, check user.role
+        return item.permissions.includes(user.role);
+      }).map((route) => {
+            const viewData = mainViewData[route.name];
+
+            return (
+              <Route
+                key={route.name}
+                path={`/${route.name.toLowerCase()}`}
+                element={
+                  <BasePage
+                    appConfig={appConfig}
+                    name={route.name}
+                    viewData={viewData}
+                  />
+                }
+              />
+            );
+          })}
+
+          {/* ✅ ✅ SUB NAVIGATION ROUTES (FIXED) */}
+          {appConfig.subNavigation?.filter(item => {
+        // If no permissions array → allow it
+        if (!item.permissions) return true;
+
+        // If permissions exist, check user.role
+        return item.permissions.includes(user.role);
+      }).map((route) => {
+            // Normalize view data for this single route
+            const subViewData = normalizeViewData([route])[route.name];
+
+            return (
+              <Route
+                key={route.name}
+                path={`/${route.name.toLowerCase()}`}
+                element={
+                  <BasePage
+                    appConfig={appConfig}
+                    name={route.name}
+                    viewData={subViewData}
+                  />
+                }
+              />
+            );
+          })}
+
+          {/* ✅ SETTINGS ROUTES */}
           <Route
             path="/settings/:name"
             element={
@@ -289,7 +396,7 @@ export default function MainNavigator({ appConfig, logo }) {
             }
           />
 
-          {/* Default */}
+          {/* ✅ DEFAULT REDIRECT */}
           <Route
             path="*"
             element={<Navigate to={`/${appConfig.defaultRoute.toLowerCase()}`} />}
@@ -305,6 +412,7 @@ export default function MainNavigator({ appConfig, logo }) {
           />
         )}
       </Box>
+
     </Box>
   );
 }

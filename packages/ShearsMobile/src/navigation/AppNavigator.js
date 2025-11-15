@@ -70,7 +70,7 @@ function AppRoutes() {
               options={{
                 presentation: 'modal',
                 headerShown: false,
-                gestureEnabled: true,
+                gestureEnabled: false,
                 animation: 'slide_from_bottom',
               }}
             />

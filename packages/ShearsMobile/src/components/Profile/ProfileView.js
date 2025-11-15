@@ -7,7 +7,7 @@ export default function ProfileView() {
   const navigation = useNavigation();
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>Profile</Text>
+      <Text>Profile Page</Text>
      
     </View>
   );
