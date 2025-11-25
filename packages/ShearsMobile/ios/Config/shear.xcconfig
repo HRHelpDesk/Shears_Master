@@ -1,0 +1,4 @@
+APP_TARGET = shear
+WHITE_LABEL = shear
+PRODUCT_BUNDLE_IDENTIFIER = com.shear.shear
+APP_NAME = Shear

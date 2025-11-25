@@ -7,8 +7,26 @@ import { Icon } from 'react-native-paper';
 import { useTheme } from 'react-native-paper';
 import BasePage from '../screens/BasePage';
 import { AuthContext } from '../context/AuthContext';
+import { DrawerContentScrollView, DrawerItemList } from "@react-navigation/drawer";
+import SmartProfileCard from "../components/SmartWidgets/SmartProfileCard";
+
 
 const Drawer = createDrawerNavigator();
+
+function CustomDrawerContent(props) {
+  const { user } = useContext(AuthContext);
+
+  return (
+    <DrawerContentScrollView {...props}>
+      {/* Profile Card at top */}
+      <SmartProfileCard user={user} />
+
+      {/* Default drawer items */}
+      <DrawerItemList {...props} />
+    </DrawerContentScrollView>
+  );
+}
+
 
 export default function RootDrawer({ appConfig }) {
     const theme = useTheme();
@@ -16,17 +34,19 @@ export default function RootDrawer({ appConfig }) {
 
     useEffect(()=>{console.log(appConfig)},[])
   return (
-    <Drawer.Navigator
-      screenOptions={{
-        headerShown: false, // each child can have its own header
-        drawerType: 'front',
-          overlayColor: 'rgba(0,0,0,0.5)',
-        drawerActiveTintColor: theme.colors.primary,
-        drawerInactiveTintColor: theme.colors.textSecondary || '#222',
-        drawerLabelStyle: { fontSize: 16, fontWeight: '500' },
-      }}
-      initialRouteName="Home"
-    >
+   <Drawer.Navigator
+  screenOptions={{
+    headerShown: false,
+    drawerType: 'front',
+    overlayColor: 'rgba(0,0,0,0.5)',
+    drawerActiveTintColor: theme.colors.primary,
+    drawerInactiveTintColor: theme.colors.textSecondary || '#222',
+    drawerLabelStyle: { fontSize: 16, fontWeight: '500' },
+  }}
+  drawerContent={(props) => <CustomDrawerContent {...props} />}
+  initialRouteName="Home"
+>
+
       <Drawer.Screen
         name="Home"
         options={{
@@ -80,7 +100,7 @@ export default function RootDrawer({ appConfig }) {
       >
         {() => <SettingsStack appConfig={appConfig} />}
       </Drawer.Screen>
-
+  
         <Drawer.Screen
         name="Logout"
         component={() => null} // No screen to render

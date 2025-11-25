@@ -14,6 +14,7 @@ import { SharedNameFields } from './types/shared/name.js';
 import { PaymentFields } from './types/shared/payment-fields.js';
 import { PhotoFields } from './types/shared/image-fields.js';
 import { ChartFields } from './types/shared/chart-fields.js';
+import { Widgets } from './types/shared/widgets.js';
 
 export const Fields = [
  ...SharedNameFields,
@@ -30,6 +31,7 @@ export const Fields = [
   ...PaymentFields, 
   ...BoolFields,
   ...PhotoFields,
-  ...ChartFields
+  ...ChartFields,
+  ...Widgets
  
 ];

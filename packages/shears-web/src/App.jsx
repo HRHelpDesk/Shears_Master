@@ -6,6 +6,7 @@ import { createTheme } from './theme/createTheme';
 import { getAppConfig } from 'shears-shared/src/config/getAppConfig';
 import { CURRENT_APP, CURRENT_WHITE_LABEL } from 'shears-shared/src/config/currentapp';
 import './App.css';
+import StripeProvider from './stripe/StripeProvider';
 
 const appConfig = getAppConfig(CURRENT_APP, CURRENT_WHITE_LABEL);
 
@@ -25,7 +26,9 @@ export default function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
+      <StripeProvider>
       <AppNavigator />
+      </StripeProvider>
     </ThemeProvider>
   );
 }

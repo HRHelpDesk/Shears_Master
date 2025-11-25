@@ -10,10 +10,11 @@ import {
   IconButton,
 } from 'react-native-paper';
 import { AuthContext } from '../../context/AuthContext';
-import { BASE_URL } from 'shears-shared/src/config/api';
+import { connectStripeAccount, disconnectStripeAccount, verifyStripeAccount } from 'shears-shared/src/Services/Authentication';
+
 
 export default function PaymentSetup() {
-  const { user } = useContext(AuthContext);
+  const { user, token } = useContext(AuthContext);
   const theme = useTheme();
 
   const [loading, setLoading] = useState(false);
@@ -21,21 +22,20 @@ export default function PaymentSetup() {
   const [stripeAccount, setStripeAccount] = useState(null);
 
   /* ------------------------------------------------------------
-     1️⃣ On mount: check Stripe connection
+     1️⃣ Check Stripe status on mount
   ------------------------------------------------------------ */
   useEffect(() => {
-    if (user?.userId) {
-      checkStripeStatus(user.userId);
+    if (user?.userId && token) {
+      loadStripeStatus();
     }
-  }, [user]);
+  }, [user, token]);
 
-  const checkStripeStatus = async (userId) => {
+  const loadStripeStatus = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${BASE_URL}/v1/stripe/user/${userId}/account`);
-      const data = await res.json();
+      const data = await verifyStripeAccount(user.userId, token);
 
-      if (data.connected && data.account) {
+      if (data.connected) {
         setStripeConnected(true);
         setStripeAccount(data.account);
       } else {
@@ -49,60 +49,76 @@ export default function PaymentSetup() {
   };
 
   /* ------------------------------------------------------------
-     2️⃣ Handle deep link after onboarding success
+     2️⃣ Deep link handler for Stripe return_url
   ------------------------------------------------------------ */
   useEffect(() => {
-    const handleDeepLink = async (event) => {
-      const url = event.url;
+    const handler = async (event) => {
+      const url = event?.url;
+      if (!url) return;
+
       if (url.includes('stripe-connected')) {
-        const userId = new URL(url).searchParams.get('userId');
-        await verifyStripeConnection(userId);
+        await loadStripeStatus();
+        Alert.alert('✅ Stripe Connected', 'Your Stripe account is now linked.');
       }
     };
 
-    const subscription = Linking.addEventListener('url', handleDeepLink);
+    const subscription = Linking.addEventListener('url', handler);
+
     (async () => {
-      const initialUrl = await Linking.getInitialURL();
-      if (initialUrl && initialUrl.includes('stripe-connected')) {
-        const userId = new URL(initialUrl).searchParams.get('userId');
-        await verifyStripeConnection(userId);
+      const initial = await Linking.getInitialURL();
+      if (initial && initial.includes('stripe-connected')) {
+        await loadStripeStatus();
       }
     })();
+
     return () => subscription.remove();
   }, []);
 
-  const verifyStripeConnection = async (userId) => {
+  /* ------------------------------------------------------------
+     3️⃣ Connect Stripe (Shared API now)
+  ------------------------------------------------------------ */
+  const handleConnectStripe = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${BASE_URL}/v1/stripe/verify/${userId}`);
-      const data = await response.json();
 
-      if (data.connected) {
-        setStripeConnected(true);
-        setStripeAccount(data.account);
-        Alert.alert('✅ Stripe Connected', 'Your Stripe account is now linked.');
-      } else {
-        Alert.alert('⚠️ Stripe Setup Incomplete', 'Please finish connecting your account.');
-      }
+      const url = await connectStripeAccount(user.userId, token);
+      if (!url) throw new Error('Stripe did not return an onboarding URL');
+
+      await Linking.openURL(url);
     } catch (err) {
-      Alert.alert('Error verifying Stripe connection', err.message);
+      console.error('Stripe connect error:', err);
+      Alert.alert('Stripe Error', err.message || 'Unable to start Stripe onboarding.');
     } finally {
       setLoading(false);
     }
   };
 
   /* ------------------------------------------------------------
-     3️⃣ Start Stripe onboarding
+     4️⃣ Disconnect Stripe
   ------------------------------------------------------------ */
-  const handleConnectStripe = async () => {
+  const confirmDisconnect = () => {
+    Alert.alert(
+      'Disconnect Stripe?',
+      'This will unlink your Stripe account. You’ll need to reconnect to accept payments again.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Disconnect', style: 'destructive', onPress: disconnectNow },
+      ]
+    );
+  };
+
+  const disconnectNow = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${BASE_URL}/v1/stripe/connect/${user.userId}`, {
-        method: 'POST',
-      });
-      const { url } = await response.json();
-      if (!url) throw new Error('No Stripe onboarding link returned.');
-      await Linking.openURL(url);
+      const data = await disconnectStripeAccount(user.userId, token);
+
+      if (data?.success) {
+        setStripeConnected(false);
+        setStripeAccount(null);
+        Alert.alert('Disconnected', 'Your Stripe account has been unlinked.');
+      } else {
+        Alert.alert('Error', data?.error || 'Failed to disconnect Stripe.');
+      }
     } catch (err) {
       Alert.alert('Error', err.message);
     } finally {
@@ -110,46 +126,9 @@ export default function PaymentSetup() {
     }
   };
 
-  const confirmDisconnect = () => {
-  Alert.alert(
-    'Disconnect Stripe?',
-    'This will unlink your Stripe account from your profile. You’ll need to reconnect to accept payments again.',
-    [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Disconnect', style: 'destructive', onPress: disconnectStripe },
-    ]
-  );
-};
-
-const disconnectStripe = async () => {
-  try {
-    setLoading(true);
-    const res = await fetch(`${BASE_URL}/v1/stripe/disconnect/${user.userId}`, {
-      method: 'POST',
-    });
-    const data = await res.json();
-
-    if (data.success) {
-      setStripeConnected(false);
-      setStripeAccount(null);
-      Alert.alert('✅ Disconnected', 'Your Stripe account has been unlinked.');
-    } else {
-      Alert.alert('Error', data.error || 'Failed to disconnect account.');
-    }
-  } catch (err) {
-    console.error('Disconnect failed:', err);
-    Alert.alert('Error', err.message);
-  } finally {
-    setLoading(false);
-  }
-};
-
-
   /* ------------------------------------------------------------
-     4️⃣ UI (React Native Paper)
+     5️⃣ UI (React Native Paper)
   ------------------------------------------------------------ */
-
-  
   return (
     <View
       style={{
@@ -171,59 +150,67 @@ const disconnectStripe = async () => {
             />
           )}
         />
+
         <Divider />
+
         <Card.Content style={{ paddingVertical: 16 }}>
           {loading ? (
-            <ActivityIndicator animating={true} size="large" style={{ marginVertical: 20 }} />
+            <ActivityIndicator animating size="large" style={{ marginVertical: 20 }} />
           ) : stripeConnected && stripeAccount ? (
             <>
               <Text variant="titleMedium" style={{ marginBottom: 6 }}>
                 ✅ Connected to Stripe
               </Text>
+
               <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
-                Account ID: <Text style={{ color: theme.colors.primary }}>{stripeAccount.id}</Text>
+                Account ID:{' '}
+                <Text style={{ color: theme.colors.primary }}>{stripeAccount.id}</Text>
               </Text>
+
               <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
                 Email: {stripeAccount.email || 'N/A'}
               </Text>
+
               <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
-                Payouts Enabled:{' '}
-                {stripeAccount.payouts_enabled ? '✅ Yes' : '❌ No'}
-              </Text>
-              <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
-                Charges Enabled:{' '}
-                {stripeAccount.charges_enabled ? '✅ Yes' : '❌ No'}
+                Charges Enabled: {stripeAccount.charges_enabled ? '✅ Yes' : '❌ No'}
               </Text>
 
-            <Button
+              <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+                Payouts Enabled: {stripeAccount.payouts_enabled ? '✅ Yes' : '❌ No'}
+              </Text>
+
+              <Button
                 mode="outlined"
                 icon="refresh"
                 style={{ marginTop: 16 }}
-                onPress={() => checkStripeStatus(user.userId)}
-                >
+                onPress={loadStripeStatus}
+              >
                 Refresh Account
-                </Button>
+              </Button>
 
-                <Button
+              <Button
                 mode="contained-tonal"
                 icon="link-off"
                 textColor="red"
                 style={{
-                    marginTop: 12,
-                    borderRadius: 8,
-                    backgroundColor: theme.colors.surfaceVariant,
+                  marginTop: 12,
+                  borderRadius: 8,
+                  backgroundColor: theme.colors.surfaceVariant,
                 }}
-                onPress={() => confirmDisconnect()}
-                >
+                onPress={confirmDisconnect}
+              >
                 Disconnect Stripe
-                </Button>
-
+              </Button>
             </>
           ) : (
             <>
               <Text
                 variant="bodyLarge"
-                style={{ marginBottom: 20, textAlign: 'center', color: theme.colors.onSurface }}
+                style={{
+                  marginBottom: 20,
+                  textAlign: 'center',
+                  color: theme.colors.onSurface,
+                }}
               >
                 Connect your Stripe account to accept payments directly through your profile.
               </Text>

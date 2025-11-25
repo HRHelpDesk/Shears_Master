@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>SchemeUserState</key>
+	<dict>
+		<key>Purpose.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>120</integer>
+		</dict>
+		<key>Shear copy.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>120</integer>
+		</dict>
+		<key>Shear.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>119</integer>
+		</dict>
+		<key>ShearsMobile copy.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>120</integer>
+		</dict>
+		<key>ShearsMobile.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>96</integer>
+		</dict>
+	</dict>
+	<key>SuppressBuildableAutocreation</key>
+	<dict>
+		<key>13B07F861A680F5B00A75B9A</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>3A5091292EC9386900154F1F</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>3A50913E2EC93A6900154F1F</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+	</dict>
+</dict>
+</plist>

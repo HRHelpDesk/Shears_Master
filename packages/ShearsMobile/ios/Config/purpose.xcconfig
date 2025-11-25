@@ -1,0 +1,4 @@
+APP_TARGET = purpose
+WHITE_LABEL = purpose
+PRODUCT_BUNDLE_IDENTIFIER = com.shear.purpose
+APP_NAME = Purpose

@@ -17,6 +17,7 @@ import { loadStripe } from "@stripe/stripe-js";
 
 import { registerUser } from "../../../../shears-shared/src/Services/Authentication";
 import { BASE_URL } from "../../../../shears-shared/src/config/api";
+import { getAppHeaders } from "../../../../shears-shared/src/config/appHeaders";
 
 // ✅ Stripe publishable key
 const stripePromise = loadStripe(
@@ -60,12 +61,14 @@ export default function Register({ appConfig, logo }) {
       try {
         const amount = formData.membershipPlan === "solo" ? 1000 : 4900;
 
-        const response = await fetch(`${BASE_URL}/v1/stripe/create-payment-intent`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount }),
-        });
-
+     const response = await fetch(`${BASE_URL}/v1/stripe/create-payment-intent`, {
+      method: "POST",
+      headers: {
+        ...getAppHeaders(),            // X-App-Name + Authorization
+        "Content-Type": "application/json",   // ❗ REQUIRED
+      },
+      body: JSON.stringify({ amount }),
+    });
         if (!response.ok) throw new Error("Failed to create payment intent");
 
         const { clientSecret } = await response.json();
@@ -89,7 +92,8 @@ export default function Register({ appConfig, logo }) {
     try {
       const payload = {
         email: formData.email,
-        fullName: formData.fullName,
+        fullName: `${formData.firstName} ${formData.lastName}`,
+        firstName:formData.firstName,
         lastName: formData.lastName,
         password: formData.password,
         phone: formData.phone,
@@ -251,8 +255,8 @@ export default function Register({ appConfig, logo }) {
           <TextField
             fullWidth
             label="First Name"
-            name="fullName"
-            value={formData.fullName}
+            name="firstName"
+            value={formData.firstName}
             onChange={handleChange}
             InputLabelProps={{ style: { color: theme.palette.text.secondary } }}
             inputProps={{ style: { color: theme.palette.text.primary } }}

@@ -1,26 +1,24 @@
-import React, { useContext, useState } from 'react';
-import { View, Button, Alert, Linking } from 'react-native';
-import { AuthContext } from '../../../../shears-web/src/context/AuthContext';
-import { BASE_URL } from 'shears-shared/src/config/api';
+import React, { useContext, useState } from "react";
+import { View, Button, Alert, Linking } from "react-native";
+import { AuthContext } from "../../../../shears-web/src/context/AuthContext";
+import { connectStripeAccount } from "shears-shared/src/Services/Authentication";
 
-export default function StripeConnectButton({ user }) {
+export default function StripeConnectButton() {
   const [loading, setLoading] = useState(false);
-const {token, user} = useContext(AuthContext);
-  const connectStripe = async () => {
+  const { user, token } = useContext(AuthContext);
+
+  const handleConnect = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${BASE_URL}/v1/stripe/connect/${user.userId}`, {
-        method: 'POST',
-      });
-      const { url } = await response.json();
 
-      if (url) {
-        await Linking.openURL(url);
-      } else {
-        Alert.alert('Error', 'Unable to get Stripe link');
-      }
+      const url = await connectStripeAccount(user.userId, token);
+
+      // 🔗 Cross-platform open URL
+      await Linking.openURL(url);
+
     } catch (err) {
-      Alert.alert('Error', err.message);
+      console.error("Stripe connect failed:", err);
+      Alert.alert("Error", err?.error || err.message || "Failed to connect Stripe");
     } finally {
       setLoading(false);
     }
@@ -29,8 +27,8 @@ const {token, user} = useContext(AuthContext);
   return (
     <View>
       <Button
-        title={loading ? 'Connecting...' : 'Connect My Stripe Account'}
-        onPress={connectStripe}
+        title={loading ? "Connecting..." : "Connect My Stripe Account"}
+        onPress={handleConnect}
         disabled={loading}
       />
     </View>

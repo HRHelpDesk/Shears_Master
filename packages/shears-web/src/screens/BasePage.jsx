@@ -112,28 +112,48 @@ export default function BasePage({ appConfig, name, viewData = [] }) {
     fetchRecords(false);
   }, [fetchRecords]);
 
-  /* -------------------------------------------------------------
-     3. Load the dynamic view component
-  ------------------------------------------------------------- */
-  useEffect(() => {
-    if (!activeView?.component) {
+ /* -------------------------------------------------------------
+   3. Load the dynamic view component – THIS ONE ACTUALLY WORKS
+------------------------------------------------------------- */
+useEffect(() => {
+  if (!activeView?.component) {
+    setViewComponent(() => FallbackComponent);
+    setLoadingComponent(false);
+    return;
+  }
+
+  setLoadingComponent(true);
+
+  // This is the magic that tells Vite to include EVERY file under src/components
+  const modules = import.meta.glob('../components/**/*.jsx');
+
+  const path = `../components/${activeView.component}.jsx`;
+
+  console.log('Trying to load:', path);
+
+  const importer = modules[path];
+
+  if (!importer) {
+    console.warn('Component not matched in glob:', activeView.component);
+    // List what is actually available (very helpful while developing)
+    console.log('Available components:', Object.keys(modules));
+    setViewComponent(() => FallbackComponent);
+    setLoadingComponent(false);
+    return;
+  }
+
+  importer()
+    .then((mod) => {
+      setViewComponent(() => mod.default || mod);
+    })
+    .catch((err) => {
+      console.error('Failed to load component', path, err);
       setViewComponent(() => FallbackComponent);
+    })
+    .finally(() => {
       setLoadingComponent(false);
-      return;
-    }
-
-    setLoadingComponent(true);
-
-    import(`../components/${activeView.component}`)
-      .then((mod) => {
-        setViewComponent(() => mod.default);
-      })
-      .catch((e) => {
-        console.warn('Dynamic import failed:', e);
-        setViewComponent(() => FallbackComponent);
-      })
-      .finally(() => setLoadingComponent(false));
-  }, [activeView]);
+    });
+}, [activeView]);
 
   /* -------------------------------------------------------------
      4. Props passed to the loaded view

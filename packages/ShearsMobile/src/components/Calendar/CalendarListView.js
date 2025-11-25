@@ -152,6 +152,7 @@ export default function CalendarListView(props) {
         userId: user.userId,
         limit: 200,
       });
+      console.log('resp',resp)
       setLocalData(resp || []);
     } catch (e) {
       console.error('CalendarListView fetch error:', e);
@@ -160,9 +161,10 @@ export default function CalendarListView(props) {
 
   useFocusEffect(
     React.useCallback(() => {
-      if (mode !== 'day') {
+      console.log('day')
+      
         fetchLocalRecords();
-      }
+      
     }, [mode])
   );
 

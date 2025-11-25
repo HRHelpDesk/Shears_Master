@@ -25,6 +25,15 @@ icon: { ios: 'add-circle', android: 'plus-circle', web: 'fa fa-plus' },
       },
     },
   },
+   {
+      field: 'image',
+      override: {
+        field: 'productImage',
+        displayInList: false,
+        label: 'Product Images',
+        display: { order: 11 },
+      },
+    },
     {
       field: 'productSKU',
       override: {
@@ -99,16 +108,6 @@ icon: { ios: 'add-circle', android: 'plus-circle', web: 'fa fa-plus' },
         required: false,
         label: 'Supplier Name',
         display: { order: 9 },
-      },
-    },
-    
-    {
-      field: 'image',
-      override: {
-        field: 'productImage',
-        displayInList: false,
-        label: 'Product Image',
-        display: { order: 11 },
       },
     },
     {

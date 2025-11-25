@@ -5,10 +5,12 @@
     "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/@stripe/stripe-react-native/android/build/generated/source/codegen/jni/CMakeLists.txt",
     "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/react-native-bottom-tabs/android/build/generated/source/codegen/jni/CMakeLists.txt",
     "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/react-native-gesture-handler/android/build/generated/source/codegen/jni/CMakeLists.txt",
+    "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/react-native-image-picker/android/build/generated/source/codegen/jni/CMakeLists.txt",
     "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/react-native-pager-view/android/build/generated/source/codegen/jni/CMakeLists.txt",
     "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/react-native-reanimated/android/build/generated/source/codegen/jni/CMakeLists.txt",
     "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/react-native-safe-area-context/android/src/main/jni/CMakeLists.txt",
     "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/react-native-screens/android/src/main/jni/CMakeLists.txt",
+    "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/react-native-svg/android/src/main/jni/CMakeLists.txt",
     "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/react-native-vector-icons/android/build/generated/source/codegen/jni/CMakeLists.txt",
     "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/react-native-worklets/android/build/generated/source/codegen/jni/CMakeLists.txt",
     "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/react-native/ReactAndroid/cmake-utils/default-app-setup/CMakeLists.txt"
@@ -36,6 +38,7 @@
       "runtimeFiles": [
         "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/android/app/build/intermediates/cxx/Debug/3e5b3y3m/obj/x86_64/libreact_codegen_safeareacontext.so",
         "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/android/app/build/intermediates/cxx/Debug/3e5b3y3m/obj/x86_64/libreact_codegen_rnscreens.so",
+        "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/android/app/build/intermediates/cxx/Debug/3e5b3y3m/obj/x86_64/libreact_codegen_rnsvg.so",
         "/Users/masonmerrell/.gradle/caches/9.0.0/transforms/5fa135f9220cf0ae1e3ee40cd371125b/transformed/fbjni-0.7.0/prefab/modules/fbjni/libs/android.x86_64/libfbjni.so",
         "/Users/masonmerrell/.gradle/caches/9.0.0/transforms/ea12ac1f332b31fb5e1a55c985795b89/transformed/react-android-0.82.0-debug/prefab/modules/jsi/libs/android.x86_64/libjsi.so",
         "/Users/masonmerrell/.gradle/caches/9.0.0/transforms/ea12ac1f332b31fb5e1a55c985795b89/transformed/react-android-0.82.0-debug/prefab/modules/reactnative/libs/android.x86_64/libreactnative.so"
@@ -50,6 +53,11 @@
       "toolchain": "toolchain",
       "abi": "x86_64",
       "artifactName": "react_codegen_RNDateTimePickerCGen"
+    },
+    "react_codegen_RNImagePickerSpec::@f66ee9a2efecfb28bee4": {
+      "toolchain": "toolchain",
+      "abi": "x86_64",
+      "artifactName": "react_codegen_RNImagePickerSpec"
     },
     "react_codegen_RNVectorIconsSpec::@479809fae146501fd34d": {
       "toolchain": "toolchain",
@@ -91,6 +99,17 @@
       "toolchain": "toolchain",
       "abi": "x86_64",
       "artifactName": "react_codegen_rnstripe"
+    },
+    "react_codegen_rnsvg::@4f40eb209d0c0b4a3b65": {
+      "toolchain": "toolchain",
+      "abi": "x86_64",
+      "artifactName": "react_codegen_rnsvg",
+      "output": "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/android/app/build/intermediates/cxx/Debug/3e5b3y3m/obj/x86_64/libreact_codegen_rnsvg.so",
+      "runtimeFiles": [
+        "/Users/masonmerrell/.gradle/caches/9.0.0/transforms/ea12ac1f332b31fb5e1a55c985795b89/transformed/react-android-0.82.0-debug/prefab/modules/reactnative/libs/android.x86_64/libreactnative.so",
+        "/Users/masonmerrell/.gradle/caches/9.0.0/transforms/ea12ac1f332b31fb5e1a55c985795b89/transformed/react-android-0.82.0-debug/prefab/modules/jsi/libs/android.x86_64/libjsi.so",
+        "/Users/masonmerrell/.gradle/caches/9.0.0/transforms/5fa135f9220cf0ae1e3ee40cd371125b/transformed/fbjni-0.7.0/prefab/modules/fbjni/libs/android.x86_64/libfbjni.so"
+      ]
     },
     "react_codegen_rnworklets::@68f58d84d4754f193387": {
       "toolchain": "toolchain",

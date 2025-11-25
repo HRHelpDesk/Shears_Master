@@ -7,7 +7,7 @@ import { ServicesList } from './view-schema/services-view.js';
 import { shearWhitelabels } from './whitelabels/shear.js';
 import { splashWhitelabels } from './whitelabels/splash.js';
 import { shearSettings } from './settings.js';
-import { StripeCheckout, StripeTerminal } from './view-schema/stripe-setup-view.js';
+import { StripeCheckout, StripeTerminal, TransactionList } from './view-schema/stripe-setup-view.js';
 export const AppData = [
   {
     appName: 'shear',
@@ -45,6 +45,20 @@ export const AppData = [
                   inputConfig: {
                     recordType: 'services',
                     searchField: 'serviceName',
+                  },
+                  display: { order: 2 },
+                },
+              },
+              {
+                field: 'linkField',
+                override: {
+                  field: 'product',
+                  label: 'Product',
+                  type: 'array', // optional explicit
+
+                  inputConfig: {
+                    recordType: 'products',
+                    searchField: 'productName',
                   },
                   display: { order: 2 },
                 },
@@ -182,8 +196,132 @@ export const AppData = [
         permissions: ['owner', 'admin', 'barber', 'stylist'], 
         displayName: 'Transactions',
         icon: { ios: 'dollarsign.circle', android: 'currency-usd', web: 'fa fa-dollar-sign' },
-        views: [StripeCheckout, StripeTerminal],
-        fields: [],
+        views: [TransactionList, StripeCheckout, StripeTerminal],
+        fields: [
+          {
+    field: "paymentName",
+    override: {
+      field: "paymentName",
+      label: "Payment Name",            // Cash | Credit | Venmo | Cash App
+      required: true,
+      input: "select",
+      inputConfig: {
+        options: ["Quick Pay", "Product", "Service"],
+      },
+      display: { order: 2 },
+    },
+  },
+  {
+    field: "id",
+    override: {
+      field: "transactionId",
+      label: "Transaction ID",            // Cash | Credit | Venmo | Cash App
+      required: true,
+      input: "string",
+      displayInList:true,
+      
+      display: { order: 2 },
+    },
+  },
+    {
+    field: "linkField",
+    override: {
+      field: "client",
+      label: "Client",
+      type: "object",
+      required: true,
+      inputConfig: {
+        recordType: "contacts",
+        searchField: "firstName",
+      },
+      display: { order: 1 },
+    },
+  },
+
+  {
+    field: "paymentType",
+    override: {
+      field: "paymentType",
+      label: "Payment Type",            // Cash | Credit | Venmo | Cash App
+      required: true,
+      input: "select",
+      inputConfig: {
+        options: ["Cash", "Credit", "Venmo", "Cash App"],
+      },
+      display: { order: 2 },
+    },
+  },
+
+
+  {
+    field: "currency",
+    override: {
+      field: "totalAmount",
+      label: "Total Amount",
+      required: true,
+      input: "currency",
+      type: "currency",
+      display: { order: 5 },
+    },
+  },
+
+  {
+    field: "date",
+    override: {
+      label: "Transaction Date",
+      field: "transactionDate",
+      type: "string",
+      required: true,
+      display: { order: 6 },
+      displayInList:true,
+      arrayConfig: { minItems: 1 },
+    },
+  },
+
+  {
+    field: "name",
+    override: {
+      field: "sendReceipt",
+      label: "Receipt Sent?",
+      input: "select",
+      inputConfig: {
+        options: ["Yes", "No"],
+      },
+      required: false,
+      display: { order: 7 },
+    },
+  },
+
+  {
+    field: "notes",
+    override: {
+      field: "notes",
+      label: "Transaction Notes",
+      display: { order: 8 },
+    },
+  },
+
+  {
+    field: "name",
+    override: {
+      field: "serviceItems",
+      label: "Line Items",
+      type: "array",
+      input: "array",
+        displayInList:false,
+      display: { order: 9 },
+      arrayConfig: {
+        minItems: 0,
+        object: [
+          { field: "description", label: "Description" },
+          { field: "qty", label: "Quantity", type: "number" },
+          { field: "price", label: "Price", type: "currency" },
+        ],
+      },
+    },
+  },
+],
+
       },
       {
         name: 'Profile',
@@ -198,7 +336,16 @@ export const AppData = [
         field: 'userAvatar',
         displayInList: false,
         label: 'Avatar',
-        display: { order: 11 },
+        display: { order: 1 },
+      },
+    },
+    {
+      field: 'appointmentSummary',
+      override: {
+        field: 'appointmentSummary',
+        displayInList: false,
+        label: 'Appointment Summary',
+        display: { order: 3 },
       },
     },
     {
@@ -207,9 +354,10 @@ export const AppData = [
         field: 'userEarnings',
         displayInList: false,
         label: 'Earnings',
-        display: { order: 11 },
+        display: { order: 2 },
       },
     },
+    
         ],
       },
       

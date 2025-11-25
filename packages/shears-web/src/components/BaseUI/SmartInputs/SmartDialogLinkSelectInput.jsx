@@ -21,7 +21,10 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { useTheme, alpha } from '@mui/material/styles';
 import { AuthContext } from '../../../context/AuthContext';
 import { getRecords } from 'shears-shared/src/Services/Authentication';
-import FieldActionsForEntry from '../ActionMenu/FieldActionsForEntry'
+import FieldActionsForEntry from '../ActionMenu/FieldActionsForEntry';
+import GlassActionButtonWeb from '../../UI/GlassActionButton';
+import RemoveIcon from '@mui/icons-material/Remove';
+import AddIcon from '@mui/icons-material/Add';
 /* ============================================================
    ✅ Helper: Format special fields dynamically
 ============================================================ */
@@ -51,22 +54,18 @@ const getLinkedDisplayFields = (raw) => {
 
   const fields = [];
 
-  // ✅ Price
   if (raw.price != null) {
     fields.push({ key: "price", label: "Price", layout: "inline" });
   }
 
-  // ✅ Duration
   if (raw.duration != null) {
     fields.push({ key: "duration", label: "Duration", layout: "inline" });
   }
 
-  // ✅ Phone (mobile behavior)
   if (Array.isArray(raw.phone) && raw.phone.length > 0) {
     fields.push({ key: "phone", label: "Phone", layout: "inline" });
   }
 
-  // ✅ Description (full width)
   if (raw.description) {
     fields.push({ key: "description", label: "Description", layout: "full" });
   }
@@ -84,25 +83,37 @@ export default function SmartDialogLinkSelectInput({
   onChangeText,
   placeholder = 'Select...',
   mode = 'edit',
+  showQuantity = false,
+  autoEnableQuantityFor = ['products'],
 }) {
   const theme = useTheme();
   const { token, user } = useContext(AuthContext);
+
   const [open, setOpen] = useState(false);
-  const [expanded, setExpanded] = useState(false); // ✅ Collapse state
+  const [expanded, setExpanded] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  /** Sync displayed value */
+  const [quantity, setQuantity] = useState(value?.quantity || 1);
+
+  /* Sync name display */
   useEffect(() => {
-    if (value && typeof value === 'object' && value.name) {
+    if (value?.name) {
       setSearchValue(value.name);
     } else {
       setSearchValue('');
     }
   }, [value]);
 
-  /** Fetch records */
+  /* Sync quantity when parent updates */
+  useEffect(() => {
+    if (value?.quantity != null) {
+      setQuantity(value.quantity);
+    }
+  }, [value]);
+
+  /* Fetch records */
   const fetchRecords = async (query = '') => {
     if (!token) return;
     setLoading(true);
@@ -150,145 +161,143 @@ export default function SmartDialogLinkSelectInput({
     if (open) fetchRecords();
   }, [open]);
 
+  /* When selecting an item */
   const handleSelect = (record) => {
-    onChangeText(record);
+    onChangeText({
+      ...record,
+      quantity: quantity || 1,
+    });
+
     setSearchValue(record.name);
     setOpen(false);
     setRecords([]);
   };
 
+  const quantityEnabled =
+    showQuantity || autoEnableQuantityFor.includes(recordTypeName);
+
   /* ============================================================
-   ✅ READ MODE — with collapsible details + phone actions
-============================================================ */
-if (mode === 'read') {
-  const raw = value?.raw || {};
-  const fields = getLinkedDisplayFields(raw);
+     ✅ READ MODE
+  ============================================================ */
+  if (mode === 'read') {
+    const raw = value?.raw || {};
+    const fields = getLinkedDisplayFields(raw);
 
-  const compact = fields.filter((f) => f.layout === "inline");
-  const fullWidth = fields.filter((f) => f.layout === "full");
+    const compact = fields.filter((f) => f.layout === "inline");
+    const fullWidth = fields.filter((f) => f.layout === "full");
 
-  // ✅ Extract phone entry like mobile
-  const phoneEntry =
-    Array.isArray(raw.phone) && raw.phone.length > 0
-      ? raw.phone[0] // { label, value }
-      : null;
+    const phoneEntry =
+      Array.isArray(raw.phone) && raw.phone.length > 0 ? raw.phone[0] : null;
 
-  return (
-    <Box sx={{ my: 1 }}>
-      {/* Label */}
-      <Typography variant="subtitle2" color="text.primary" sx={{ mb: 0.5 }}>
-        {label}
-      </Typography>
-
-      {/* Header (click-to-expand) */}
-      <Box
-        onClick={() => setExpanded(!expanded)}
-        sx={{
-          cursor: 'pointer',
-          bgcolor:
-            theme.palette.mode === 'dark'
-              ? alpha(theme.palette.background.paper, 0.6)
-              : theme.palette.grey[100],
-          borderRadius: 1,
-          p: 1.5,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          transition: 'all 0.2s ease',
-        }}
-      >
-        <Typography variant="body1" sx={{ fontWeight: 600 }}>
-          {value?.name || (
-            <em style={{ color: theme.palette.text.secondary }}>Not set</em>
-          )}
+    return (
+      <Box sx={{ my: 1 }}>
+        <Typography variant="subtitle2" color="text.primary" sx={{ mb: 0.5 }}>
+          {label}
         </Typography>
 
-        <KeyboardArrowDownIcon
+        <Box
+          onClick={() => setExpanded(!expanded)}
           sx={{
-            transition: '0.3s',
-            transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
-            color: theme.palette.text.secondary,
+            cursor: 'pointer',
+            bgcolor:
+              theme.palette.mode === 'dark'
+                ? alpha(theme.palette.background.paper, 0.6)
+                : theme.palette.grey[100],
+            borderRadius: 1,
+            p: 1.5,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            transition: 'all 0.2s ease',
           }}
-        />
-      </Box>
+        >
+          <Typography variant="body1" sx={{ fontWeight: 600 }}>
+            {value?.name || (
+              <em style={{ color: theme.palette.text.secondary }}>Not set</em>
+            )}
+          </Typography>
 
-      {/* Collapsible Details */}
-      <Collapse in={expanded} timeout={250} unmountOnExit>
-        <Box sx={{ mt: 1, pl: 1 }}>
-          {/* ✅ Compact fields (Price, Duration, Phone) */}
-          {compact.length > 0 && (
-            <Box
-              sx={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 3,
-                mb: fullWidth.length ? 2 : 0,
-              }}
-            >
-              {compact.map((f) => {
-                const isPhoneField = f.key === "phone";
+          <KeyboardArrowDownIcon
+            sx={{
+              transition: '0.3s',
+              transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+              color: theme.palette.text.secondary,
+            }}
+          />
+        </Box>
 
-                let formattedValue = formatLinkedValue(f.key, raw[f.key]);
+        {quantityEnabled && value?.quantity && (
+          <Typography
+            variant="body2"
+            sx={{ mt: 0.5, ml: 0.5, fontWeight: 600, color: theme.palette.text.secondary }}
+          >
+            Quantity: {value.quantity}
+          </Typography>
+        )}
 
-                if (isPhoneField && phoneEntry) {
-                  formattedValue = phoneEntry.value;
-                }
+        <Collapse in={expanded} timeout={250} unmountOnExit>
+          <Box sx={{ mt: 1, pl: 1 }}>
+            {compact.length > 0 && (
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 3,
+                  mb: fullWidth.length ? 2 : 0,
+                }}
+              >
+                {compact.map((f) => {
+                  const isPhoneField = f.key === "phone";
+                  let formattedValue = formatLinkedValue(f.key, raw[f.key]);
 
-                return (
-                  <Box key={f.key} sx={{ flex: "1 1 150px" }}>
-                    {/* Small label */}
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ display: 'block', mb: 0.25 }}
-                    >
-                      {f.label}
-                    </Typography>
+                  if (isPhoneField && phoneEntry) {
+                    formattedValue = phoneEntry.value;
+                  }
 
-                    {/* Value + phone action icons */}
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                      }}
-                    >
-                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                        {formattedValue}
+                  return (
+                    <Box key={f.key} sx={{ flex: "1 1 150px" }}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ display: 'block', mb: 0.25 }}
+                      >
+                        {f.label}
                       </Typography>
 
-                      {/* ✅ Inline actions (call, sms, email, maps) */}
-                      {isPhoneField && phoneEntry && (
-                        <FieldActionsForEntry entry={phoneEntry} />
-                      )}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {formattedValue}
+                        </Typography>
+
+                        {isPhoneField && phoneEntry && (
+                          <FieldActionsForEntry entry={phoneEntry} />
+                        )}
+                      </Box>
                     </Box>
-                  </Box>
-                );
-              })}
-            </Box>
-          )}
+                  );
+                })}
+              </Box>
+            )}
 
-          {/* ✅ Full-width fields (Description) */}
-          {fullWidth.map((f) => (
-            <Box key={f.key} sx={{ mb: 1.5 }}>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ display: 'block', mb: 0.25 }}
-              >
-                {f.label}
-              </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                {formatLinkedValue(f.key, raw[f.key])}
-              </Typography>
-            </Box>
-          ))}
-        </Box>
-      </Collapse>
-    </Box>
-  );
-}
-
+            {fullWidth.map((f) => (
+              <Box key={f.key} sx={{ mb: 1.5 }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: 'block', mb: 0.25 }}
+                >
+                  {f.label}
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  {formatLinkedValue(f.key, raw[f.key])}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        </Collapse>
+      </Box>
+    );
+  }
 
   /* ============================================================
      ✅ EDIT MODE
@@ -325,7 +334,50 @@ if (mode === 'read') {
         }}
       />
 
-      {/* Dialog */}
+      {/* Quantity Field */}
+      {quantityEnabled && value?._id && (
+  <Box sx={{ mt: 2 }}>
+    <Typography variant="subtitle2" color="text.primary" sx={{ mb: 1 }}>
+      Quantity
+    </Typography>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      <GlassActionButtonWeb
+        icon={<RemoveIcon />}
+        onClick={() => {
+          const newQ = Math.max(1, quantity - 1);
+          setQuantity(newQ);
+          onChangeText({ ...value, quantity: newQ });
+        }}
+        theme={theme}
+        color={theme.palette.primary.main}
+        size={40}
+      />
+      <TextField
+        value={quantity}
+        onChange={(e) => {
+          const val = parseInt(e.target.value) || 1;
+          const final = Math.max(1, val);
+          setQuantity(final);
+          onChangeText({ ...value, quantity: final });
+        }}
+        inputProps={{ min: 1, style: { textAlign: 'center' } }}
+        sx={{ width: 100 }}
+      />
+      <GlassActionButtonWeb
+        icon={<AddIcon />}
+        onClick={() => {
+          const newQ = quantity + 1;
+          setQuantity(newQ);
+          onChangeText({ ...value, quantity: newQ });
+        }}
+        theme={theme}
+        color={theme.palette.primary.main}
+        size={40}
+      />
+    </Box>
+  </Box>
+)}
+
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ borderBottom: `1px solid ${theme.palette.divider}` }}>
           Select {label}

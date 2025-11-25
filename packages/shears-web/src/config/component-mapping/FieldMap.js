@@ -9,6 +9,8 @@ import SmartCurrencyInput from "../../components/BaseUI/SmartInputs/SmartCurrenc
 import SmartSwitchInput from "../../components/BaseUI/SmartInputs/SmartSwitchInput";
 import SmartImageInput from "../../components/BaseUI/SmartInputs/SmartImageInput";
 
+import { WidgetMap } from "./WidgetMap";
+
 export const FieldMap = {
    text: PlainTextInput,
  textarea: SmartTextAreaInput, // could later map to a MultiLineInput
@@ -21,6 +23,7 @@ export const FieldMap = {
   number: PlainTextInput,
   time: SmartTimeInput,
   boolean: SmartSwitchInput,
-  image: SmartImageInput
+  image: SmartImageInput,
+  ...WidgetMap
 
 };

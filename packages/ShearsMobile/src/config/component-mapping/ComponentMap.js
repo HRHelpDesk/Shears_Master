@@ -10,6 +10,7 @@ import StripeCheckout from '../../components/Stripe/StripeCheckout';
 import QuickPayScreen from '../../components/QuickPay/QuickPayScreen'
 import UserListView from '../../components/User/UserListView'
 import BasicLayoutPage from '../../components/BaseUI/BasicLayoutPage'
+import TransactionsListView from '../../components//Payment/TransactionsListView'
 
 const COMPONENTS = {
   ListView,
@@ -20,7 +21,8 @@ const COMPONENTS = {
   StripeCheckout,
   QuickPayScreen,
   UserListView,
-  BasicLayoutPage
+  BasicLayoutPage,
+  TransactionsListView
 };
 
 export default COMPONENTS;

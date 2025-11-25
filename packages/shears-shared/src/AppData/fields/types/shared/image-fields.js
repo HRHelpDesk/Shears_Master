@@ -2,7 +2,7 @@ export const PhotoFields = [
 
     {
   field: "image",
-  type: "string",
+  type: "array",
   label: "Image",
   displayInList: true,
   input: "image",

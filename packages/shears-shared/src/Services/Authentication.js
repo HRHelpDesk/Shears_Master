@@ -1,43 +1,39 @@
 import axios from 'axios';
 import { BASE_URL } from '../config/api';
 import { CURRENT_APP, CURRENT_WHITE_LABEL } from '../config/currentapp';
+import { getAppHeaders } from '../config/appHeaders';
+
 const API_URL = `${BASE_URL}/v1/data-records`;
 
-export const registerUser = async (formData) => {
-  console.log('register user')
+/* -------------------------------------------------------------
+   AUTH: Register User
+------------------------------------------------------------- */
+export const registerUser = async (formData, token = null) => {
   try {
-    console.log('Registering user with data:', formData);
-    const response = await axios.post(`${BASE_URL}/v1/auth/register`, formData);
-    console.log('Registration response:', response.data);
-    return response.data; // return entire response (message + user)
+    const response = await axios.post(
+      `${BASE_URL}/v1/auth/register`,
+      formData,
+      { headers: getAppHeaders(token) }
+    );
+
+    return response.data;
   } catch (error) {
     console.error('Registration failed:', error);
-    if (error.response) {
-      throw new Error(error.response.data.message); // throw so frontend can catch
-    } else {
-      throw new Error('Network error. Please try again.');
-    }
+    throw new Error(error.response?.data?.message || 'Network error');
   }
-
-  
-
 };
 
+/* -------------------------------------------------------------
+   AUTH: Update User
+------------------------------------------------------------- */
 export async function updateUser(userId, updates, token) {
   try {
     if (!token) throw new Error("No authentication token found");
-    if (!userId) throw new Error("Missing userId");
-
-    console.log("Updating USER:", userId, updates);
 
     const response = await axios.put(
       `${BASE_URL}/v1/auth/update/${userId}`,
       updates,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
+      { headers: getAppHeaders(token) }
     );
 
     return response.data;
@@ -48,87 +44,76 @@ export async function updateUser(userId, updates, token) {
   }
 }
 
-
-
-
+/* -------------------------------------------------------------
+   AUTH: Login
+------------------------------------------------------------- */
 export const login = async (email, password) => {
-    try {
-      const response = await axios.post(`${BASE_URL}/v1/auth/login`, { email, password });
-      const { user, token } = response.data;
-      return { user, token };
-    } catch (error) {
-      throw new Error(error.response?.data?.message || 'Login failed');
-    }
-  };
+  try {
+    const response = await axios.post(
+      `${BASE_URL}/v1/auth/login`,
+      { email, password },
+      { headers: getAppHeaders() }
+    );
 
-// ✅ Helper: Get defaults from owner user
+    const { user, token } = response.data;
+    return { user, token };
+
+  } catch (error) {
+    throw new Error(error.response?.data?.message || 'Login failed');
+  }
+};
+
+/* -------------------------------------------------------------
+   Helper: Inherit owner fields for sub-users
+------------------------------------------------------------- */
 function inheritBusinessFields(ownerUser, newUser) {
   return {
     ...newUser,
-    // ✅ REQUIRED → Inherit same subscriberId as owner
     subscriberId: ownerUser.subscriberId,
-
-    // ✅ Use owner business info (for non-owners)
     businessName: ownerUser.businessName || null,
     businessWebsite: ownerUser.businessWebsite || null,
     businessAddress: ownerUser.businessAddress || null,
     membershipPlan: ownerUser.membershipPlan || null,
-
-    // ✅ Track parent creator
     parentUserId: ownerUser.userId,
     parentSubscriberId: ownerUser.subscriberId,
   };
 }
 
+/* -------------------------------------------------------------
+   CREATE RECORD (Special case for creating sub-users)
+------------------------------------------------------------- */
 export async function createRecord(record, recordType, token, userId, subscriberId, ownerUser) {
   try {
     if (!token) throw new Error("No authentication token found");
-console.log(record)
-    /* ------------------------------------------------------------
-       ✅ SPECIAL CASE: Creating a USER
-    ------------------------------------------------------------ */
-    if (recordType === "user") {
-      if (!ownerUser) {
-        throw new Error("Owner user context is required to create sub-users.");
-      }
 
-      // ✅ Build basic user object
+    /* --- SPECIAL CASE: Creating a REAL USER ---------------- */
+    if (recordType === "user") {
+      if (!ownerUser) throw new Error("Owner user context is required");
+
       let newUser = {
         firstName: record.firstName,
         lastName: record.lastName,
         fullName: `${record.firstName} ${record.lastName}`.trim(),
         email: record.email,
         role: record.role || "barber",
-        password: record.password || "Temp123!", // ✅ Temporary password
+        password: record.password || "Temp123!",
         phone: record.phone || null,
       };
 
-      // ✅ OWNER role stays standalone
-        if (newUser.role !== "owner") {
-    newUser = inheritBusinessFields(ownerUser, newUser);
+      if (newUser.role !== "owner") {
+        newUser = inheritBusinessFields(ownerUser, newUser);
+      }
 
-    // ✅ REQUIRED → match backend expectations
-    newUser.parentSubscriberId = ownerUser.subscriberId;
-    newUser.parentUserId = ownerUser.userId;
-  }
-
-      console.log("✅ Creating USER payload:", newUser);
-
-      // ✅ Call backend user registration
       const response = await axios.post(
         `${BASE_URL}/v1/auth/register`,
         newUser,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: getAppHeaders(token) }
       );
 
       return response.data;
     }
 
-    /* ------------------------------------------------------------
-       ✅ DEFAULT: Create a normal DataRecord
-    ------------------------------------------------------------ */
+    /* --- DEFAULT: Create a DataRecord ---------------------- */
     const { data } = await axios.post(
       API_URL,
       {
@@ -139,11 +124,7 @@ console.log(record)
         tags: record.tags || [],
         status: "active",
       },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
+      { headers: getAppHeaders(token) }
     );
 
     return data;
@@ -154,7 +135,9 @@ console.log(record)
   }
 }
 
-// --- GET all records with optional filters and pagination
+/* -------------------------------------------------------------
+   GET ALL RECORDS
+------------------------------------------------------------- */
 export const getRecords = async ({
   recordType,
   searchField,
@@ -166,12 +149,9 @@ export const getRecords = async ({
   limit = 20,
   token,
 }) => {
-  console.log('Getting records with token:', token);
-  console.log('Subscriber ID:', subscriberId, 'User ID:', userId);
   try {
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
+    if (!token) throw new Error('No authentication token found');
+
     const params = {
       recordType,
       searchField,
@@ -179,64 +159,63 @@ export const getRecords = async ({
       status,
       page,
       limit,
-       subscriberId,
-  userId,
+      subscriberId,
+      userId,
     };
 
-    // Remove undefined values to keep clean query params
-    Object.keys(params).forEach((key) => params[key] === undefined && delete params[key]);
-console.log(CURRENT_APP === CURRENT_WHITE_LABEL ? CURRENT_APP : CURRENT_WHITE_LABEL)
+    Object.keys(params).forEach(
+      (key) => params[key] === undefined && delete params[key]
+    );
+
     const { data } = await axios.get(API_URL, {
       params,
-      headers: {
-        'X-App-Name': CURRENT_APP === CURRENT_WHITE_LABEL ? CURRENT_APP : CURRENT_WHITE_LABEL,
-        Authorization: `Bearer ${token}`,
-      },
+      headers: getAppHeaders(token),
     });
-    console.log("data",data)
+
     return data;
+
   } catch (err) {
     console.error('Error fetching records:', err);
     throw err.response?.data || err;
   }
 };
 
-// --- GET a single record by ID
+/* -------------------------------------------------------------
+   GET SINGLE RECORD BY ID
+------------------------------------------------------------- */
 export const getRecordById = async (id, token) => {
   try {
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-    const appName = 'shears';
+    if (!token) throw new Error('No authentication token found');
 
-    const { data } = await axios.get(`${API_URL}/${id}`, {
-      headers: {
-        'X-App-Name': appName,
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const { data } = await axios.get(
+      `${API_URL}/${id}`,
+      { headers: getAppHeaders(token) }
+    );
+
     return data;
+
   } catch (err) {
     console.error('Error fetching record:', err);
     throw err.response?.data || err;
   }
 };
 
-// --- UPDATE a record by ID
+/* -------------------------------------------------------------
+   UPDATE RECORD
+------------------------------------------------------------- */
 export const updateRecord = async (id, updates, token) => {
   try {
     if (!token) throw new Error("No authentication token found");
-console.log("__isUser", updates.__isUser)
-    // ✅ If this is a REAL user update → go to user API
-    if (updates && updates.__isUser === true) {
+
+    if (updates.__isUser === true) {
       return await updateUser(id, updates, token);
     }
 
-    const { data } = await axios.put(`${API_URL}/${id}`, updates, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const { data } = await axios.put(
+      `${API_URL}/${id}`,
+      updates,
+      { headers: getAppHeaders(token) }
+    );
 
     return data;
 
@@ -245,22 +224,22 @@ console.log("__isUser", updates.__isUser)
     throw err.response?.data || err;
   }
 };
-// --- HARD DELETE a record by ID
+
+/* -------------------------------------------------------------
+   DELETE RECORD
+------------------------------------------------------------- */
 export const deleteRecord = async (id, token, isUser = false) => {
   try {
     if (!token) throw new Error("No authentication token found");
 
     if (isUser) {
-      // Route user deletion to proper API
       return await deleteUser(id, token);
     }
 
-    const { data } = await axios.delete(`${API_URL}/${id}`, {
-      headers: {
-        'X-App-Name': CURRENT_APP === CURRENT_WHITE_LABEL ? CURRENT_APP : CURRENT_WHITE_LABEL,
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const { data } = await axios.delete(
+      `${API_URL}/${id}`,
+      { headers: getAppHeaders(token) }
+    );
 
     return data;
 
@@ -270,8 +249,9 @@ export const deleteRecord = async (id, token, isUser = false) => {
   }
 };
 
-
-// ✅ GET sub-users by subscriberId
+/* -------------------------------------------------------------
+   GET SUB USERS
+------------------------------------------------------------- */
 export async function getSubUsers(subscriberId, token) {
   try {
     if (!subscriberId) throw new Error("Missing subscriberId.");
@@ -279,33 +259,28 @@ export async function getSubUsers(subscriberId, token) {
 
     const res = await axios.get(
       `${BASE_URL}/v1/auth/subusers/${subscriberId}`,
-      {
-        headers: { Authorization: `Bearer ${token}` }
-      }
+      { headers: getAppHeaders(token) }
     );
 
     return res.data || [];
+
   } catch (err) {
     console.error("Error getting sub-users:", err);
     throw err.response?.data || err;
   }
 }
 
-
+/* -------------------------------------------------------------
+   DELETE USER
+------------------------------------------------------------- */
 export async function deleteUser(userId, token) {
   try {
     if (!token) throw new Error("No authentication token found");
     if (!userId) throw new Error("Missing userId");
 
-    console.log("Deleting USER:", userId);
-
     const response = await axios.delete(
       `${BASE_URL}/v1/auth/delete/${userId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
+      { headers: getAppHeaders(token) }
     );
 
     return response.data;
@@ -316,13 +291,16 @@ export async function deleteUser(userId, token) {
   }
 }
 
-
-// ✅ REQUEST RESET PASSWORD (send OTP)
+/* -------------------------------------------------------------
+   PASSWORD RESET METHODS
+------------------------------------------------------------- */
 export async function requestPasswordReset(email) {
   try {
-    const res = await axios.post(`${BASE_URL}/v1/auth/reset-password-request`, {
-      email,
-    });
+    const res = await axios.post(
+      `${BASE_URL}/v1/auth/reset-password-request`,
+      { email },
+      { headers: getAppHeaders() }
+    );
 
     return res.data;
   } catch (err) {
@@ -331,13 +309,13 @@ export async function requestPasswordReset(email) {
   }
 }
 
-// ✅ VERIFY OTP
 export async function verifyResetOtp(email, otp) {
   try {
-    const res = await axios.post(`${BASE_URL}/v1/auth/reset-password-verify`, {
-      email,
-      otp,
-    });
+    const res = await axios.post(
+      `${BASE_URL}/v1/auth/reset-password-verify`,
+      { email, otp },
+      { headers: getAppHeaders() }
+    );
 
     return res.data;
   } catch (err) {
@@ -346,19 +324,223 @@ export async function verifyResetOtp(email, otp) {
   }
 }
 
-// ✅ RESET PASSWORD
 export async function resetPassword(email, otp, newPassword, confirmPassword) {
   try {
-    const res = await axios.post(`${BASE_URL}/v1/auth/reset-password`, {
-      email,
-      otp,
-      newPassword,
-      confirmPassword,
-    });
+    const res = await axios.post(
+      `${BASE_URL}/v1/auth/reset-password`,
+      { email, otp, newPassword, confirmPassword },
+      { headers: getAppHeaders() }
+    );
 
     return res.data;
   } catch (err) {
     console.error("Error resetting password:", err);
+    throw err.response?.data || err;
+  }
+}
+
+/* -------------------------------------------------------------
+   AUTH: Upload User Avatar (RN + Web Compatible)
+------------------------------------------------------------- */
+export async function uploadUserAvatar(userId, file, token) {
+  try {
+    if (!token) throw new Error("No authentication token found");
+
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    const res = await axios.post(
+      `${BASE_URL}/v1/avatar/${userId}/avatar`,
+      formData,
+      {
+        headers: {
+          ...getAppHeaders(token),
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+
+    return res.data; // { avatar: "https://cloud/storage/..." }
+
+  } catch (err) {
+    console.error("Avatar upload failed:", err.response?.data || err);
+    throw err.response?.data || err;
+  }
+}
+
+/* -------------------------------------------------------------
+   MEDIA: Upload Image
+------------------------------------------------------------- */
+export async function uploadImageBase64(base64, token) {
+  const formData = new FormData();
+  formData.append("image", {
+    uri: base64,
+    name: "photo.jpg",
+    type: "image/jpeg",
+  });
+
+  const res = await axios.post(
+    `${BASE_URL}/v1/media/upload`,
+    formData,
+    {
+      headers: {
+        ...getAppHeaders(token),
+        "Content-Type": "multipart/form-data",
+      },
+    }
+  );
+
+  return res.data; // { url, public_id }
+}
+
+/* -------------------------------------------------------------
+   MEDIA: Delete Image
+------------------------------------------------------------- */
+export async function deleteImage(public_id, token) {
+  return axios.delete(`${BASE_URL}/v1/media/delete`, {
+    headers: getAppHeaders(token),
+    data: { public_id }
+  });
+}
+
+
+export async function connectStripeAccount(userId, token) {
+  if (!userId) throw new Error("Missing userId");
+  if (!token) throw new Error("Missing auth token");
+
+  try {
+    const response = await axios.post(
+      `${BASE_URL}/v1/stripe/connect/${userId}`,
+      {},
+      { headers: getAppHeaders(token) }
+    );
+
+    if (!response.data?.url) {
+      throw new Error("Stripe did not return an onboarding URL");
+    }
+
+    return response.data.url;
+
+  } catch (err) {
+    console.error("❌ Stripe Connect Error:", err.response?.data || err);
+    throw err.response?.data || err;
+  }
+}
+
+/* -------------------------------------------------------------
+   🔵 Verify linked Stripe account
+------------------------------------------------------------- */
+export async function verifyStripeAccount(userId, token) {
+  const res = await axios.get(
+    `${BASE_URL}/v1/stripe/verify/${userId}`,
+    { headers: getAppHeaders(token) }
+  );
+
+  return res.data;
+}
+
+/* -------------------------------------------------------------
+   🔵 Disconnect Stripe
+------------------------------------------------------------- */
+export async function disconnectStripeAccount(userId, token) {
+  const res = await axios.post(
+    `${BASE_URL}/v1/stripe/disconnect/${userId}`,
+    {},
+    { headers: getAppHeaders(token) }
+  );
+
+  return res.data;
+}
+
+/* -------------------------------------------------------------
+   🔵 Create Payment Intent (Manual Card Entry)
+------------------------------------------------------------- */
+export async function createManualPaymentIntent({
+  amount,
+  stripeAccountId,
+  token,
+}) {
+  if (!amount) throw new Error("Missing amount");
+  if (!stripeAccountId) throw new Error("Missing stripeAccountId");
+  if (!token) throw new Error("Missing authentication token");
+
+  const res = await axios.post(
+    `${BASE_URL}/v1/stripe/payment-intent-manual`,
+    { amount, stripeAccountId },
+    { headers: getAppHeaders(token) }
+  );
+
+  return res.data; // { clientSecret }
+}
+
+/* -------------------------------------------------------------
+   🔵 Create Terminal Payment Intent (Tap / Reader)
+------------------------------------------------------------- */
+export async function createTerminalPaymentIntent({
+  amount,
+  stripeAccountId,
+  token,
+}) {
+  if (!amount) throw new Error("Missing amount");
+  if (!stripeAccountId) throw new Error("Missing stripeAccountId");
+  if (!token) throw new Error("Missing authentication token");
+
+  const res = await axios.post(
+    `${BASE_URL}/v1/stripe/payment-intent`,
+    { amount, stripeAccountId },
+    { headers: getAppHeaders(token) }
+  );
+
+  return res.data; 
+  // { client_secret, paymentIntentId }
+}
+
+/* -------------------------------------------------------------
+   🔵 Create Platform Payment Intent (App-level billing)
+------------------------------------------------------------- */
+export async function createPlatformPaymentIntent({
+  amount,
+  membershipPlan,
+}) {
+  const res = await axios.post(
+    `${BASE_URL}/v1/stripe/create-payment-intent`,
+    { amount, membershipPlan },
+    { headers: getAppHeaders() }
+  );
+
+  return res.data; 
+  // { clientSecret }
+}
+
+
+/* -------------------------------------------------------------
+   🔵 Fetch Stripe Terminal Connection Token
+------------------------------------------------------------- */
+export async function getStripeTerminalToken(stripeAccountId, token) {
+  if (!stripeAccountId) throw new Error("Missing stripeAccountId");
+  if (!token) throw new Error("Missing authentication token");
+
+  const payload = { stripeAccountId };
+
+  console.log("🟦 [Shared] Sending Terminal Token Request:", payload);
+
+  try {
+    const res = await axios.post(
+      `${BASE_URL}/v1/stripe/connection-token`,
+      payload,
+      { headers: getAppHeaders(token) }
+    );
+
+    console.log("🟩 [Shared] Terminal Token Response:", res.data);
+
+    if (!res.data?.secret) {
+      throw new Error("Stripe did not return a connection secret");
+    }
+
+    return res.data.secret;
+
+  } catch (err) {
+    console.error("❌ [Shared] Terminal Token Error:", err.response?.data || err);
     throw err.response?.data || err;
   }
 }

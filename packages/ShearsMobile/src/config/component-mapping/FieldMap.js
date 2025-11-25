@@ -16,6 +16,7 @@ import PaymentButton from "../../components/SmartInputs/PaymentButton";
 import SmartImageInput from "../../components/SmartInputs/SmartImageInput";
 import SmartAvatarInput from "../../components/SmartWidgets/SmartAvatarInput";
 import SmartSemiCircleGauge from "../../components/SmartWidgets/SmartSemiCircleGauge";
+import {WidgetMap} from './WidgetMap'
 
 export const FieldMap = {
   text: PlainTextInput,
@@ -30,6 +31,5 @@ export const FieldMap = {
   currency: SmartCurrencyInput,
   boolean: SmartSwitchInput,
   image:SmartImageInput,
-  avatar: SmartAvatarInput,
-  earnings:SmartSemiCircleGauge
+  ...WidgetMap
 };

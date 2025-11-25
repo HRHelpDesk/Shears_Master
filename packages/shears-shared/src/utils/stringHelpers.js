@@ -1,5 +1,4 @@
 // utils/stringHelpers.js
-
 /**
  * Capitalizes the first letter of a string.
  * @param {string} str - The string to capitalize.
@@ -277,4 +276,130 @@ export const parseYMD = (value) => {
   if (!match) return new Date(value);
   const [_, y, m, d] = match;
   return new Date(Number(y), Number(m) - 1, Number(d), 0, 0, 0, 0);
+};
+
+
+export const formatDateValue = (value) => {
+  if (!value) return "";
+
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return value; // not a valid date → return raw
+
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const year = d.getFullYear();
+
+  return `${month}/${day}/${year}`;
+};
+
+
+// shears-shared/src/utils/buildTransaction.js
+
+
+export function buildTransactionFromAppointment(appointment, paymentUpdate, newID) {
+  if (!appointment) {
+    throw new Error("Invalid appointment object");
+  }
+
+  const fd = appointment;
+
+  /* -------------------------------------------------------------
+     1) CLIENT
+  ------------------------------------------------------------- */
+  const client =
+    fd.contact?._id
+      ? {
+          _id: fd.contact._id,
+          name:
+            fd.contact.raw?.firstName +
+            " " +
+            (fd.contact.raw?.lastName || ""),
+          raw: fd.contact.raw,
+        }
+      : null;
+
+  /* -------------------------------------------------------------
+     2) LINE ITEMS (services + products)
+  ------------------------------------------------------------- */
+  const serviceItems = [];
+
+  // Services → add as line items
+  if (Array.isArray(fd.service)) {
+    fd.service.forEach((svc) => {
+      serviceItems.push({
+        description: svc.raw?.serviceName || svc.name || "Service",
+        qty: svc.quantity ?? 1,
+        price: currencyToNumber(svc.raw?.price || "0"),
+      });
+    });
+  }
+
+  // Products → add as line items
+  if (Array.isArray(fd.product)) {
+    fd.product.forEach((prd) => {
+      serviceItems.push({
+        description: prd.raw?.productName || prd.name || "Product",
+        qty: prd.quantity ?? 1,
+        price: currencyToNumber(prd.raw?.price || "0"),
+      });
+    });
+  }
+
+  /* -------------------------------------------------------------
+     3) TOTAL AMOUNT
+  ------------------------------------------------------------- */
+  const totalAmount = currencyToNumber(fd.payment?.amount || "0");
+
+  /* -------------------------------------------------------------
+     4) PAYMENT TYPE AND RECEIPT
+     paymentUpdate = {
+       method: "cash" | "credit" | "venmo" | "cashapp",
+       status: "Paid",
+       sendReceipt: true/false
+     }
+  ------------------------------------------------------------- */
+  const paymentType = paymentUpdate?.method
+    ? paymentUpdate.method.replace(/^\w/, (c) => c.toUpperCase())
+    : "Cash";
+
+  const receiptString = paymentUpdate?.sendReceipt ? "Yes" : "No";
+
+  /* -------------------------------------------------------------
+     5) PAYMENT NAME
+     Your AppData says:
+       Quick Pay | Product | Service
+     Since Calendar = appointment, we default to Service
+  ------------------------------------------------------------- */
+  const paymentName = "Service";
+
+  /* -------------------------------------------------------------
+     6) TRANSACTION OBJECT
+  ------------------------------------------------------------- */
+  return {
+    paymentName,
+    transactionId: newID,
+    client,
+    paymentType,
+    totalAmount,
+    transactionDate: new Date().toISOString().split("T")[0],
+    sendReceipt: receiptString,
+    notes: fd.appointmentNotes || fd.clientNotes || "",
+    serviceItems,
+  };
+}
+
+
+export const formatMoneyValue = (val) => {
+  if (!val) return null;
+
+  // Remove $ and commas
+  let cleaned = String(val).replace(/[^0-9.]/g, "");
+
+  if (!cleaned) return null;
+
+  // Ensure two decimals
+  let num = parseFloat(cleaned);
+  if (isNaN(num)) return null;
+
+  return `$${num.toFixed(2)}`;
 };

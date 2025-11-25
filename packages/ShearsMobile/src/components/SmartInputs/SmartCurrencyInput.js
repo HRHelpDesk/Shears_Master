@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TextInput as RNTextInput } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
-import { formatCurrency } from 'shears-shared/src/utils/stringHelpers';
+import { formatCurrency, formatMoneyValue } from 'shears-shared/src/utils/stringHelpers';
 
 export default function SmartCurrencyInput({
   label,
@@ -29,7 +29,11 @@ export default function SmartCurrencyInput({
         </Text>
 
         <Text variant="bodyLarge" style={[styles.value, { color: theme.colors.text }]}>
-          {value ? value : <Text style={{ color: theme.colors.textLight, fontStyle: 'italic' }}>Not set</Text>}
+          {value
+            ? formatMoneyValue(value)
+            : <Text style={{ color: theme.colors.textLight, fontStyle: "italic" }}>Not set</Text>
+          }
+
         </Text>
       </View>
     );

@@ -1,66 +1,80 @@
 // App.js
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useContext, useCallback } from 'react';
 import { Appearance, useColorScheme } from 'react-native';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StripeProvider } from '@stripe/stripe-react-native';
-import { StripeTerminalProvider, useStripeTerminal } from '@stripe/stripe-terminal-react-native';
+import { StripeTerminalProvider } from '@stripe/stripe-terminal-react-native';
 import AppNavigator from './src/navigation/AppNavigator';
 import { getAppConfig } from 'shears-shared/src/config/getAppConfig';
 import { CURRENT_APP, CURRENT_WHITE_LABEL } from 'shears-shared/src/config/currentapp';
 import { createTheme } from './src/theme/createTheme';
 import { BASE_URL } from 'shears-shared/src/config/api';
+import { AuthProvider, AuthContext } from './src/context/AuthContext';
+import { getStripeTerminalToken } from 'shears-shared/src/Services/Authentication';
 
 const appConfig = getAppConfig(CURRENT_APP, CURRENT_WHITE_LABEL);
 
-// ✅ Separate component to safely initialize SDK once
-function StripeTerminalInitializer() {
-  const { initialize } = useStripeTerminal();
+// -----------------------------------------------------
+// A wrapper so tokenProvider CAN access AuthContext
+// -----------------------------------------------------
+function TerminalProviderWrapper({ children }) {
+  const { user, token } = useContext(AuthContext);
 
-  useEffect(() => {
-    const init = async () => {
-      const { error } = await initialize();
-      if (error) {
-        console.log('❌ Stripe Terminal initialization failed:', error);
-      } else {
-        console.log('✅ Stripe Terminal SDK initialized successfully');
-      }
-    };
-    init();
-  }, [initialize]);
+  const fetchTerminalToken = useCallback(async () => {
+    console.log("🟦 [Terminal] Token Provider Called");
 
-  return <AppNavigator />;
+    if (!user?.stripeAccountId) {
+      console.warn("⚠ [Terminal] No stripeAccountId yet — user not connected");
+      return null;
+    }
+
+    try {
+      const secret = await getStripeTerminalToken(
+        user.stripeAccountId,
+        token
+      );
+
+      console.log("✅ [Terminal] Token provider returning secret");
+      return secret;
+
+    } catch (err) {
+      console.error("❌ [Terminal] Failed to get terminal token:", err);
+      throw err;
+    }
+
+  }, [user?.stripeAccountId, token]);
+
+  return (
+    <StripeTerminalProvider
+      logLevel="verbose"
+      tokenProvider={fetchTerminalToken}
+      simulate="preferred"
+    >
+      {children}
+    </StripeTerminalProvider>
+  );
 }
+
+
+// -----------------------------------------------------
 
 export default function App() {
   const systemScheme = useColorScheme();
-  const [themeMode, setThemeMode] = useState(systemScheme || 'light');
+  const [themeMode, setThemeMode] = useState(systemScheme || "light");
 
   useEffect(() => {
     const sub = Appearance.addChangeListener(({ colorScheme }) => {
-      setThemeMode(colorScheme || 'light');
+      setThemeMode(colorScheme || "light");
     });
     return () => sub.remove();
   }, []);
 
-  const theme = useMemo(() => createTheme(themeMode, appConfig.themeColors), [themeMode]);
-
-  const fetchTokenProvider = async () => {
-    try {
-      const res = await fetch(`${BASE_URL}/v1/stripe/connection_token`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      const { secret } = await res.json();
-
-      console.log("secret", secret)
-      return secret;
-    } catch (err) {
-      console.error('Failed to fetch connection token:', err);
-      throw err;
-    }
-  };
+  const theme = useMemo(
+    () => createTheme(themeMode, appConfig.themeColors),
+    [themeMode]
+  );
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -69,13 +83,15 @@ export default function App() {
         merchantIdentifier="merchant.com.shears"
         urlScheme="shears"
       >
-        <StripeTerminalProvider logLevel="verbose" tokenProvider={fetchTokenProvider}>
-          <SafeAreaProvider>
-            <PaperProvider theme={theme}>
-              <StripeTerminalInitializer />
-            </PaperProvider>
-          </SafeAreaProvider>
-        </StripeTerminalProvider>
+        <AuthProvider>
+          <TerminalProviderWrapper>
+            <SafeAreaProvider>
+              <PaperProvider theme={theme}>
+                <AppNavigator />
+              </PaperProvider>
+            </SafeAreaProvider>
+          </TerminalProviderWrapper>
+        </AuthProvider>
       </StripeProvider>
     </GestureHandlerRootView>
   );

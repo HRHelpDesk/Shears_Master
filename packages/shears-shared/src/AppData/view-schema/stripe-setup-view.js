@@ -24,3 +24,12 @@ export const StripeTerminal = {
     mobileComponent: 'QuickPayScreen',
     
 }
+
+export const TransactionList = {
+    parent:'Transactions',
+    name: 'Transactions',
+    displayName: 'Transactions',
+    component: 'BaseUI/ListView',
+    mobileComponent:'TransactionsListView',
+    
+}

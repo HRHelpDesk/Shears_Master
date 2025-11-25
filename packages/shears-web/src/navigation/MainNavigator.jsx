@@ -29,6 +29,7 @@ import SettingsDrawer from '../components/BaseUI/SettingsDrawer';
 import StripeSuccess from '../components/Stripe/StripeSuccess';
 import StripeReauth from '../components/Stripe/StripeReauth';
 import { AuthContext } from '../context/AuthContext';
+import SmartProfileCard from '../components/BaseUI/SmartWidgets/SmartProfileCard';
 
 const drawerWidth = 250;
 const collapsedWidth = 72;
@@ -156,27 +157,18 @@ export default function MainNavigator({ appConfig, logo }) {
           },
         }}
       >
-        {/* Logo */}
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            p: 2,
-            mt: 8,
-          }}
-        >
-          <img
-            src={logo}
-            alt="App Logo"
-            style={{
-              width: open ? '70%' : '40px',
-              transition: 'width 0.3s ease',
-              borderRadius: 8,
-            }}
-          />
-        </Box>
-
+       {/* Logo */}
+<Box
+  sx={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    p: 2,
+    mt: 8,
+  }}
+>
+  <SmartProfileCard user={user} open={open}/>
+</Box>
         <Divider sx={{ bgcolor: theme.palette.divider, my: 1 }} />
 
         {/* NAVIGATION LIST */}

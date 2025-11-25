@@ -17,4 +17,5 @@ export const SharedLinkField = [
     inputConfig: { recordType: 'contacts' },
     display: { placeholder: 'Select a record', order: 32 },
   },
+  
 ];

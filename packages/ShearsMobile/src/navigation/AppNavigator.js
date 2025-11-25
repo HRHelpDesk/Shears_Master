@@ -5,13 +5,13 @@ import { NavigationContainer } from '@react-navigation/native';
 import LoginScreen from '../screens/auth/LoginScreen';
 import SplashScreen from '../screens/SplashScreen';
 import DetailView from '../components/BaseUI/ListItemDetail';
-import { AuthContext, AuthProvider } from '../context/AuthContext';
 import RootDrawer from './RootDrawer';
 import { getAppConfig } from 'shears-shared/src/config/getAppConfig';
 import { CURRENT_APP, CURRENT_WHITE_LABEL } from 'shears-shared/src/config/currentapp';
 import { AppLogos } from '../config/appLogos';
 import CalendarListView from '../components/Calendar/CalendarListView';
 import { useStripeTerminal } from '@stripe/stripe-terminal-react-native';
+import { AuthContext } from '../context/AuthContext';
 
 const Stack = createNativeStackNavigator();
 const appConfig = getAppConfig(CURRENT_APP, CURRENT_WHITE_LABEL);
@@ -85,10 +85,8 @@ export default function AppNavigator() {
 
 
   return (
-    <AuthProvider>    
       <NavigationContainer>
         <AppRoutes />
       </NavigationContainer>
-    </AuthProvider>
   );
 }
