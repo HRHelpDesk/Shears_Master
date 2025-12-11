@@ -31,5 +31,52 @@ export const ProductCoreFields = [
     input: 'number',
   },
 
+  {
+    field: "flashSaleAndCoupon",
+    type: "object",
+    label: "Flash Sale & Coupon",
+    input: "object",
+    displayInList: true,
+    required: false,
+    display: { order: 6 },
+
+    objectConfig: [
+      {
+        field: "flashSalePercent",
+        type: "number",
+        label: "Flash Sale (%)",
+        defaultValue: 0,
+        input: "number",
+        inputConfig: {
+          min: 0,
+          max: 100,
+          step: 1,
+          placeholder: "0–100",
+        },
+        validations: {
+          min: 0,
+          max: 100,
+        },
+      },
+      {
+        field: "couponAmount",
+        type: "number",
+        label: "Coupon Amount ($)",
+        defaultValue: 0,
+        input: "number",
+        inputConfig: {
+          min: 0,
+          step: 1,
+          placeholder: "$0 if none",
+        },
+        validations: {
+          min: 0,
+        },
+      },
+    ],
+  },
+
+
+
 
 ];

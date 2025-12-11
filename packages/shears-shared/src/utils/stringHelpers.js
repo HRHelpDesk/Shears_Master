@@ -403,3 +403,61 @@ export const formatMoneyValue = (val) => {
 
   return `$${num.toFixed(2)}`;
 };
+
+
+export function buildUserPayload(userFields, formData) {
+  const payload = {};
+
+  userFields.forEach((field) => {
+    const key = field.field;
+
+    // -------------------------------------------------------
+    // SIMPLE FIELDS (string, number, boolean)
+    // -------------------------------------------------------
+    if (field.type !== "object" && field.type !== "array") {
+      const value = formData[key];
+
+      payload[key] =
+        value !== undefined && value !== null
+          ? value
+          : field.default !== undefined
+            ? field.default
+            : "";   // 🔥 force empty string for missing values
+
+      return;
+    }
+
+    // -------------------------------------------------------
+    // OBJECT FIELDS (address, membership, stripe)
+    // -------------------------------------------------------
+    if (field.type === "object") {
+      const obj = {};
+      const existing = formData[key] || {};
+
+      field.objectConfig?.forEach((child) => {
+        const val = existing[child.field];
+
+        obj[child.field] =
+          val !== undefined && val !== null
+            ? val
+            : child.default !== undefined
+              ? child.default
+              : "";   // 🔥 force empty keys into object
+      });
+
+      payload[key] = obj;
+      return;
+    }
+
+    // -------------------------------------------------------
+    // ARRAY FIELDS (locations)
+    // -------------------------------------------------------
+    if (field.type === "array") {
+      payload[key] = Array.isArray(formData[key]) ? [...formData[key]] : [];
+      return;
+    }
+  });
+
+  return payload;
+}
+

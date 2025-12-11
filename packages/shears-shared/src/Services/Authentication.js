@@ -1,6 +1,5 @@
 import axios from 'axios';
 import { BASE_URL } from '../config/api';
-import { CURRENT_APP, CURRENT_WHITE_LABEL } from '../config/currentapp';
 import { getAppHeaders } from '../config/appHeaders';
 
 const API_URL = `${BASE_URL}/v1/data-records`;
@@ -12,16 +11,18 @@ export const registerUser = async (formData, token = null) => {
   try {
     const response = await axios.post(
       `${BASE_URL}/v1/auth/register`,
-      formData,
+      formData,   // 🔥 no appConfig anymore
       { headers: getAppHeaders(token) }
     );
 
     return response.data;
+
   } catch (error) {
-    console.error('Registration failed:', error);
-    throw new Error(error.response?.data?.message || 'Network error');
+    console.error("Registration failed:", error);
+    throw new Error(error.response?.data?.message || "Network error");
   }
 };
+
 
 /* -------------------------------------------------------------
    AUTH: Update User
@@ -44,6 +45,7 @@ export async function updateUser(userId, updates, token) {
   }
 }
 
+
 /* -------------------------------------------------------------
    AUTH: Login
 ------------------------------------------------------------- */
@@ -51,17 +53,17 @@ export const login = async (email, password) => {
   try {
     const response = await axios.post(
       `${BASE_URL}/v1/auth/login`,
-      { email, password },
+      { email, password }, // 🔥 no appConfig needed
       { headers: getAppHeaders() }
     );
 
-    const { user, token } = response.data;
-    return { user, token };
+    return { user: response.data.user, token: response.data.token };
 
   } catch (error) {
-    throw new Error(error.response?.data?.message || 'Login failed');
+    throw new Error(error.response?.data?.message || "Login failed");
   }
 };
+
 
 /* -------------------------------------------------------------
    Helper: Inherit owner fields for sub-users
@@ -79,10 +81,18 @@ function inheritBusinessFields(ownerUser, newUser) {
   };
 }
 
+
 /* -------------------------------------------------------------
-   CREATE RECORD (Special case for creating sub-users)
+   CREATE RECORD (Special case: sub-users)
 ------------------------------------------------------------- */
-export async function createRecord(record, recordType, token, userId, subscriberId, ownerUser) {
+export async function createRecord(
+  record,
+  recordType,
+  token,
+  userId,
+  subscriberId,
+  ownerUser
+) {
   try {
     if (!token) throw new Error("No authentication token found");
 
@@ -106,7 +116,7 @@ export async function createRecord(record, recordType, token, userId, subscriber
 
       const response = await axios.post(
         `${BASE_URL}/v1/auth/register`,
-        newUser,
+        newUser, // 🔥 no appConfig here
         { headers: getAppHeaders(token) }
       );
 
@@ -135,6 +145,7 @@ export async function createRecord(record, recordType, token, userId, subscriber
   }
 }
 
+
 /* -------------------------------------------------------------
    GET ALL RECORDS
 ------------------------------------------------------------- */
@@ -148,6 +159,8 @@ export const getRecords = async ({
   page = 1,
   limit = 20,
   token,
+  startDate,
+  endDate,
 }) => {
   try {
     if (!token) throw new Error('No authentication token found');
@@ -159,13 +172,25 @@ export const getRecords = async ({
       status,
       page,
       limit,
-      subscriberId,
-      userId,
-    };
 
-    Object.keys(params).forEach(
-      (key) => params[key] === undefined && delete params[key]
-    );
+      // SubscriberId ONLY used for admin
+      subscriberId: subscriberId || undefined,
+
+      // userId is NEVER overridden — used for influencer
+      userId: userId || undefined,
+
+      startDate: startDate
+        ? new Date(startDate).toISOString().split("T")[0]
+        : undefined,
+
+      endDate: endDate
+        ? new Date(endDate).toISOString().split("T")[0]
+        : undefined,
+    };
+    // Remove undefined
+    Object.keys(params).forEach(key => {
+      if (params[key] === undefined) delete params[key];
+    });
 
     const { data } = await axios.get(API_URL, {
       params,
@@ -180,8 +205,10 @@ export const getRecords = async ({
   }
 };
 
+
+
 /* -------------------------------------------------------------
-   GET SINGLE RECORD BY ID
+   GET SINGLE RECORD
 ------------------------------------------------------------- */
 export const getRecordById = async (id, token) => {
   try {
@@ -200,6 +227,7 @@ export const getRecordById = async (id, token) => {
   }
 };
 
+
 /* -------------------------------------------------------------
    UPDATE RECORD
 ------------------------------------------------------------- */
@@ -207,7 +235,9 @@ export const updateRecord = async (id, updates, token) => {
   try {
     if (!token) throw new Error("No authentication token found");
 
+    // Special case: user updates
     if (updates.__isUser === true) {
+      console.log("Updating user via auth endpoint...");
       return await updateUser(id, updates, token);
     }
 
@@ -224,6 +254,7 @@ export const updateRecord = async (id, updates, token) => {
     throw err.response?.data || err;
   }
 };
+
 
 /* -------------------------------------------------------------
    DELETE RECORD
@@ -249,6 +280,7 @@ export const deleteRecord = async (id, token, isUser = false) => {
   }
 };
 
+
 /* -------------------------------------------------------------
    GET SUB USERS
 ------------------------------------------------------------- */
@@ -269,6 +301,7 @@ export async function getSubUsers(subscriberId, token) {
     throw err.response?.data || err;
   }
 }
+
 
 /* -------------------------------------------------------------
    DELETE USER
@@ -291,8 +324,9 @@ export async function deleteUser(userId, token) {
   }
 }
 
+
 /* -------------------------------------------------------------
-   PASSWORD RESET METHODS
+   PASSWORD RESET FUNCTIONS
 ------------------------------------------------------------- */
 export async function requestPasswordReset(email) {
   try {
@@ -301,7 +335,6 @@ export async function requestPasswordReset(email) {
       { email },
       { headers: getAppHeaders() }
     );
-
     return res.data;
   } catch (err) {
     console.error("Error requesting password reset:", err);
@@ -316,7 +349,6 @@ export async function verifyResetOtp(email, otp) {
       { email, otp },
       { headers: getAppHeaders() }
     );
-
     return res.data;
   } catch (err) {
     console.error("Error verifying OTP:", err);
@@ -331,7 +363,6 @@ export async function resetPassword(email, otp, newPassword, confirmPassword) {
       { email, otp, newPassword, confirmPassword },
       { headers: getAppHeaders() }
     );
-
     return res.data;
   } catch (err) {
     console.error("Error resetting password:", err);
@@ -339,8 +370,9 @@ export async function resetPassword(email, otp, newPassword, confirmPassword) {
   }
 }
 
+
 /* -------------------------------------------------------------
-   AUTH: Upload User Avatar (RN + Web Compatible)
+   UPLOAD AVATAR (NO MORE appConfig!)
 ------------------------------------------------------------- */
 export async function uploadUserAvatar(userId, file, token) {
   try {
@@ -360,7 +392,7 @@ export async function uploadUserAvatar(userId, file, token) {
       }
     );
 
-    return res.data; // { avatar: "https://cloud/storage/..." }
+    return res.data;
 
   } catch (err) {
     console.error("Avatar upload failed:", err.response?.data || err);
@@ -368,10 +400,27 @@ export async function uploadUserAvatar(userId, file, token) {
   }
 }
 
+
 /* -------------------------------------------------------------
-   MEDIA: Upload Image
+   MEDIA UPLOAD + DELETE
 ------------------------------------------------------------- */
 export async function uploadImageBase64(base64, token) {
+  const isWeb = typeof window !== "undefined";
+
+  if (isWeb) {
+    const res = await axios.post(
+      `${BASE_URL}/v1/media/upload`,
+      { base64 },
+      {
+        headers: {
+          ...getAppHeaders(token),
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    return res.data;
+  }
+
   const formData = new FormData();
   formData.append("image", {
     uri: base64,
@@ -379,168 +428,263 @@ export async function uploadImageBase64(base64, token) {
     type: "image/jpeg",
   });
 
-  const res = await axios.post(
-    `${BASE_URL}/v1/media/upload`,
-    formData,
-    {
-      headers: {
-        ...getAppHeaders(token),
-        "Content-Type": "multipart/form-data",
-      },
-    }
-  );
+  const res = await axios.post(`${BASE_URL}/v1/media/upload`, formData, {
+    headers: {
+      ...getAppHeaders(token),
+      "Content-Type": "multipart/form-data",
+    },
+  });
 
-  return res.data; // { url, public_id }
+  return res.data;
 }
 
-/* -------------------------------------------------------------
-   MEDIA: Delete Image
-------------------------------------------------------------- */
 export async function deleteImage(public_id, token) {
   return axios.delete(`${BASE_URL}/v1/media/delete`, {
     headers: getAppHeaders(token),
-    data: { public_id }
+    data: { public_id },
   });
 }
 
 
+/* -------------------------------------------------------------
+   STRIPE FUNCTIONS (UNCHANGED)
+------------------------------------------------------------- */
 export async function connectStripeAccount(userId, token) {
-  if (!userId) throw new Error("Missing userId");
   if (!token) throw new Error("Missing auth token");
+  if (!userId) throw new Error("Missing userId");
 
-  try {
-    const response = await axios.post(
-      `${BASE_URL}/v1/stripe/connect/${userId}`,
-      {},
-      { headers: getAppHeaders(token) }
-    );
+  const response = await axios.post(
+    `${BASE_URL}/v1/stripe/connect/${userId}`,
+    {},
+    { headers: getAppHeaders(token) }
+  );
 
-    if (!response.data?.url) {
-      throw new Error("Stripe did not return an onboarding URL");
-    }
-
-    return response.data.url;
-
-  } catch (err) {
-    console.error("❌ Stripe Connect Error:", err.response?.data || err);
-    throw err.response?.data || err;
-  }
+  return response.data.url;
 }
 
-/* -------------------------------------------------------------
-   🔵 Verify linked Stripe account
-------------------------------------------------------------- */
 export async function verifyStripeAccount(userId, token) {
   const res = await axios.get(
     `${BASE_URL}/v1/stripe/verify/${userId}`,
     { headers: getAppHeaders(token) }
   );
-
   return res.data;
 }
 
-/* -------------------------------------------------------------
-   🔵 Disconnect Stripe
-------------------------------------------------------------- */
 export async function disconnectStripeAccount(userId, token) {
   const res = await axios.post(
     `${BASE_URL}/v1/stripe/disconnect/${userId}`,
     {},
     { headers: getAppHeaders(token) }
   );
-
   return res.data;
 }
 
-/* -------------------------------------------------------------
-   🔵 Create Payment Intent (Manual Card Entry)
-------------------------------------------------------------- */
-export async function createManualPaymentIntent({
-  amount,
-  stripeAccountId,
-  token,
-}) {
-  if (!amount) throw new Error("Missing amount");
-  if (!stripeAccountId) throw new Error("Missing stripeAccountId");
-  if (!token) throw new Error("Missing authentication token");
+export async function createManualPaymentIntent({ amount, stripeAccountId, token }) {
+  if (!token) throw new Error("Missing auth token");
 
   const res = await axios.post(
     `${BASE_URL}/v1/stripe/payment-intent-manual`,
     { amount, stripeAccountId },
     { headers: getAppHeaders(token) }
   );
-
-  return res.data; // { clientSecret }
+  return res.data;
 }
 
-/* -------------------------------------------------------------
-   🔵 Create Terminal Payment Intent (Tap / Reader)
-------------------------------------------------------------- */
-export async function createTerminalPaymentIntent({
-  amount,
-  stripeAccountId,
-  token,
-}) {
-  if (!amount) throw new Error("Missing amount");
-  if (!stripeAccountId) throw new Error("Missing stripeAccountId");
-  if (!token) throw new Error("Missing authentication token");
+export async function createTerminalPaymentIntent({ amount, stripeAccountId, token }) {
+  if (!token) throw new Error("Missing auth token");
 
   const res = await axios.post(
     `${BASE_URL}/v1/stripe/payment-intent`,
     { amount, stripeAccountId },
     { headers: getAppHeaders(token) }
   );
-
-  return res.data; 
-  // { client_secret, paymentIntentId }
+  return res.data;
 }
 
-/* -------------------------------------------------------------
-   🔵 Create Platform Payment Intent (App-level billing)
-------------------------------------------------------------- */
-export async function createPlatformPaymentIntent({
-  amount,
-  membershipPlan,
-}) {
+export async function createPlatformPaymentIntent({ amount, membershipPlan }) {
   const res = await axios.post(
     `${BASE_URL}/v1/stripe/create-payment-intent`,
     { amount, membershipPlan },
     { headers: getAppHeaders() }
   );
-
-  return res.data; 
-  // { clientSecret }
+  return res.data;
 }
 
-
-/* -------------------------------------------------------------
-   🔵 Fetch Stripe Terminal Connection Token
-------------------------------------------------------------- */
 export async function getStripeTerminalToken(stripeAccountId, token) {
-  if (!stripeAccountId) throw new Error("Missing stripeAccountId");
-  if (!token) throw new Error("Missing authentication token");
+  if (!token) throw new Error("Missing auth token");
 
   const payload = { stripeAccountId };
 
-  console.log("🟦 [Shared] Sending Terminal Token Request:", payload);
+  const res = await axios.post(
+    `${BASE_URL}/v1/stripe/connection-token`,
+    payload,
+    { headers: getAppHeaders(token) }
+  );
 
+  return res.data.secret;
+}
+
+
+export function buildCalendarAndNotification(request, user, notify = true) {
+  if (!request) {
+    console.warn("❌ No request passed into buildCalendarAndNotification");
+    return null;
+  }
+
+  console.log("🔧 Normalizing request for calendar + notification:", request);
+
+  // ------------------------------
+  // Extract influencer raw object
+  // ------------------------------
+  const influencer = request.influencerName?.raw || null;
+
+  // ------------------------------
+  // Extract start time + timezone
+  // ------------------------------
+  const startTime = request.startTimeWithZone?.time || null; // "16:00"
+  const timezone = request.startTimeWithZone?.timezone || null;
+
+  // ------------------------------
+  // Compute end time based on duration
+  // ------------------------------
+  let endTime = null;
   try {
-    const res = await axios.post(
-      `${BASE_URL}/v1/stripe/connection-token`,
-      payload,
-      { headers: getAppHeaders(token) }
-    );
+    if (startTime && request.duration) {
+      const [sh, sm] = startTime.split(":").map(Number);
+      const addMinutes =
+        Number(request.duration.hours || 0) * 60 +
+        Number(request.duration.minutes || 0);
 
-    console.log("🟩 [Shared] Terminal Token Response:", res.data);
+      const startDate = new Date(0, 0, 0, sh, sm);
+      const end = new Date(startDate.getTime() + addMinutes * 60000);
 
-    if (!res.data?.secret) {
-      throw new Error("Stripe did not return a connection secret");
+      endTime =
+        `${String(end.getHours()).padStart(2, "0")}:` +
+        `${String(end.getMinutes()).padStart(2, "0")}`;
+    }
+  } catch (err) {
+    console.warn("⚠️ Failed calculating endTime:", err);
+  }
+
+  // ------------------------------
+  // Extract discount code (if any)
+  // ------------------------------
+  const discountCode =
+    request.salesCoupon?.raw?.code ||
+    request.salesCoupon?.fieldsData?.code ||
+    null;
+
+  // ------------------------------
+  // CALENDAR RECORD
+  // ------------------------------
+  const calendarRecord = {
+    date: request.date || null,
+
+    time: {
+      start: startTime,
+      end: endTime,
+      timezone,
+    },
+
+    assignedInfluencer: influencer
+      ? {
+          userId: influencer.userId,
+          _id: influencer._id,
+          firstName: influencer.firstName,
+          lastName: influencer.lastName,
+          fullName: influencer.fullName,
+          avatar: influencer.avatar,
+        }
+      : null,
+
+    discountCode: discountCode,
+    notes: request.notes || "",
+    requestId: request._id,
+
+    createdBy: user?.userId || null,
+
+    createdAt: new Date().toISOString(),
+  };
+
+  console.log("📅 Built Calendar Record:", calendarRecord);
+
+  // ------------------------------
+  // NOTIFICATION RECORD (Optional)
+  // ------------------------------
+  if (!notify) {
+    console.log("⏭️ Notification skipped (notify = false)");
+    return { calendarRecord, notificationRecord: null };
+  }
+
+  const notificationRecord = {
+    forUserId: influencer?.userId || null,
+    title: "New Scheduled Live Assignment",
+    message: `You have been assigned a new live slot on ${request.date}.`,
+    relatedRecordId: request._id,
+    relatedRecordType: "requests",
+    createdAt: new Date().toISOString(),
+    read: false,
+  };
+
+  console.log("🔔 Built Notification Record:", notificationRecord);
+
+  return { calendarRecord, notificationRecord };
+}
+
+
+export async function saveCalendarAndNotification(request, user, token, notify = true) {
+  try {
+    // Build objects
+    const { calendarRecord, notificationRecord } =
+      buildCalendarAndNotification(request, user, notify);
+
+    if (!calendarRecord) {
+      console.warn("⚠️ No calendar record created.");
+      return null;
     }
 
-    return res.data.secret;
+    console.log("📌 Saving Calendar Record:", calendarRecord);
+
+    // --------------------------------------------
+    // 1️⃣ SAVE CALENDAR RECORD
+    // --------------------------------------------
+    const savedCalendar = await createRecord(
+      calendarRecord,
+      "calendar",
+      token,
+      notificationRecord.userId,
+      user.subscriberId,
+      user // ownerUser (needed for user logic)
+    );
+
+    console.log("✅ Calendar saved:", savedCalendar);
+
+    // --------------------------------------------
+    // 2️⃣ SAVE NOTIFICATION RECORD (if notify = true)
+    // --------------------------------------------
+    let savedNotification = null;
+
+    if (notify && notificationRecord) {
+      console.log("🔔 Saving Notification:", notificationRecord);
+
+      savedNotification = await createRecord(
+        notificationRecord,
+        "notifications",
+        token,
+        notificationRecord.forUserId,
+        user.subscriberId,
+        user
+      );
+
+      console.log("📨 Notification saved:", savedNotification);
+    } else {
+      console.log("⏭️ Notification skipped");
+    }
+
+    return { savedCalendar, savedNotification };
 
   } catch (err) {
-    console.error("❌ [Shared] Terminal Token Error:", err.response?.data || err);
-    throw err.response?.data || err;
+    console.error("❌ Error saving calendar + notification:", err);
+    throw err;
   }
 }

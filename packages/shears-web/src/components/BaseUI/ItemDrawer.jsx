@@ -121,6 +121,7 @@ export default function ItemDrawer({
 
     try {
       await createRecord(
+        appConfig,
         formValues,
         appConfig.defaultRoute.toLowerCase(),
         token,

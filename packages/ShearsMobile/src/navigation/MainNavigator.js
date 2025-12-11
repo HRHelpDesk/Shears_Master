@@ -4,10 +4,10 @@ import { Platform } from 'react-native';
 import { useTheme } from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
-// ✅ Use native tabs for iOS, standard tabs for Android
 import {
   createBottomTabNavigator as createStandardBottomTabs,
 } from '@react-navigation/bottom-tabs';
+
 import {
   createNativeBottomTabNavigator as createNativeBottomTabs,
 } from '@bottom-tabs/react-navigation';
@@ -15,13 +15,13 @@ import {
 import BasePage from '../screens/BasePage';
 import { AuthContext } from '../context/AuthContext';
 
-// ✅ Platform-specific Tab Navigator
+// iOS = native tabs, Android = JS tabs
 const Tab =
   Platform.OS === 'ios'
     ? createNativeBottomTabs()
     : createStandardBottomTabs();
 
-// ✅ Helper for platform icons
+// Platform icons
 const getTabIcon = (iosIcon, androidIcon) => {
   if (Platform.OS === 'ios') {
     return () => ({ sfSymbol: iosIcon });
@@ -34,34 +34,104 @@ const getTabIcon = (iosIcon, androidIcon) => {
 const MainNavigator = ({ appConfig }) => {
   const theme = useTheme();
   const { colors } = theme;
-  const {token, user} = useContext(AuthContext);
-console.log('MainNavigator appConfig:', appConfig);
-  // ✅ Process all view data dynamically from appConfig
+  const { user } = useContext(AuthContext);
+
+  const resolvedDefaultRoute =
+    typeof appConfig.defaultRoute === 'function'
+      ? appConfig.defaultRoute(user)
+      : appConfig.defaultRoute;
+
+  console.log('Resolved Default Route (native):', resolvedDefaultRoute);
+  console.log('MainNavigator appConfig (native):', appConfig);
+
+  /* ----------------------------------------------------------
+     Build viewData WITH recordType injected (per route)
+  ----------------------------------------------------------- */
   const viewData = appConfig.mainNavigation.reduce((acc, route) => {
-    console.log('Processing route:', route);
+    const recordType = route.recordType || null; // ⭐ route-level recordType
+
     acc[route.name] = route.views
       ? route.views.map((view) => ({
+          ...view,
           displayName: view.displayName || view.name,
           component: view.component,
-          fields: view.fields || [],
+          fields: route.fields || [],
+          recordType, // ⭐ inject into each view
           data: view.data || [],
           icon: route.icon,
         }))
       : [
           {
-            displayName: route.name,
+            displayName: route.displayName || route.name,
             component: route.component || null,
             fields: route.fields || [],
+            recordType, // ⭐ still injected
             data: route.data || [],
             icon: route.icon,
           },
         ];
+
     return acc;
   }, {});
 
+  /* ----------------------------------------------------------
+     Filter screens by user.role
+  ----------------------------------------------------------- */
+  const allowedTabs = appConfig.mainNavigation.filter((item) => {
+    console.log('Checking permissions for tab:', item.name, item.permissions, 'against user role:', user.role);
+    if (!item.permissions) return true;
+    return item.permissions.includes(user.role);
+  });
+
+  console.log('Allowed Tabs (native):', allowedTabs);
+
+  /* ----------------------------------------------------------
+     CASE 1 — No tabs → Render default route directly
+  ----------------------------------------------------------- */
+  if (allowedTabs.length === 0) {
+    const targetName = resolvedDefaultRoute;
+    const defaultView = viewData[targetName] || [];
+
+    const targetRoute =
+      appConfig.mainNavigation.find((r) => r.name === targetName) || {};
+
+    return (
+      <BasePage
+        appConfig={appConfig}
+        name={targetName}
+        recordType={targetRoute.recordType || null} // ⭐ pass recordType down
+        viewData={defaultView}
+        displayName={targetName}
+        settings={appConfig.settings || []}
+      />
+    );
+  }
+
+  /* ----------------------------------------------------------
+     CASE 2 — Only ONE tab → Render directly without TabBar
+  ----------------------------------------------------------- */
+  if (allowedTabs.length === 1) {
+    const route = allowedTabs[0];
+    const screens = viewData[route.name] || [];
+
+    return (
+      <BasePage
+        appConfig={appConfig}
+        name={route.name}
+        recordType={route.recordType || null} // ⭐ pass recordType
+        viewData={screens}
+        displayName={route.displayName}
+        settings={route.settings || []}
+      />
+    );
+  }
+
+  /* ----------------------------------------------------------
+     CASE 3 — MULTIPLE tabs → Show TabBar
+  ----------------------------------------------------------- */
   return (
     <Tab.Navigator
-      initialRouteName={appConfig.name}
+      initialRouteName={resolvedDefaultRoute}
       screenOptions={{
         headerShown: false,
         tabBarHideOnKeyboard: true,
@@ -84,7 +154,6 @@ console.log('MainNavigator appConfig:', appConfig);
                 right: 10,
                 bottom: 10,
                 borderRadius: 28,
-                borderWidth: 0,
                 overflow: 'hidden',
                 marginHorizontal: 12,
                 shadowColor: colors.shadow || '#000',
@@ -103,13 +172,7 @@ console.log('MainNavigator appConfig:', appConfig);
             }),
       }}
     >
-      {appConfig.mainNavigation.filter(item => {
-        // If no permissions array → allow it
-        if (!item.permissions) return true;
-
-        // If permissions exist, check user.role
-        return item.permissions.includes(user.role);
-      }).map((route) => (
+      {allowedTabs.map((route) => (
         <Tab.Screen
           key={route.name}
           name={route.name}
@@ -117,7 +180,8 @@ console.log('MainNavigator appConfig:', appConfig);
             <BasePage
               appConfig={appConfig}
               name={route.name}
-              viewData={viewData[route.name]}
+              recordType={route.recordType || null} // ⭐ pass recordType
+              viewData={viewData[route.name] || []}
               displayName={route.displayName}
               settings={route.settings || []}
             />

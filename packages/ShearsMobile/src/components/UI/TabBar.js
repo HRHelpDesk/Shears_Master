@@ -5,7 +5,7 @@ import { useTheme } from 'react-native-paper';
 
 const TopTab = createMaterialTopTabNavigator();
 
-export default function TabBar({ views = [], dynamicProps }) {
+export default function TabBar({ views = [], dynamicProps, activeTab, onTabChange }) {
   const theme = useTheme();
 
   return (
@@ -19,6 +19,15 @@ export default function TabBar({ views = [], dynamicProps }) {
         },
         tabBarStyle: {
           backgroundColor: theme.colors.surface,
+        },
+      }}
+      screenListeners={{
+        state: (e) => {
+          // Get the active tab index from navigation state
+          const index = e.data.state.index;
+          if (onTabChange && index !== activeTab) {
+            onTabChange(index);
+          }
         },
       }}
     >

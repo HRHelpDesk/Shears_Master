@@ -1,5 +1,5 @@
 // packages/web/src/navigation/MainNavigator.js
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useState } from 'react';
 import {
   Link,
   Routes,
@@ -34,7 +34,9 @@ import SmartProfileCard from '../components/BaseUI/SmartWidgets/SmartProfileCard
 const drawerWidth = 250;
 const collapsedWidth = 72;
 
-/* ✅ MUI-styled drawer for mini-variant behavior */
+/* ===========================================================
+   Drawer styling
+=========================================================== */
 const DrawerContainer = styled(Drawer)(({ theme }) => ({
   flexShrink: 0,
   whiteSpace: 'nowrap',
@@ -53,57 +55,81 @@ export default function MainNavigator({ appConfig, logo }) {
   const theme = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
-  const {user, token} = useContext(AuthContext);
+  const { user, token } = useContext(AuthContext);
   const [open, setOpen] = useState(true);
   const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
 
+  const resolvedDefaultRoute =
+    typeof appConfig.defaultRoute === 'function'
+      ? appConfig.defaultRoute(user)
+      : appConfig.defaultRoute;
+
   const toggleDrawer = () => setOpen((prev) => !prev);
 
-  /* ==========================================================================
-     Normalize view data for BasePage
-  ========================================================================== */
+  console.log('MainNavigator render', { user, location });
+
+  /* ===========================================================
+     Build permitted routes for this user
+  ============================================================ */
+  const permittedMainRoutes = appConfig.mainNavigation.filter(
+    (item) => !item.permissions || item.permissions.includes(user.role)
+  );
+
+  const permittedSubRoutes = appConfig.subNavigation.filter(
+    (item) => !item.permissions || item.permissions.includes(user.role)
+  );
+
+  /* ===========================================================
+     Normalize View Data (now includes recordType)
+  ============================================================ */
   const normalizeViewData = (routes) =>
     routes.reduce((acc, route) => {
       const fields = route.fields || [];
-      const views = route.views?.length
-        ? route.views.map((view) => ({
-            ...view,
-            displayName: view.displayName || view.name,
-            fields,
-            data: view.data || [],
-            icon: route.icon || {},
-          }))
-        : [
-            {
-              displayName: route.displayName || route.name,
-              component: route.component || null,
+      const recordType = route.recordType || null;
+
+      const views =
+        route.views?.length > 0
+          ? route.views.map((view) => ({
+              ...view,
+              displayName: view.displayName || view.name,
               fields,
-              data: route.data || [],
+              recordType, // ⭐ inject recordType
+              data: view.data || [],
               icon: route.icon || {},
-            },
-          ];
+            }))
+          : [
+              {
+                displayName: route.displayName || route.name,
+                component: route.component || null,
+                fields,
+                recordType, // ⭐ inject recordType
+                data: route.data || [],
+                icon: route.icon || {},
+              },
+            ];
 
       acc[route.name] = views;
       return acc;
     }, {});
 
-  const mainViewData = normalizeViewData(appConfig.mainNavigation);
+  // ⭐ IMPORTANT: only use permitted routes here, so "requests" doesn't get overwritten
+  const mainViewData = normalizeViewData(permittedMainRoutes);
   const settingsViewData = normalizeViewData(appConfig.settings.flat());
 
-  /* ==========================================================================
-     Settings selection
-  ========================================================================== */
+  /* ===========================================================
+     Handle Settings
+  ============================================================ */
   const handleSelectSetting = (item) => {
     navigate(`/settings/${item.name}`);
     setSettingsDrawerOpen(false);
   };
 
-  /* ==========================================================================
+  /* ===========================================================
      Render
-  ========================================================================== */
+  ============================================================ */
   return (
     <Box sx={{ display: 'flex', height: '100vh' }}>
-      {/* ====================== APP BAR ================================ */}
+      {/* ================= APP BAR ==================== */}
       <AppBar
         position="fixed"
         elevation={1}
@@ -111,21 +137,17 @@ export default function MainNavigator({ appConfig, logo }) {
           zIndex: theme.zIndex.drawer + 1,
           backgroundColor: theme.palette.primary.main,
           color: theme.palette.primary.contrastText,
-          transition: theme.transitions.create(['width', 'margin'], {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.standard,
-          }),
         }}
       >
         <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
-          {/* Left side */}
+          {/* Left */}
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <IconButton onClick={toggleDrawer} color="inherit" edge="start" sx={{ mr: 2 }}>
               <i className="fa fa-bars" />
             </IconButton>
           </Box>
 
-          {/* Right side */}
+          {/* Right */}
           <Box>
             <Tooltip title="Settings">
               <IconButton color="inherit" onClick={() => setSettingsDrawerOpen(true)}>
@@ -142,7 +164,7 @@ export default function MainNavigator({ appConfig, logo }) {
         </Toolbar>
       </AppBar>
 
-      {/* ====================== SIDEBAR DRAWER ================================ */}
+      {/* ================= SIDEBAR ==================== */}
       <DrawerContainer
         variant="permanent"
         sx={{
@@ -157,29 +179,17 @@ export default function MainNavigator({ appConfig, logo }) {
           },
         }}
       >
-       {/* Logo */}
-<Box
-  sx={{
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    p: 2,
-    mt: 8,
-  }}
->
-  <SmartProfileCard user={user} open={open}/>
-</Box>
+        {/* PROFILE HEADER */}
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 2, mt: 8 }}>
+          <SmartProfileCard user={user} open={open} />
+        </Box>
+
         <Divider sx={{ bgcolor: theme.palette.divider, my: 1 }} />
 
-        {/* NAVIGATION LIST */}
+        {/* ================= NAVIGATION LIST ==================== */}
         <List sx={{ mt: 1 }}>
-          {appConfig.mainNavigation.filter(item => {
-        // If no permissions array → allow it
-        if (!item.permissions) return true;
-
-        // If permissions exist, check user.role
-        return item.permissions.includes(user.role);
-      }).map((route) => {
+          {/* MAIN NAVIGATION */}
+          {permittedMainRoutes.map((route) => {
             const routePath = `/${route.name.toLowerCase()}`;
             const selected = location.pathname === routePath;
 
@@ -199,12 +209,6 @@ export default function MainNavigator({ appConfig, logo }) {
                     mb: 0.5,
                     justifyContent: open ? 'initial' : 'center',
                     px: open ? 2 : 1.5,
-                    '&.Mui-selected': {
-                      backgroundColor: theme.palette.action.selected,
-                    },
-                    '&:hover': {
-                      backgroundColor: theme.palette.action.hover,
-                    },
                   }}
                 >
                   <ListItemIcon
@@ -232,15 +236,9 @@ export default function MainNavigator({ appConfig, logo }) {
               </Tooltip>
             );
           })}
-          {appConfig.subNavigation.filter(item => {
-        // If no permissions array → allow it
-        if (!item.permissions) return true;
 
-        // If permissions exist, check user.role
-        return item.permissions.includes(user.role);
-      }).map((route) => {
-            console.log(route)
-            console.log(route.name)
+          {/* ================= SUB NAVIGATION ==================== */}
+          {permittedSubRoutes.map((route) => {
             const routePath = `/${route.name.toLowerCase()}`;
             const selected = location.pathname === routePath;
 
@@ -260,12 +258,6 @@ export default function MainNavigator({ appConfig, logo }) {
                     mb: 0.5,
                     justifyContent: open ? 'initial' : 'center',
                     px: open ? 2 : 1.5,
-                    '&.Mui-selected': {
-                      backgroundColor: theme.palette.action.selected,
-                    },
-                    '&:hover': {
-                      backgroundColor: theme.palette.action.hover,
-                    },
                   }}
                 >
                   <ListItemIcon
@@ -296,7 +288,7 @@ export default function MainNavigator({ appConfig, logo }) {
         </List>
       </DrawerContainer>
 
-     {/* ====================== MAIN CONTENT ================================ */}
+      {/* ================= MAIN CONTENT ==================== */}
       <Box
         component="main"
         sx={{
@@ -314,15 +306,8 @@ export default function MainNavigator({ appConfig, logo }) {
         }}
       >
         <Routes>
-
-          {/* ✅ MAIN NAVIGATION ROUTES */}
-          {appConfig.mainNavigation.filter(item => {
-        // If no permissions array → allow it
-        if (!item.permissions) return true;
-
-        // If permissions exist, check user.role
-        return item.permissions.includes(user.role);
-      }).map((route) => {
+          {/* MAIN ROUTES */}
+          {permittedMainRoutes.map((route) => {
             const viewData = mainViewData[route.name];
 
             return (
@@ -333,6 +318,7 @@ export default function MainNavigator({ appConfig, logo }) {
                   <BasePage
                     appConfig={appConfig}
                     name={route.name}
+                    recordType={route.recordType} // ⭐ added
                     viewData={viewData}
                   />
                 }
@@ -340,15 +326,8 @@ export default function MainNavigator({ appConfig, logo }) {
             );
           })}
 
-          {/* ✅ ✅ SUB NAVIGATION ROUTES (FIXED) */}
-          {appConfig.subNavigation?.filter(item => {
-        // If no permissions array → allow it
-        if (!item.permissions) return true;
-
-        // If permissions exist, check user.role
-        return item.permissions.includes(user.role);
-      }).map((route) => {
-            // Normalize view data for this single route
+          {/* SUB ROUTES */}
+          {permittedSubRoutes.map((route) => {
             const subViewData = normalizeViewData([route])[route.name];
 
             return (
@@ -359,6 +338,7 @@ export default function MainNavigator({ appConfig, logo }) {
                   <BasePage
                     appConfig={appConfig}
                     name={route.name}
+                    recordType={route.recordType} // ⭐ added
                     viewData={subViewData}
                   />
                 }
@@ -366,7 +346,7 @@ export default function MainNavigator({ appConfig, logo }) {
             );
           })}
 
-          {/* ✅ SETTINGS ROUTES */}
+          {/* SETTINGS ROUTES */}
           <Route
             path="/settings/:name"
             element={
@@ -375,12 +355,13 @@ export default function MainNavigator({ appConfig, logo }) {
                 const settingData = settingsViewData[routeName] || [];
 
                 if (!settingData.length)
-                  return <Navigate to={`/${appConfig.defaultRoute.toLowerCase()}`} />;
+                  return <Navigate to={`/${resolvedDefaultRoute.toLowerCase()}`} />;
 
                 return (
                   <BasePage
                     appConfig={appConfig}
                     name={routeName}
+                    recordType={settingData[0]?.recordType || null} // ⭐ added
                     viewData={settingData}
                   />
                 );
@@ -388,14 +369,14 @@ export default function MainNavigator({ appConfig, logo }) {
             }
           />
 
-          {/* ✅ DEFAULT REDIRECT */}
+          {/* FALLBACK → DEFAULT ROUTE */}
           <Route
             path="*"
-            element={<Navigate to={`/${appConfig.defaultRoute.toLowerCase()}`} />}
+            element={<Navigate to={`/${resolvedDefaultRoute.toLowerCase()}`} />}
           />
         </Routes>
 
-        {/* ====================== SETTINGS DRAWER ================================ */}
+        {/* SETTINGS DRAWER */}
         {settingsDrawerOpen && (
           <SettingsDrawer
             onClose={() => setSettingsDrawerOpen(false)}
@@ -404,7 +385,6 @@ export default function MainNavigator({ appConfig, logo }) {
           />
         )}
       </Box>
-
     </Box>
   );
 }

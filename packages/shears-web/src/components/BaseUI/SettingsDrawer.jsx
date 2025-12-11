@@ -73,6 +73,7 @@ export default function SettingsDrawer({
       <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
         <List>
           {flattenedSettings.filter(item => {
+            console.log("Checking permissions for item:", item);  
         // If no permissions array → allow it
         if (!item.permissions) return true;
 

@@ -1,5 +1,5 @@
 // BasePage.js
-import React, { useState, useEffect, useContext, useCallback } from 'react';
+import React, { useState, useEffect, useContext, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, KeyboardAvoidingView } from 'react-native';
 import { useTheme } from 'react-native-paper';
 import { useIsFocused } from '@react-navigation/native';
@@ -18,106 +18,151 @@ const FallbackComponent = () => (
   </View>
 );
 
-export default function BasePage({ appConfig, name, viewData = [], displayName, settings = [], subNav }) {
+export default function BasePage({ appConfig, name, viewData = [], displayName, settings = [], subNav, recordType }) {
   const isFocused = useIsFocused();
   const theme = useTheme();
   const { token, user } = useContext(AuthContext);
-
-  const route = 
-  subNav ?
-  appConfig.subNavigation.find((r) => r.name === name): appConfig.mainNavigation.find((r) => r.name === name);
-  console.log('route', route)
+  const route = subNav 
+    ? appConfig.subNavigation.find((r) => r.name === name)
+    : appConfig.mainNavigation.find((r) => r.name === name);
+  
   const views = route?.views || [];
-const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const [data, setData] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Map view components safely
-  const activeViews = views.map((view) => {
+  // Map view components safely - memoize to prevent recalculation
+  const activeViews = useMemo(() => {
+    return views.map((view) => {
+      const Component = COMPONENTS[view.mobileComponent];
+      if (!Component) {
+        console.warn(`⚠️ Missing component: ${view.mobileComponent}. Using fallback.`);
+      }
+      return { ...view, component: Component || FallbackComponent };
+    });
+  }, [views]);
 
-    const Component = COMPONENTS[view.mobileComponent];
-    if (!Component) {
-      console.warn(`⚠️ Missing component: ${view.mobileComponent}. Using fallback.`);
-    }
-    return { ...view, component: Component || FallbackComponent };
-  });
-  
-console.log('activeView', activeViews)
   const activeView = activeViews[activeTab] || null;
-  console.log('activeView', activeView)
-
   const fieldsFromConfig = route?.fields || viewData[activeTab]?.fields || [];
-    console.log('activeView', fieldsFromConfig)
-
   const mappedFields = mapFields(fieldsFromConfig);
 
   /**
-   * ✅ Fetch records
-   * - `isRefresh = true` → only updates list (no page reload)
-   * - `isRefresh = false` → used for initial load
+   * ✅ Calculate date filters based on active view name
+   */
+  const getDateFiltersForActiveView = (viewName) => {
+    if (!viewName) return {};
+
+    const now = new Date();
+    console.log('Calculating date filters for view:', viewName);
+
+    // Calendar List = next 30 days
+    if (viewName === "CalendarList") {
+      const startDate = now;
+      const endDate = new Date();
+      endDate.setDate(now.getDate() + 30);
+      return { startDate, endDate };
+    }
+
+    // Today view = today only
+     if (viewName === "CalendarToday" || viewName === "CalendarHourly") {
+    const startDate = new Date(now);
+    startDate.setDate(now.getDate() - 10);
+    startDate.setHours(0, 0, 0, 0);
+
+    const endDate = new Date(now);
+    endDate.setDate(now.getDate() + 10);
+    endDate.setHours(23, 59, 59, 999);
+
+    return { startDate, endDate };
+  }
+
+    // Calendar Month View = start/end of current month
+    if (viewName === "Calendar") {
+      const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+      return { startDate, endDate };
+    }
+
+    return {};
+  };
+
+  /**
+   * ✅ Fetch records with date filters
    */
   const fetchRecords = useCallback(
-  async (isRefresh = false) => {
-    if (!token || !user?.subscriberId) return;
+    async (isRefresh = false) => {
+      if (!token || !user?.subscriberId) return;
 
-    try {
-      if (isRefresh) {
-        // Pull-to-refresh or soft refresh (no spinner)
-        setRefreshing(true);
-      } else {
-        // Initial load (spinner)
-        setLoading(true);
+      try {
+        if (isRefresh) {
+          setRefreshing(true);
+        } else {
+          setLoading(true);
+        }
+
+        const dateFilters = getDateFiltersForActiveView(activeView?.name);
+
+        const response = await getRecords({
+          recordType: recordType.toLowerCase(),
+          token,
+          subscriberId: user.subscriberId,
+          userId: user.userId,
+          ...dateFilters,
+        });
+
+        console.log('Fetched records:', response);
+        setData(response || []);
+        setError(null);
+      } catch (err) {
+        console.error('Failed to load records:', err);
+        setError(err.message || 'Failed to load data');
+      } finally {
+        if (isRefresh) setRefreshing(false);
+        else setLoading(false);
       }
+    },
+    [token, user, name, activeView?.name] // Only depend on the view NAME, not the whole object
+  );
 
-      const response = await getRecords({
-        recordType: name.toLowerCase(),
-        token,
-        subscriberId: user.subscriberId,
-        userId: user.userId,
-      });
+  // ✅ Reset to first tab when views change
+  useEffect(() => {
+    setActiveTab(0);
+  }, [viewData]); // Use viewData instead of views
 
-      console.log(response)
-
-      setData(response || []);
-      setError(null);
-    } catch (err) {
-      console.error('Failed to load records:', err);
-      setError(err.message || 'Failed to load data');
-    } finally {
-      if (isRefresh) setRefreshing(false);
-      else setLoading(false);
+  // 🔄 Initial load only
+  useEffect(() => {
+    if (!hasLoadedOnce) {
+      fetchRecords(false);
+      setHasLoadedOnce(true);
     }
-  },
-  [token, user, name]
-);
+  }, [fetchRecords, hasLoadedOnce]);
 
+  // 🔄 Refresh when screen comes into focus (but NOT on initial mount)
+  useEffect(() => {
+    if (isFocused && hasLoadedOnce) {
+      fetchRecords(true);
+    }
+  }, [isFocused, hasLoadedOnce]); // Removed fetchRecords and activeTab
 
-  // 🔄 Auto-fetch when screen comes into focus
-useEffect(() => {
-  if (!hasLoadedOnce) {
-    fetchRecords(false);
-    setHasLoadedOnce(true);
-  }
-}, [fetchRecords]);
-
-useEffect(() => {
-  if (isFocused && hasLoadedOnce) {
-    fetchRecords(true); // soft refresh
-  }
-}, [isFocused, hasLoadedOnce, fetchRecords]);
+  // 🔄 Refresh when active tab changes (but not on initial mount)
+  useEffect(() => {
+    if (hasLoadedOnce) {
+      fetchRecords(true);
+    }
+  }, [activeTab]); // Only activeTab dependency
 
   const dynamicProps = {
     name: activeView?.displayName || name,
+    recordType: recordType.toLowerCase() || name.toLowerCase(),
     fields: mappedFields,
     data: data,
     appConfig,
     refreshing,
     onRefresh: () => fetchRecords(true),
-    
   };
 
   if (loading) {
@@ -141,10 +186,10 @@ useEffect(() => {
   return (
     <KeyboardAvoidingView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <PageHeader 
-  title={displayName} 
-  appConfig={appConfig} 
-  settings={settings || null}
-/>
+        title={displayName} 
+        appConfig={appConfig} 
+        settings={settings || null}
+      />
 
       {activeViews.length > 1 ? (
         <TabBar

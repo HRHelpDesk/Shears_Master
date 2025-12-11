@@ -310,67 +310,118 @@ export default function CalendarListView(props) {
   );
 
   const renderItem = ({ item }) => {
-    const initials =
-      item.contactName
-        .split(' ')
-        .map((p) => p[0])
-        .join('')
-        .substring(0, 2)
-        .toUpperCase() || '?';
+  const initials =
+    item.contactName
+      .split(' ')
+      .map((p) => p[0])
+      .join('')
+      .substring(0, 2)
+      .toUpperCase() || '?';
 
-    const extraLines = listFields
-      .filter((f) => !['contact', 'service'].includes(f.field))
-      .map((field) => {
-        const raw = item.flatItem[field.field];
-        if (!raw) return null;
+  const payment = item.flatItem?.payment;
+  const amount = payment?.amount;
+  const rawStatus = payment?.status || "";
+  const status = rawStatus.toUpperCase();
 
-        let txt = renderObjectAsLines(raw, field.field);
-        if (!txt && typeof raw !== 'object') txt = String(raw);
-        if (field.field === 'date') txt = formatDatePretty(raw);
-
-        return txt ? (
-          <Text key={field.field} style={[styles.tertiary, { color: theme.colors.onSurfaceVariant }]}>
-            {txt}
-          </Text>
-        ) : null;
-      });
-
-    return (
-      <Swipeable renderRightActions={() => renderRightActions(item)}>
-        <TouchableOpacity
-          style={[styles.card, { backgroundColor: theme.colors.surface }]}
-          onPress={() =>
-            navigation.navigate('ListItemDetail', {
-              item: item.flatItem,
-              name: 'Calendar',
-              appConfig,
-              fields: mapFields(viewData?.fields || []),
-              mode: 'read',
-            })
-          }
-        >
-          <Avatar.Text
-            size={48}
-            label={initials}
-            style={{ backgroundColor: theme.colors.primary }}
-            color={theme.colors.onPrimary}
-          />
-
-          <View style={styles.textContainer}>
-            <Text style={[styles.primary, { color: theme.colors.onSurface }]}>
-              {item.contactName}
-            </Text>
-
-            <Text style={[styles.secondary, { color: theme.colors.onSurfaceVariant }]}>
-              {item.serviceName}
-            </Text>
-
-            {extraLines}
-          </View>
-        </TouchableOpacity>
-      </Swipeable>
-    );
+  // ⭐ Dynamic Status Color
+  const getStatusColor = () => {
+    switch (status) {
+      case "PAID":
+        return "#2ecc71"; // green
+      case "PENDING":
+        return "#f1c40f"; // yellow/amber
+      case "REFUNDED":
+      case "CANCELED":
+      case "CANCELLED":
+        return "#e74c3c"; // red
+      default:
+        return theme.colors.onSurfaceVariant;
+    }
   };
+
+  const extraLines = listFields
+    .filter((f) => !['contact', 'service', 'payment'].includes(f.field))
+    .map((field) => {
+      const raw = item.flatItem[field.field];
+      if (!raw) return null;
+
+      let txt = renderObjectAsLines(raw, field.field);
+      if (!txt && typeof raw !== 'object') txt = String(raw);
+      if (field.field === 'date') txt = formatDatePretty(raw);
+
+      return txt ? (
+        <Text key={field.field} style={[styles.tertiary, { color: theme.colors.onSurfaceVariant }]}>
+          {txt}
+        </Text>
+      ) : null;
+    });
+
+  return (
+    <Swipeable renderRightActions={() => renderRightActions(item)}>
+      <TouchableOpacity
+        style={[styles.card, { backgroundColor: theme.colors.surface }]}
+        onPress={() =>
+          navigation.navigate('ListItemDetail', {
+            item: item.flatItem,
+            name: 'Calendar',
+            appConfig,
+            fields: mapFields(viewData?.fields || []),
+            mode: 'read',
+          })
+        }
+      >
+        <Avatar.Text
+          size={48}
+          label={initials}
+          style={{ backgroundColor: theme.colors.primary }}
+          color={theme.colors.onPrimary}
+        />
+
+        <View style={styles.textContainer}>
+          {/* Contact */}
+          <Text style={[styles.primary, { color: theme.colors.onSurface }]}>
+            {item.contactName}
+          </Text>
+
+          {/* Service */}
+          <Text style={[styles.secondary, { color: theme.colors.onSurfaceVariant }]}>
+            {item.serviceName}
+          </Text>
+
+          {/* ⭐ Payment Box */}
+          {payment && (
+            <View style={{ marginTop: 4 }}>
+              {amount ? (
+                <Text style={{
+                  fontSize: 14,
+                  fontWeight: '600',
+                  color: theme.colors.onSurface,
+                }}>
+                  {amount}
+                </Text>
+              ) : null}
+
+              <Text
+                style={{
+                  fontSize: 12,
+                  marginTop: 2,
+                  fontWeight: 'bold',
+                  color: getStatusColor(),
+                }}
+              >
+                {status}
+              </Text>
+            </View>
+          )}
+
+          {/* Other Fields */}
+          {extraLines}
+        </View>
+      </TouchableOpacity>
+    </Swipeable>
+  );
+};
+
 
   const renderSectionHeader = ({ section }) => (
     <View style={[styles.sectionHeader, { backgroundColor: 'transparent' }]}>

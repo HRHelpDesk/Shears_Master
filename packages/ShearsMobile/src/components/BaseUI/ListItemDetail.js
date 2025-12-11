@@ -392,11 +392,13 @@ const RenderField = ({
         label={fieldDef.label || fieldDef.field}
         value={value}
         mode={mode}
+        item={item} 
         onChangeText={(newVal) => handleChange(fieldPath, newVal)}
         multiline={fieldDef.input === "textarea"}
         keyboardType={
           fieldDef.input === "number" ? "numeric" : "default"
         }
+        defaultValue={fieldDef.inputConfig?.defaultValue || ""}
         options={
           fieldDef.input === "select"
             ? fieldDef.inputConfig?.options || []
@@ -411,8 +413,11 @@ const RenderField = ({
    MAIN SCREEN
 ============================================================ */
 export default function ListItemDetailScreen({ route, navigation }) {
-  const { item = {}, name, fields = [], mode: initialMode = "read" } =
+  const { item = {}, name, fields = [], mode: initialMode = "read", recordType } =
     route.params;
+    useEffect(() => {
+        console.log("Record type:", recordType);
+    }, [recordType]);
   const theme = useTheme();
   const { token, user } = useContext(AuthContext);
 
@@ -435,6 +440,113 @@ export default function ListItemDetailScreen({ route, navigation }) {
 
   const [localItem, setLocalItem] = useState(initialData);
   const [mode, setMode] = useState(initialMode);
+  const originalItemRef = useRef(JSON.parse(JSON.stringify(initialData)));
+
+// --------------------------------------------------------------
+// AUTO CALC KEY — triggers recalculation when data changes
+// --------------------------------------------------------------
+const buildAutoKey = (obj) => {
+  if (!obj || typeof obj !== "object") return "";
+
+  if (Array.isArray(obj)) {
+    return obj.map(buildAutoKey).join("|");
+  }
+
+  return Object.keys(obj)
+    .sort()
+    .map((k) => {
+      const v = obj[k];
+      if (typeof v === "object") return `${k}:${buildAutoKey(v)}`;
+      return `${k}:${String(v)}`;
+    })
+    .join(",");
+};
+
+const autoKey = useMemo(() => buildAutoKey(localItem), [localItem]);
+const lastAutoAmount = useRef(0);
+
+// --------------------------------------------------------------
+// AUTO CALC (mobile version) — full parity with Web
+// --------------------------------------------------------------
+useEffect(() => {
+  if (!localItem) return;
+
+  let totalAmount = 0;
+  let totalMinutes = 0;
+
+  // Walk all linkSelect entries and accumulate price + duration
+  const walk = (node) => {
+    if (!node || typeof node !== "object") return;
+
+    // linkSelect raw.price
+    if (node.raw?.price != null) {
+      const p = currencyToNumber(node.raw.price);
+      const q = Number(node.quantity ?? 1);
+      totalAmount += p * q;
+    }
+
+    // linkSelect raw.duration
+    if (node.raw?.duration) {
+      const h = Number(node.raw.duration.hours || 0);
+      const m = Number(node.raw.duration.minutes || 0);
+      totalMinutes += h * 60 + m;
+    }
+
+    // Continue deep walk
+    if (Array.isArray(node)) node.forEach(walk);
+    else Object.values(node).forEach(walk);
+  };
+
+  walk(localItem);
+
+  // APPLY CALCULATED FIELDS
+  setLocalItem((prev) => {
+    const updated = { ...prev };
+
+    // ------------------------------
+    // 1️⃣ Duration (hours/minutes)
+    // ------------------------------
+    if (totalMinutes > 0) {
+      const h = Math.floor(totalMinutes / 60);
+      const m = totalMinutes % 60;
+
+      if (!updated.duration) updated.duration = {};
+
+      updated.duration = {
+        hours: h.toString(),
+        minutes: m.toString().padStart(2, "0"),
+      };
+
+      // Auto-calc endTime if startTime exists
+      if (updated.time?.startTime) {
+        const [sh, sm] = updated.time.startTime.split(":").map(Number);
+        const start = new Date(0, 0, 0, sh, sm);
+        const end = new Date(start.getTime() + totalMinutes * 60000);
+
+        if (!updated.time) updated.time = {};
+
+        updated.time.endTime =
+          `${String(end.getHours()).padStart(2, "0")}:` +
+          `${String(end.getMinutes()).padStart(2, "0")}`;
+      }
+    }
+
+    // ------------------------------
+    // 2️⃣ Payment auto amount
+    // ------------------------------
+    if (!updated.payment) updated.payment = {};
+
+    const current = currencyToNumber(updated.payment.amount);
+
+    if (!updated.payment.amount || current === lastAutoAmount.current) {
+      updated.payment.amount = formatCurrency(String(totalAmount));
+      lastAutoAmount.current = totalAmount;
+    }
+
+    return updated;
+  });
+}, [autoKey]);
+
 
   /* ----------------------------------------------------------
      Handle Payment Completion → create Transaction + update appt
@@ -486,37 +598,70 @@ export default function ListItemDetailScreen({ route, navigation }) {
      Saving Logic
   ---------------------------------------------------------- */
   const handleSave = async () => {
-    try {
-      const isUser = name?.toLowerCase() === "users";
+  try {
+    const isUser = name?.toLowerCase() === "users";
+    let savedId = item?._id;
 
-      if (isUser) {
-        if (mode === "add") {
-          await createRecord(localItem, "user", token, user.userId, user.subscriberId, user);
-        } else {
-          const idToUpdate = item?.userId || item?._id;
-          localItem.__isUser = true;
-          await updateRecord(idToUpdate, localItem, token);
-        }
+    // -----------------------------------------
+    // USERS
+    // -----------------------------------------
+    if (isUser) {
+      if (mode === "add") {
+        const created = await createRecord(
+          localItem,
+          "user",
+          token,
+          user.userId,
+          user.subscriberId,
+          user
+        );
+
+        // NEW RECORD → CLOSE SCREEN
+        return navigation.goBack();
+
       } else {
-        if (mode === "edit" && item._id) {
-          await updateRecord(item._id, localItem, token);
-        } else {
-          await createRecord(
-            localItem,
-            name.toLowerCase(),
-            token,
-            user.userId,
-            user.subscriberId,
-            user
-          );
-        }
-      }
+        const idToUpdate = item?.userId || item?._id;
+        localItem.__isUser = true;
 
-      navigation.goBack();
-    } catch (err) {
-      console.error("Save failed:", err);
+        await updateRecord(idToUpdate, localItem, token);
+
+        // EDIT EXISTING USER → STAY ON SCREEN
+        originalItemRef.current = JSON.parse(JSON.stringify(localItem));
+        return setMode("read");
+      }
     }
-  };
+
+    // -----------------------------------------
+    // NON-USER RECORDS (appointments, transactions, etc)
+    // -----------------------------------------
+    if (mode === "edit" && item._id) {
+      // Updating existing record
+      await updateRecord(item._id, localItem, token);
+
+      // STAY ON SCREEN → SWITCH TO READ MODE
+      originalItemRef.current = JSON.parse(JSON.stringify(localItem));
+      return setMode("read");
+
+    } else {
+      // Creating new record
+      await createRecord(
+        localItem,
+        recordType.toLowerCase(),
+        token,
+        user.userId,
+        user.subscriberId,
+        user
+      );
+
+      // NEW RECORD → CLOSE SCREEN
+      return navigation.goBack();
+    }
+
+  } catch (err) {
+    console.error("Save failed:", err);
+  }
+};
+
 
   /* ----------------------------------------------------------
      Delete Logic
@@ -613,14 +758,18 @@ export default function ListItemDetailScreen({ route, navigation }) {
 
                     <GlassActionButton
                       icon="pencil"
-                      onPress={() => setMode("edit")}
+                      onPress={() => {
+                        originalItemRef.current = JSON.parse(JSON.stringify(localItem));
+                        setMode("edit");
+                      }}
                       color={theme.colors.primary}
                       theme={theme}
                     />
 
                     <GlassActionButton
                       icon="close"
-                      onPress={() => navigation.goBack()}
+                      onPress={() =>navigation.goBack()}
+                  
                       theme={theme}
                     />
                   </>
@@ -634,13 +783,18 @@ export default function ListItemDetailScreen({ route, navigation }) {
                     />
                     <GlassActionButton
                       icon="close"
-                      onPress={() =>
-                        mode === "add"
-                          ? navigation.goBack()
-                          : setMode("read")
-                      }
+                      onPress={() => {
+                        if (mode === "add") {
+                          navigation.goBack();
+                        } else {
+                          // ❌ Restore snapshot
+                          setLocalItem(JSON.parse(JSON.stringify(originalItemRef.current)));
+                          setMode("read");
+                        }
+                      }}
                       theme={theme}
                     />
+
                   </>
                 )}
               </View>
@@ -658,7 +812,7 @@ export default function ListItemDetailScreen({ route, navigation }) {
           >
             <View style={styles.fieldsContainer}>
               {fields.map((field, index) => (
-                <React.Fragment key={field.field}>
+                <React.Fragment key={`${field.field}-${index}`}>
                   <RenderField
                     fieldDef={field}
                     item={localItem}

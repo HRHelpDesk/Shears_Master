@@ -2,30 +2,23 @@
 import React, { useState, useRef, useEffect, useContext } from 'react';
 import {
   View,
-  ScrollView,
   TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
   Keyboard,
   LayoutAnimation,
   UIManager,
+  Platform,
   StyleSheet,
 } from 'react-native';
-import {
-  TextInput,
-  Text,
-  Dialog,
-  Portal,
-  Button,
-  List,
-  useTheme,
-  ActivityIndicator,
-} from 'react-native-paper';
+import { TextInput, Text, useTheme } from 'react-native-paper';
 import { AuthContext } from '../../context/AuthContext';
 import { getRecords } from 'shears-shared/src/Services/Authentication';
 
 import FieldActionsForEntry from "../BaseUI/ActionMenu/FieldActionsForEntry";
 import { GlassActionButton } from '../UI/GlassActionButton';
+
+// 💥 NEW IMPORTS
+import BottomSheetModal from "../BaseUI/BottomSheetModal";
+import SelectableListView from "../BaseUI/SubMenu/SelectableListView";
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -35,42 +28,62 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
    Helpers
 ============================================================ */
 const formatLinkedValue = (key, value) => {
-  if (!value) return "";
+  if (value == null) return "";
 
-  if (key === "price") {
-    const num = parseFloat(value);
-    return isNaN(num) ? value : `$${num.toFixed(2)}`;
+  // STRING / NUMBER
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value);
   }
 
-  if (key === "duration" && typeof value === "object") {
-    const h = value.hours || "0";
-    const m = value.minutes || "00";
-    return `${h}h ${m}m`;
+  // ARRAY (ex: phone: [{label, value}])
+  if (Array.isArray(value)) {
+    return value
+      .map(v => formatLinkedValue(key, v))
+      .filter(Boolean)
+      .join(", ");
   }
 
-  return value;
+  // OBJECTS
+  if (typeof value === "object") {
+    // Duration { hours, minutes }
+    if ("hours" in value || "minutes" in value) {
+      const h = value.hours ?? 0;
+      const m = value.minutes ?? 0;
+      return `${h}h ${m}m`;
+    }
+
+    // Price { value } or {label, value}
+    if ("value" in value) {
+      if (key === "price") {
+        const num = parseFloat(value.value || 0);
+        return `$${num.toFixed(2)}`;
+      }
+      return String(value.value);
+    }
+
+    // Generic fallback → join all printable values
+    return Object.values(value)
+      .map(v => (typeof v === "string" || typeof v === "number" ? v : ""))
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  // FINAL FALLBACK
+  return "";
 };
+
 
 const getLinkedDisplayFields = (raw) => {
   if (!raw || typeof raw !== "object") return [];
 
   const fields = [];
 
-  if (raw.price != null) {
-    fields.push({ key: "price", label: "Price", layout: "inline" });
-  }
-
-  if (raw.duration != null) {
-    fields.push({ key: "duration", label: "Duration", layout: "inline" });
-  }
-
-  if (raw.phone && Array.isArray(raw.phone)) {
-    fields.push({ key: "phone", label: "Phone", layout: "inline" });
-  }
-
-  if (raw.description) {
-    fields.push({ key: "description", label: "Description", layout: "full" });
-  }
+    if (raw.price != null) fields.push({ key: "price", label: "Price", layout: "inline" });
+  if (raw.duration != null) fields.push({ key: "duration", label: "Duration", layout: "inline" });
+  if (Array.isArray(raw.phone)) fields.push({ key: "phone", label: "Phone", layout: "inline" });
+  if (raw.description) fields.push({ key: "description", label: "Description", layout: "full" });
+  if (raw.saleAmount) fields.push({ key: "saleAmount", label: "Sale Amount", layout: "full" });
+  if (raw.percentage) fields.push({ key: "percentage", label: "Percentage off Regular Price", layout: "full" });
 
   return fields;
 };
@@ -85,10 +98,9 @@ export default function SmartDialogLinkSelectInput({
   onChangeText,
   placeholder = "Select...",
   mode = "edit",
-  error,
   helperText,
 
-  // NEW
+  // NEW quantity feature
   showQuantity = false,
   autoEnableQuantityFor = ["products"],
 }) {
@@ -100,13 +112,9 @@ export default function SmartDialogLinkSelectInput({
   const [searchValue, setSearchValue] = useState("");
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
-
   const [quantity, setQuantity] = useState(value?.quantity || 1);
 
-  const scrollRef = useRef(null);
-
-  const quantityEnabled =
-    showQuantity || autoEnableQuantityFor.includes(recordTypeName);
+  const quantityEnabled = showQuantity || autoEnableQuantityFor.includes(recordTypeName);
 
   /* Sync displayed name */
   useEffect(() => {
@@ -122,20 +130,12 @@ export default function SmartDialogLinkSelectInput({
     }
   }, [value]);
 
-  /* Fetch records when dialog opens */
+  /* Fetch records when bottom sheet opens */
   useEffect(() => {
     if (visible) fetchRecords();
   }, [visible]);
 
-  /* Smooth scroll when keyboard appears */
-  useEffect(() => {
-    const showListener = Keyboard.addListener("keyboardDidShow", () => {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      scrollRef.current?.scrollToEnd({ animated: true });
-    });
-    return () => showListener.remove();
-  }, []);
-
+  /* Fetch list of records */
   const fetchRecords = async (query = "") => {
     if (!token) return;
     setLoading(true);
@@ -152,22 +152,17 @@ export default function SmartDialogLinkSelectInput({
       const formatted =
         response?.map((r) => {
           const fields = r.fieldsData || {};
-
-          const nameKeys = Object.keys(fields).filter((k) =>
-            k.toLowerCase().includes("name")
-          );
+          const nameKeys = Object.keys(fields).filter((k) => k.toLowerCase().includes("name"));
 
           const displayName = nameKeys.length
             ? nameKeys.slice(0, 2).map((k) => fields[k]).join(" ")
             : "(Unnamed)";
 
-          return { _id: r._id, name: displayName, raw: fields };
+          return { _id: r._id, name: displayName, raw: fields, fieldsData: r.fieldsData };
         }) || [];
 
       const filtered = query
-        ? formatted.filter((r) =>
-            r.name.toLowerCase().includes(query.toLowerCase())
-          )
+        ? formatted.filter((r) => r.name.toLowerCase().includes(query.toLowerCase()))
         : formatted;
 
       setRecords(filtered);
@@ -246,19 +241,18 @@ export default function SmartDialogLinkSelectInput({
               const isPhone = f.key === "phone";
               const phone = raw.phone?.[0];
 
-              const formatted = isPhone
+                const formatted = isPhone
                 ? phone?.value || "Not set"
                 : formatLinkedValue(f.key, raw[f.key]);
-
               return (
                 <View key={f.key} style={{ marginBottom: 12 }}>
                   <Text style={{ opacity: 0.6, fontSize: 12 }}>{f.label}</Text>
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <Text style={{ fontWeight: "500", marginRight: 6 }}>
-                      {formatted}
-                    </Text>
-                    {isPhone && phone && <FieldActionsForEntry entry={phone} />}
-                  </View>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+
+                  <Text style={{ fontWeight: "500" }}>{formatted}
+                  </Text>
+                                 {isPhone && phone && <FieldActionsForEntry entry={phone} />}
+                </View>
                 </View>
               );
             })}
@@ -268,6 +262,7 @@ export default function SmartDialogLinkSelectInput({
                 <Text style={{ opacity: 0.6, fontSize: 12 }}>{f.label}</Text>
                 <Text style={{ fontWeight: "500" }}>
                   {formatLinkedValue(f.key, raw[f.key])}
+
                 </Text>
               </View>
             ))}
@@ -282,9 +277,7 @@ export default function SmartDialogLinkSelectInput({
   ============================================================ */
   return (
     <View style={{ marginBottom: 16 }}>
-      <Text style={{ marginBottom: 6, color: theme.colors.text }}>
-        {label}
-      </Text>
+      <Text style={{ marginBottom: 6, color: theme.colors.text }}>{label}</Text>
 
       {/* Selector */}
       <TouchableOpacity onPress={() => setVisible(true)}>
@@ -306,14 +299,10 @@ export default function SmartDialogLinkSelectInput({
         </View>
       </TouchableOpacity>
 
-      {/* --------------------------
-           QUANTITY FIELD (Updated)
-      --------------------------- */}
+      {/* Quantity */}
       {quantityEnabled && value && value._id && (
         <View style={{ marginTop: 12 }}>
-          <Text style={{ marginBottom: 6, color: theme.colors.text }}>
-            Quantity
-          </Text>
+          <Text style={{ marginBottom: 6, color: theme.colors.text }}>Quantity</Text>
 
           <View
             style={{
@@ -328,33 +317,27 @@ export default function SmartDialogLinkSelectInput({
               justifyContent: "space-between",
             }}
           >
-            {/* ---- Minus ---- */}
             <GlassActionButton
               icon="minus"
               theme={theme}
               onPress={() => {
-                setQuantity(q => {
+                setQuantity((q) => {
                   const newQ = Math.max(1, q - 1);
-                  if (value) onChangeText({ ...value, quantity: newQ });
+                  onChangeText({ ...value, quantity: newQ });
                   return newQ;
                 });
               }}
-              color={theme.colors.primary}
             />
 
-            {/* ---- Input ---- */}
             <TextInput
               mode="flat"
               value={String(quantity)}
               keyboardType="numeric"
               onChangeText={(text) => {
                 const num = parseInt(text.replace(/[^0-9]/g, ""), 10);
-                const final = !num || num < 1 ? 1 : num;
+                const final = num && num >= 1 ? num : 1;
                 setQuantity(final);
-
-                if (value) {
-                  onChangeText({ ...value, quantity: final });
-                }
+                onChangeText({ ...value, quantity: final });
               }}
               style={{
                 flex: 1,
@@ -365,99 +348,41 @@ export default function SmartDialogLinkSelectInput({
                 fontWeight: "600",
                 paddingVertical: 0,
               }}
-              underlineColor="transparent"
-              activeUnderlineColor="transparent"
             />
 
-            {/* ---- Plus ---- */}
             <GlassActionButton
               icon="plus"
               theme={theme}
               onPress={() => {
-                setQuantity(q => {
+                setQuantity((q) => {
                   const newQ = q + 1;
-                  if (value) onChangeText({ ...value, quantity: newQ });
+                  onChangeText({ ...value, quantity: newQ });
                   return newQ;
                 });
               }}
-              color={theme.colors.primary}
             />
           </View>
         </View>
       )}
 
-      {helperText && (
-        <Text style={{ marginTop: 4, opacity: 0.6 }}>{helperText}</Text>
-      )}
+      {helperText && <Text style={{ marginTop: 4, opacity: 0.6 }}>{helperText}</Text>}
 
-      {/* Dialog */}
-      <Portal>
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-        >
-          <Dialog visible={visible} onDismiss={() => setVisible(false)}>
-            <Dialog.Title>Select {label}</Dialog.Title>
-
-            <Dialog.Content style={{ maxHeight: 320 }}>
-              <TextInput
-                placeholder="Search..."
-                value={searchValue}
-                onChangeText={(text) => {
-                  setSearchValue(text);
-                  fetchRecords(text);
-                }}
-                mode="outlined"
-                style={{ marginBottom: 8 }}
-              />
-
-              {loading ? (
-                <ActivityIndicator style={{ marginTop: 20 }} />
-              ) : (
-                <ScrollView ref={scrollRef}>
-                  {records.map((record) => (
-                    <List.Item
-                      key={record._id}
-                      title={record.name}
-                      onPress={() => handleSelect(record)}
-                      style={{
-                        borderBottomWidth: 0.4,
-                        borderBottomColor: theme.colors.outlineVariant,
-                      }}
-                    />
-                  ))}
-
-                  {records.length === 0 && (
-                    <Text
-                      style={{
-                        textAlign: "center",
-                        marginTop: 12,
-                        opacity: 0.6,
-                        fontStyle: "italic",
-                      }}
-                    >
-                      No results found
-                    </Text>
-                  )}
-                </ScrollView>
-              )}
-            </Dialog.Content>
-
-            <Dialog.Actions>
-              <Button onPress={() => setVisible(false)}>Cancel</Button>
-            </Dialog.Actions>
-          </Dialog>
-        </KeyboardAvoidingView>
-      </Portal>
+      {/* ============================================================
+          BOTTOM SHEET MODAL (REPLACES DIALOG)
+      ============================================================ */}
+      <BottomSheetModal
+        visible={visible}
+        onDismiss={() => setVisible(false)}
+        component={SelectableListView}
+        data={records}
+        name={recordTypeName}
+        loading={loading}
+        onSelect={(record) => handleSelect(record)}
+      />
     </View>
   );
 }
 
-/* ============================================================
-   Styles
-============================================================ */
 const styles = StyleSheet.create({
-  selectorText: {
-    fontSize: 16,
-  },
+  selectorText: { fontSize: 16 },
 });

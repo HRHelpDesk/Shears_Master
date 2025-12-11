@@ -1,5 +1,5 @@
 // src/components/SmartInputs/DialogSelectInput.jsx
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -25,6 +25,7 @@ export default function DialogSelectInput({
   value,
   options = [],
   onChangeText,
+  defaultValue = null,
   placeholder = "Select...",
   allowCustom = true,
   mode = "edit",
@@ -36,7 +37,11 @@ export default function DialogSelectInput({
   const [open, setOpen] = useState(false);
   const [isCustom, setIsCustom] = useState(false);
   const [customValue, setCustomValue] = useState("");
-
+useEffect(()=>{
+if(defaultValue != null && (value == null || value === "")){
+  onChangeText(defaultValue);
+}
+}, [])
   /* -------------------------------------------------------------------------- */
   /* ✅ Normalize value consistently (string)                                   */
   /* -------------------------------------------------------------------------- */

@@ -1,5 +1,5 @@
 // src/components/SmartInputs/DialogSelectInput.js
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, use } from 'react';
 import {
   View,
   ScrollView,
@@ -55,7 +55,11 @@ export default function DialogSelectInput({
     (r) => r?.params?.presentation === 'modal' || r?.name?.toLowerCase().includes('modal')
   );
   const shouldUseModal = forceModal || insideModalScreen;
-
+useEffect(() => {
+    if (defaultValue) {
+      onChangeText(defaultValue);
+    }
+  }, [defaultValue]);
   // Smooth scroll for custom input
   useEffect(() => {
     if (!isCustom) return;

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useContext } from "react";
 import {
   Box,
   Typography,
@@ -7,10 +7,17 @@ import {
   DialogContent,
   Paper,
   Fade,
+  CircularProgress,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import CloseIcon from "@mui/icons-material/Close";
 import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
+
+import { AuthContext } from "../../../context/AuthContext";
+import {
+  uploadImageBase64,
+  deleteImage,
+} from "shears-shared/src/Services/Authentication";
 
 export default function SmartMultiImageInput({
   label,
@@ -20,10 +27,11 @@ export default function SmartMultiImageInput({
   inputConfig = {},
 }) {
   const theme = useTheme();
+  const { token } = useContext(AuthContext);
   const fileRef = useRef(null);
 
   /* ----------------------------------------------------------
-     NORMALIZE VALUE into [{ url, public_id }]
+     NORMALIZE IMAGES
   ---------------------------------------------------------- */
   const images = (() => {
     if (!value) return [];
@@ -34,9 +42,7 @@ export default function SmartMultiImageInput({
       .map((item) => {
         if (!item) return null;
 
-        if (typeof item === "string") {
-          return { url: item };
-        }
+        if (typeof item === "string") return { url: item };
 
         if (item.url) return item;
 
@@ -51,11 +57,12 @@ export default function SmartMultiImageInput({
 
   const [previewImage, setPreviewImage] = useState(null);
   const [previewIndex, setPreviewIndex] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   /* ----------------------------------------------------------
-     FILE UPLOAD (local preview only)
+     UPLOAD FILE (same flow as RN)
   ---------------------------------------------------------- */
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -64,15 +71,53 @@ export default function SmartMultiImageInput({
       return;
     }
 
+    if (images.length >= maxPhotos) return;
+
     const reader = new FileReader();
-    reader.onload = () => {
-      if (images.length < maxPhotos) {
-        onChangeText([...images, { url: reader.result }]);
+    reader.onload = async () => {
+      const base64 = reader.result;
+
+      try {
+        setUploading(true);
+
+        const { url, public_id } = await uploadImageBase64(base64, token);
+
+        onChangeText([...images, { url, public_id }]);
+      } catch (err) {
+        console.error("Web upload failed:", err);
+        alert("Image upload failed");
+      } finally {
+        setUploading(false);
       }
     };
+
     reader.readAsDataURL(file);
   };
 
+  /* ----------------------------------------------------------
+     DELETE IMAGE
+  ---------------------------------------------------------- */
+  const removeImage = async (idx) => {
+    const img = images[idx];
+
+    if (img?.public_id) {
+      try {
+        await deleteImage(img.public_id, token);
+      } catch (err) {
+        console.error("Cloud delete failed:", err);
+      }
+    }
+
+    const updated = [...images];
+    updated.splice(idx, 1);
+    onChangeText(updated);
+
+    if (previewIndex === idx) closePreview();
+  };
+
+  /* ----------------------------------------------------------
+     PREVIEW HANDLERS
+  ---------------------------------------------------------- */
   const openPreview = (img, index) => {
     setPreviewImage(img.url);
     setPreviewIndex(index);
@@ -83,28 +128,18 @@ export default function SmartMultiImageInput({
     setPreviewIndex(null);
   };
 
-  const removeImage = (idx) => {
-    const updated = [...images];
-    updated.splice(idx, 1);
-    onChangeText(updated);
-
-    if (previewIndex === idx) closePreview();
-  };
-
   /* ----------------------------------------------------------
-     DETECT READ MODE
+     READ MODE
   ---------------------------------------------------------- */
   const isReadMode =
-    typeof mode === "string" &&
-    ["read", "view", "display", "readonly"].includes(mode.toLowerCase());
+    ["read", "view", "display", "readonly"].includes(
+      (mode || "").toLowerCase()
+    );
 
-  /* ----------------------------------------------------------
-     ⭐ READ MODE — EXACT SAME LAYOUT AS EDIT (NO DELETE/ADD)
-  ---------------------------------------------------------- */
   if (isReadMode) {
     return (
-      <Box sx={{ mb: 2 }}>
-        <Typography variant="subtitle1" sx={{ mb: 1 }}>
+      <Box sx={{ mb: 2, position: "relative" }}>
+  <Typography variant="subtitle1" sx={{ color: theme.palette.primary.main, fontWeight: 500 }}>    
           {label}
         </Typography>
 
@@ -182,10 +217,28 @@ export default function SmartMultiImageInput({
      EDIT MODE
   ---------------------------------------------------------- */
   return (
-    <Box sx={{ mb: 2 }}>
+    <Box sx={{ mb: 3, position: "relative" }}>
       <Typography variant="subtitle1" sx={{ mb: 1 }}>
         {label}
       </Typography>
+
+      {/* ✨ UPLOADING OVERLAY */}
+      {uploading && (
+        <Box
+          sx={{
+            position: "absolute",
+            inset: 0,
+            bgcolor: "rgba(255,255,255,0.85)",
+            zIndex: 20,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            borderRadius: 2,
+          }}
+        >
+          <CircularProgress color="primary" size={48} />
+        </Box>
+      )}
 
       <Box sx={{ display: "flex", overflowX: "auto", gap: 2, pb: 1 }}>
         {images.map((img, idx) => (
@@ -272,7 +325,7 @@ export default function SmartMultiImageInput({
         onChange={handleFileChange}
       />
 
-      {/* FULLSCREEN PREVIEW WITH DELETE */}
+      {/* FULLSCREEN PREVIEW */}
       <Dialog fullScreen open={!!previewImage} onClose={closePreview}>
         <DialogContent
           sx={{
@@ -283,6 +336,7 @@ export default function SmartMultiImageInput({
             alignItems: "center",
           }}
         >
+          {/* CLOSE BUTTON */}
           <IconButton
             onClick={closePreview}
             sx={{
@@ -295,6 +349,7 @@ export default function SmartMultiImageInput({
             <CloseIcon sx={{ color: "#fff" }} />
           </IconButton>
 
+          {/* DELETE BUTTON */}
           <IconButton
             onClick={() => removeImage(previewIndex)}
             sx={{

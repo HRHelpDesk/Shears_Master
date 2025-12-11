@@ -46,34 +46,91 @@ function FallbackComponent({ name }) {
   );
 }
 
-export default function BasePage({ appConfig, name, viewData = [] }) {
-  const route = appConfig.mainNavigation.find((r) => r.name === name);
-  const views = route?.views || [];
+export default function BasePage({
+  appConfig,
+  name,
+  recordType,      // ⭐ NEW — passed from navigator
+  viewData = [],
+}) {
+  const { user, token } = useContext(AuthContext);
 
+  /* -------------------------------------------------------------
+       Determine the correct recordType
+       Fallback: use route name lowercase
+  ------------------------------------------------------------- */
+  const resolvedRecordType =
+    recordType ||
+    name?.toLowerCase() ||
+    null;
+
+  /* -------------------------------------------------------------
+       Get route views from navigation or settings
+  ------------------------------------------------------------- */
+  const route =
+    appConfig.mainNavigation.find((r) => r.name === name) ||
+    appConfig.subNavigation.find((r) => r.name === name) ||
+    null;
+
+  const views = viewData || [];
   const [activeTab, setActiveTab] = useState(0);
 
-  // Data, loading, error states
+  // data + UI state
   const [data, setData] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
-  // Component dynamic loading
+  // dynamic component loading
   const [ViewComponent, setViewComponent] = useState(() => FallbackComponent);
   const [loadingComponent, setLoadingComponent] = useState(true);
 
-  const { user, token } = useContext(AuthContext);
   const activeView = viewData[activeTab] || null;
 
   /* -------------------------------------------------------------
-     1. Reset activeTab when viewData changes
+     Reset tab when switching screens
   ------------------------------------------------------------- */
   useEffect(() => {
-    setActiveTab(0);               // always start on the first tab
-  }, [viewData]);                  // <-- runs when a new field set is loaded
+    setActiveTab(0);
+  }, [viewData]);
 
   /* -------------------------------------------------------------
-     2. Fetch Records
+     Date Filters — Calendar systems
+  ------------------------------------------------------------- */
+  const getDateFiltersForActiveView = () => {
+    if (!activeView) return {};
+    const now = new Date();
+
+    // Calendar List = next 30 days
+    if (activeView.name === "CalendarList") {
+      const startDate = now;
+      const endDate = new Date();
+      endDate.setDate(now.getDate() + 30);
+      return { startDate, endDate };
+    }
+
+    // Today = only today
+    if (activeView.name === "CalendarToday") {
+      const startDate = new Date(now);
+      startDate.setHours(0, 0, 0, 0);
+
+      const endDate = new Date(now);
+      endDate.setHours(23, 59, 59, 999);
+
+      return { startDate, endDate };
+    }
+
+    // Month view
+    if (activeView.name === "Calendar") {
+      const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+      return { startDate, endDate };
+    }
+
+    return {};
+  };
+
+  /* -------------------------------------------------------------
+     Fetch Records (now 100% recordType-driven)
   ------------------------------------------------------------- */
   const fetchRecords = useCallback(
     async (isRefresh = false) => {
@@ -87,11 +144,21 @@ export default function BasePage({ appConfig, name, viewData = [] }) {
         if (isRefresh) setRefreshing(true);
         else setLoadingData(true);
 
+        const dateFilters = getDateFiltersForActiveView();
+
+        console.log("📦 Fetching:", {
+          resolvedRecordType,
+          dateFilters,
+        });
+console.log('Using record type:', resolvedRecordType);
+const isAdmin = user.role === "admin";
+
         const response = await getRecords({
-          recordType: name.toLowerCase(),
+          recordType: resolvedRecordType,  // ⭐ Clean + dynamic
           token,
           subscriberId: user.subscriberId,
-          userId: user.userId,
+          userId: isAdmin ? undefined : user.userId,
+          ...dateFilters,
         });
 
         setData(response || []);
@@ -104,80 +171,78 @@ export default function BasePage({ appConfig, name, viewData = [] }) {
         else setLoadingData(false);
       }
     },
-    [token, user, name]
+    [token, user, resolvedRecordType, activeView]
   );
 
-  // Initial fetch
+  /* Initial load */
   useEffect(() => {
     fetchRecords(false);
   }, [fetchRecords]);
 
- /* -------------------------------------------------------------
-   3. Load the dynamic view component – THIS ONE ACTUALLY WORKS
-------------------------------------------------------------- */
-useEffect(() => {
-  if (!activeView?.component) {
-    setViewComponent(() => FallbackComponent);
-    setLoadingComponent(false);
-    return;
-  }
-
-  setLoadingComponent(true);
-
-  // This is the magic that tells Vite to include EVERY file under src/components
-  const modules = import.meta.glob('../components/**/*.jsx');
-
-  const path = `../components/${activeView.component}.jsx`;
-
-  console.log('Trying to load:', path);
-
-  const importer = modules[path];
-
-  if (!importer) {
-    console.warn('Component not matched in glob:', activeView.component);
-    // List what is actually available (very helpful while developing)
-    console.log('Available components:', Object.keys(modules));
-    setViewComponent(() => FallbackComponent);
-    setLoadingComponent(false);
-    return;
-  }
-
-  importer()
-    .then((mod) => {
-      setViewComponent(() => mod.default || mod);
-    })
-    .catch((err) => {
-      console.error('Failed to load component', path, err);
+  /* -------------------------------------------------------------
+     Dynamic Component Loader (Vite glob mapping)
+  ------------------------------------------------------------- */
+  useEffect(() => {
+    if (!activeView?.component) {
       setViewComponent(() => FallbackComponent);
-    })
-    .finally(() => {
       setLoadingComponent(false);
-    });
-}, [activeView]);
+      return;
+    }
+
+    setLoadingComponent(true);
+
+    const modules = import.meta.glob('../components/**/*.jsx');
+    const path = `../components/${activeView.component}.jsx`;
+
+    console.log('🔍 Trying to load:', path);
+
+    const importer = modules[path];
+
+    if (!importer) {
+      console.warn('Component not matched in glob:', activeView.component);
+      console.log('Available modules:', Object.keys(modules));
+      setViewComponent(() => FallbackComponent);
+      setLoadingComponent(false);
+      return;
+    }
+
+    importer()
+      .then((mod) => setViewComponent(() => mod.default || mod))
+      .catch((err) => {
+        console.error('Dynamic import error:', err);
+        setViewComponent(() => FallbackComponent);
+      })
+      .finally(() => setLoadingComponent(false));
+  }, [activeView]);
 
   /* -------------------------------------------------------------
-     4. Props passed to the loaded view
+     Props passed to loaded view
   ------------------------------------------------------------- */
   const dynamicProps = {
-    name: activeView?.displayName || name,
+    name: activeView?.name,
+    displayName: activeView?.displayName,
     fields: mapFields(activeView?.fields),
     refreshing,
+    recordType: resolvedRecordType,   // ⭐ Pass recordType into child view
     onRefresh: () => fetchRecords(true),
     data,
     appConfig,
   };
 
-  /* -------------------------------------------------------------
-     5. UI: Loaders + retry handling
-  ------------------------------------------------------------- */
   const showMainLoader = loadingComponent || loadingData;
 
+  /* -------------------------------------------------------------
+     UI Output
+  ------------------------------------------------------------- */
   return (
     <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
+      
+      {/* TABS */}
       {views.length > 0 && (
         <TabBar views={views} activeTab={activeTab} onTabChange={setActiveTab} />
       )}
 
+      {/* CONTENT CONTAINER */}
       <Box
         sx={{
           flex: 1,
@@ -191,7 +256,7 @@ useEffect(() => {
           overflow: 'hidden',
         }}
       >
-        {/* MAIN LOADER OVERLAY */}
+        {/* LOADER OVERLAY */}
         {showMainLoader && (
           <Fade in={true}>
             <Box
@@ -210,7 +275,7 @@ useEffect(() => {
           </Fade>
         )}
 
-        {/* Error State */}
+        {/* ERROR STATE */}
         {error && !showMainLoader && (
           <Box
             sx={{
@@ -231,7 +296,7 @@ useEffect(() => {
           </Box>
         )}
 
-        {/* MAIN COMPONENT WHEN READY */}
+        {/* MAIN COMPONENT */}
         {!error && (
           <Suspense fallback={<CircularProgress sx={{ m: 'auto' }} />}>
             <ViewComponent

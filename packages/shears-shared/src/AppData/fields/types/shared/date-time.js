@@ -45,6 +45,15 @@ export const TimeDateFields = [
     ],
   },
   {
+  field: 'singleTime',
+  type: 'string',
+  label: 'Time',
+  input: 'time', 
+  displayInList: true,
+  display: { order: 4 },
+  layout: { row: 1, span: 3 }, // full-width row like date
+},
+  {
     field: 'duration',
     type: 'object',
     label: 'Duration',

@@ -62,7 +62,7 @@ const fetchUsers = async () => {
   if (!user?.subscriberId || !token) return;
   try {
     setLoading(true);
-    const data = await getSubUsers(user.subscriberId, token);
+    const data = await getSubUsers(user.subscriberId, token, appConfig);
     setUsers(data);
   } catch (err) {
     console.error("Error loading subusers:", err);
@@ -217,16 +217,41 @@ const fetchUsers = async () => {
                 >
                   {/* Avatar */}
                   <TableCell sx={{ py: 1 }}>
-                    <Avatar
-                      sx={{
-                        width: 40,
-                        height: 40,
-                        bgcolor: 'primary.main',
-                        color: 'primary.contrastText',
-                      }}
-                    >
-                      {initials}
-                    </Avatar>
+                    {u.avatar ? (
+                      <Box
+                        sx={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 1, // square
+                          overflow: "hidden",
+                          bgcolor: "action.hover",
+                        }}
+                      >
+                        <img
+                          src={u.avatar}
+                          alt={initials}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            display: "block",
+                          }}
+                        />
+                      </Box>
+                    ) : (
+                      <Avatar
+                        sx={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 1, // square avatar
+                          bgcolor: "primary.main",
+                          color: "primary.contrastText",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {initials}
+                      </Avatar>
+                    )}
                   </TableCell>
 
                   {/* Data columns */}

@@ -144,6 +144,7 @@ function RenderField({
           label={fieldDef.label}
           value={value}
           mode={mode}
+          item={item}  
           onChangeText={(nv) => handleChange(fieldPath, nv)}
           inputConfig={fieldDef.inputConfig}
         />
@@ -295,6 +296,7 @@ function RenderField({
           label={fieldDef.label}
           value={value}
           mode={mode}
+          item={item}  
           recordTypeName={fieldDef.inputConfig?.recordType}
           onChangeText={(nv) => handleChange(fieldPath, nv)}
         />
@@ -392,15 +394,17 @@ function RenderField({
     (fieldDef.inputConfig && Array.isArray(fieldDef.inputConfig.options));
 
   const selectOptions = isSelect ? fieldDef.inputConfig?.options : null;
-
+const defaultValue = isSelect ? fieldDef.inputConfig?.defaultValue : null;
   return (
     <Box sx={{ mb: 2 }}>
       <FieldComponent
         label={fieldDef.label}
         value={value}
         mode={mode}
+        item={item}  
         onChangeText={(nv) => handleChange(fieldPath, nv)}
         options={selectOptions}
+        defaultValue={defaultValue}
         multiline={fieldDef.input === "textarea"}
       />
     </Box>
@@ -417,6 +421,7 @@ export default function ListItemDetail({
   fields = [],
   name,
   mode: initialMode = "read",
+  recordType
 }) {
   const theme = useTheme();
   const { token, user } = useContext(AuthContext);
@@ -432,15 +437,24 @@ export default function ListItemDetail({
     return o;
   };
 
-  const initialData = useMemo(() => {
-    if (!item || typeof item !== "object") return initFromSchema(fields);
-
-    if (item.fieldsData) return item.fieldsData;
-
-    if (Object.keys(item).length > 0) return item;
-
+ const initialData = useMemo(() => {
+  if (!item || typeof item !== "object") {
     return initFromSchema(fields);
-  }, [item, fields]);
+  }
+
+  // CASE: DataRecord object → flatten metadata + fieldsData
+  if (item.fieldsData) {
+    return {
+      ...item,                // include metadata (_id, recordType, etc.)
+      ...item.fieldsData,     // flatten editable fields
+      fieldsData: item.fieldsData, // keep original for reference
+    };
+  }
+
+  // CASE: full item already (not wrapped)
+  return item;
+}, [item, fields]);
+
 
   const [localItem, setLocalItem] = React.useState(initialData);
   const [mode, setMode] = React.useState(initialMode);
@@ -634,7 +648,7 @@ export default function ListItemDetail({
       } else {
         await createRecord(
           localItem,
-          name.toLowerCase(),
+          recordType || name?.toLowerCase(),
           token,
           user.userId,
           user.subscriberId,

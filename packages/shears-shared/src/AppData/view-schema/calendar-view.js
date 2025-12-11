@@ -1,3 +1,4 @@
+//Current month data 
 export const CalendarMonthView = {
     parent:'Calendar',
     name: 'Calendar',
@@ -6,6 +7,7 @@ export const CalendarMonthView = {
     mobileComponent: 'CalendarView',
 }
 
+//Anything in the next 30 days
 export const CalendarList = {
     parent:'Calendar',
     name: 'CalendarList',
@@ -15,11 +17,12 @@ export const CalendarList = {
     
 }
 
-export const CalendarRoute = {
+//Today's data
+export const CalendarToday = {
     parent:'Calendar',
-    name: 'CalendarRoute',
-    displayName: 'Route',
-    component: 'RouteView',
-    mobileComponent: 'RouteView',
+    name: 'CalendarToday',
+    displayName: 'Today',
+    component: 'calendar/CalendarHourlyView',
+    mobileComponent: 'CalendarHourlyView',
 }
 

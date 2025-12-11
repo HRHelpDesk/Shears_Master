@@ -97,13 +97,21 @@ export default function TransactionListView({
   /* Helpers: Primary + Subtext                                    */
   /* ------------------------------------------------------------ */
   const getPrimaryText = (item) => {
-    const nameFields = Object.keys(item).filter((k) =>
-      k.toLowerCase().includes('name')
-    );
-    const combined = nameFields.map((k) => item[k]).join(' ').trim();
+  // 1️⃣ If the transaction has a nested client → use their name
+  if (item.client && item.client.name) {
+    return item.client.name;
+  }
 
-    return combined || item.title || item.description || 'Untitled';
-  };
+  // 2️⃣ Otherwise fall back to any field with “name”
+  const nameFields = Object.keys(item).filter((k) =>
+    k.toLowerCase().includes("name")
+  );
+
+  const combined = nameFields.map((k) => item[k]).join(" ").trim();
+
+  // 3️⃣ Final fallback
+  return combined || item.title || item.description || "Untitled";
+};
 
   const getSubText = (item) => {
   const parts = [];
@@ -169,7 +177,10 @@ export default function TransactionListView({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[
+      styles.container,
+      { backgroundColor: theme.colors.background },
+    ]}>
       {/* Search */}
       <TextInput
         style={[
@@ -187,6 +198,9 @@ export default function TransactionListView({
       />
 
       <FlatList
+ contentContainerStyle={{
+    paddingBottom: Platform.OS === "ios" ? 80:10, // 👈 add safe padding
+  }}
         data={sortedData}
         keyExtractor={(item) => item._id}
         renderItem={renderItem}
@@ -222,7 +236,7 @@ export default function TransactionListView({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 12 },
+  container: { flex: 1, padding: 12, },
 
   search: {
     borderWidth: 1,

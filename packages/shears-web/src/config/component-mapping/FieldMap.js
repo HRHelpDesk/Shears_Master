@@ -10,12 +10,18 @@ import SmartSwitchInput from "../../components/BaseUI/SmartInputs/SmartSwitchInp
 import SmartImageInput from "../../components/BaseUI/SmartInputs/SmartImageInput";
 
 import { WidgetMap } from "./WidgetMap";
+import SmartVideoInputWeb from "../../components/BaseUI/SmartInputs/SmartVideoInput";
+import SmartUserLinkSelect from "../../components/BaseUI/SmartInputs/SmartUserLinkSelect";
+import SmartAutoUserInput from "../../components/BaseUI/SmartInputs/SmartAutoUserInput";
+import SmartReadOnlyField from "../../components/BaseUI/SmartInputs/SmartReadOnlyField";
+import SmartTimeTimeZone from "../../components/BaseUI/SmartInputs/SmartTimeTimeZone";
 
 export const FieldMap = {
    text: PlainTextInput,
  textarea: SmartTextAreaInput, // could later map to a MultiLineInput
   select: SmartDialogSelect,
   linkSelect: SmartDialogLinkSelectInput,
+  userSelect: SmartUserLinkSelect,
   date: SmartDateInput, // replace with DatePickerInput
   phone:PhoneTextInput,
   paymentButton: PaymentButton,
@@ -24,6 +30,10 @@ export const FieldMap = {
   time: SmartTimeInput,
   boolean: SmartSwitchInput,
   image: SmartImageInput,
+  video: SmartVideoInputWeb,
+  autoUser: SmartAutoUserInput,
+  readOnly: SmartReadOnlyField,
+  timeTimeZone: SmartTimeTimeZone,
   ...WidgetMap
 
 };

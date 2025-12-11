@@ -9,17 +9,16 @@
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		3A50912C2EC9386900154F1F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
-		3A50912E2EC9386900154F1F /* libPods-ShearsMobile.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 673D2823894EF73D5395F326 /* libPods-ShearsMobile.a */; };
 		3A5091302EC9386900154F1F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		3A5091312EC9386900154F1F /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		3A5091322EC9386900154F1F /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 		3A5091412EC93A6900154F1F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
-		3A5091432EC93A6900154F1F /* libPods-ShearsMobile.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 673D2823894EF73D5395F326 /* libPods-ShearsMobile.a */; };
 		3A5091452EC93A6900154F1F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		3A5091462EC93A6900154F1F /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		3A5091472EC93A6900154F1F /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
+		88EF2B01A65F5B9422C954F9 /* libPods-ShearsMobile.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 673D2823894EF73D5395F326 /* libPods-ShearsMobile.a */; };
 		AB25B2C6EC3CFC00231F1A56 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 		E96C4E7D690A200C2FBC10D1 /* libPods-ShearsMobile.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 673D2823894EF73D5395F326 /* libPods-ShearsMobile.a */; };
 /* End PBXBuildFile section */
@@ -32,9 +31,9 @@
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = ShearsMobile/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		1FD07EDC2B2548F5B78077F6 /* Foundation.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Foundation.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Foundation.ttf"; sourceTree = "<group>"; };
 		21483308A6F545FF822A8AB6 /* Ionicons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Ionicons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Ionicons.ttf"; sourceTree = "<group>"; };
+		2688DE71C474703A88594172 /* Pods-ShearsMobile.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ShearsMobile.debug.xcconfig"; path = "Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile.debug.xcconfig"; sourceTree = "<group>"; };
 		34D8A36842AF46B697FA50DB /* Octicons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Octicons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Octicons.ttf"; sourceTree = "<group>"; };
 		368D8F9E56844BB4ACA7F58B /* FontAwesome5_Solid.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = FontAwesome5_Solid.ttf; path = "../node_modules/react-native-vector-icons/Fonts/FontAwesome5_Solid.ttf"; sourceTree = "<group>"; };
-		3A1108CCCCA392F936D0BBF1 /* Pods-ShearsMobile.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ShearsMobile.debug.xcconfig"; path = "Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile.debug.xcconfig"; sourceTree = "<group>"; };
 		3A1F75EFF6A64DBCA1C157F1 /* FontAwesome6_Brands.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = FontAwesome6_Brands.ttf; path = "../node_modules/react-native-vector-icons/Fonts/FontAwesome6_Brands.ttf"; sourceTree = "<group>"; };
 		3A5091022EC9366D00154F1F /* ShearsMobile copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "ShearsMobile copy-Info.plist"; path = "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/ios/ShearsMobile copy-Info.plist"; sourceTree = "<absolute>"; };
 		3A5091172EC9373600154F1F /* ShearsMobile copy2-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "ShearsMobile copy2-Info.plist"; path = "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/ios/ShearsMobile copy2-Info.plist"; sourceTree = "<absolute>"; };
@@ -47,11 +46,11 @@
 		3AE9A27C2ED4A79B00A464FE /* ShearsMobile.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = ShearsMobile.entitlements; path = ShearsMobile/ShearsMobile.entitlements; sourceTree = "<group>"; };
 		40BA0DAA88E44102BA307535 /* FontAwesome6_Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = FontAwesome6_Regular.ttf; path = "../node_modules/react-native-vector-icons/Fonts/FontAwesome6_Regular.ttf"; sourceTree = "<group>"; };
 		4A11D65D14414C34AFDE65E4 /* EvilIcons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = EvilIcons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/EvilIcons.ttf"; sourceTree = "<group>"; };
-		52C8798E408D5B8AECF8DB77 /* Pods-ShearsMobile.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ShearsMobile.release.xcconfig"; path = "Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile.release.xcconfig"; sourceTree = "<group>"; };
 		673D2823894EF73D5395F326 /* libPods-ShearsMobile.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-ShearsMobile.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = ShearsMobile/AppDelegate.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = ShearsMobile/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		8C9568169991495A8614D135 /* MaterialIcons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = MaterialIcons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/MaterialIcons.ttf"; sourceTree = "<group>"; };
+		9782FA7EA64D4A5AE3815FB0 /* Pods-ShearsMobile.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ShearsMobile.release.xcconfig"; path = "Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile.release.xcconfig"; sourceTree = "<group>"; };
 		ADDE1DF2BDB5423E948B4C82 /* Fontisto.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Fontisto.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Fontisto.ttf"; sourceTree = "<group>"; };
 		B4D86D7EC79A446495627FDD /* Zocial.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Zocial.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Zocial.ttf"; sourceTree = "<group>"; };
 		B9A69FD6E6234C5CBBF5E95C /* FontAwesome6_Solid.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = FontAwesome6_Solid.ttf; path = "../node_modules/react-native-vector-icons/Fonts/FontAwesome6_Solid.ttf"; sourceTree = "<group>"; };
@@ -71,6 +70,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E96C4E7D690A200C2FBC10D1 /* libPods-ShearsMobile.a in Frameworks */,
+				88EF2B01A65F5B9422C954F9 /* libPods-ShearsMobile.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,7 +78,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3A50912E2EC9386900154F1F /* libPods-ShearsMobile.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -86,7 +85,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3A5091432EC93A6900154F1F /* libPods-ShearsMobile.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -182,8 +180,8 @@
 		BBD78D7AC51CEA395F1C20DB /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				3A1108CCCCA392F936D0BBF1 /* Pods-ShearsMobile.debug.xcconfig */,
-				52C8798E408D5B8AECF8DB77 /* Pods-ShearsMobile.release.xcconfig */,
+				2688DE71C474703A88594172 /* Pods-ShearsMobile.debug.xcconfig */,
+				9782FA7EA64D4A5AE3815FB0 /* Pods-ShearsMobile.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -216,13 +214,10 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 3A5091362EC9386900154F1F /* Build configuration list for PBXNativeTarget "Shear" */;
 			buildPhases = (
-				3A50912A2EC9386900154F1F /* [CP] Check Pods Manifest.lock */,
 				3A50912B2EC9386900154F1F /* Sources */,
 				3A50912D2EC9386900154F1F /* Frameworks */,
 				3A50912F2EC9386900154F1F /* Resources */,
 				3A5091332EC9386900154F1F /* Bundle React Native code and images */,
-				3A5091342EC9386900154F1F /* [CP] Embed Pods Frameworks */,
-				3A5091352EC9386900154F1F /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -237,13 +232,10 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 3A50914B2EC93A6900154F1F /* Build configuration list for PBXNativeTarget "Purpose" */;
 			buildPhases = (
-				3A50913F2EC93A6900154F1F /* [CP] Check Pods Manifest.lock */,
 				3A5091402EC93A6900154F1F /* Sources */,
 				3A5091422EC93A6900154F1F /* Frameworks */,
 				3A5091442EC93A6900154F1F /* Resources */,
 				3A5091482EC93A6900154F1F /* Bundle React Native code and images */,
-				3A5091492EC93A6900154F1F /* [CP] Embed Pods Frameworks */,
-				3A50914A2EC93A6900154F1F /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -338,28 +330,6 @@
 			shellPath = /bin/sh;
 			shellScript = "set -e\n\nWITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n/bin/sh -c \"$WITH_ENVIRONMENT $REACT_NATIVE_XCODE\"\n";
 		};
-		3A50912A2EC9386900154F1F /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-ShearsMobile-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
 		3A5091332EC9386900154F1F /* Bundle React Native code and images */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -375,70 +345,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "set -e\n\nWITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n/bin/sh -c \"$WITH_ENVIRONMENT $REACT_NATIVE_XCODE\"\n";
-		};
-		3A5091342EC9386900154F1F /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-frameworks-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			inputPaths = (
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		3A5091352EC9386900154F1F /* [CP] Copy Pods Resources */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-resources-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			inputPaths = (
-			);
-			name = "[CP] Copy Pods Resources";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-resources-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-resources.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		3A50913F2EC93A6900154F1F /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-ShearsMobile-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
 		};
 		3A5091482EC93A6900154F1F /* Bundle React Native code and images */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -456,48 +362,6 @@
 			shellPath = /bin/sh;
 			shellScript = "set -e\n\nWITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n/bin/sh -c \"$WITH_ENVIRONMENT $REACT_NATIVE_XCODE\"\n";
 		};
-		3A5091492EC93A6900154F1F /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-frameworks-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			inputPaths = (
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		3A50914A2EC93A6900154F1F /* [CP] Copy Pods Resources */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-resources-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			inputPaths = (
-			);
-			name = "[CP] Copy Pods Resources";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-resources-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-resources.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
 		40362A8CEA455BF6A803C421 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -506,13 +370,9 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-resources-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-			);
 			name = "[CP] Copy Pods Resources";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-resources-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -527,13 +387,9 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -594,7 +450,7 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 3A1108CCCCA392F936D0BBF1 /* Pods-ShearsMobile.debug.xcconfig */;
+			baseConfigurationReference = 2688DE71C474703A88594172 /* Pods-ShearsMobile.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -628,7 +484,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 52C8798E408D5B8AECF8DB77 /* Pods-ShearsMobile.release.xcconfig */;
+			baseConfigurationReference = 9782FA7EA64D4A5AE3815FB0 /* Pods-ShearsMobile.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -660,7 +516,6 @@
 		};
 		3A5091372EC9386900154F1F /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 3A1108CCCCA392F936D0BBF1 /* Pods-ShearsMobile.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = ShearIcon;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
@@ -696,7 +551,6 @@
 		};
 		3A5091382EC9386900154F1F /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 52C8798E408D5B8AECF8DB77 /* Pods-ShearsMobile.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = ShearIcon;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
@@ -730,7 +584,6 @@
 		};
 		3A50914C2EC93A6900154F1F /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 3A1108CCCCA392F936D0BBF1 /* Pods-ShearsMobile.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = PurposeIcon;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
@@ -766,7 +619,6 @@
 		};
 		3A50914D2EC93A6900154F1F /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 52C8798E408D5B8AECF8DB77 /* Pods-ShearsMobile.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = PurposeIcon;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;

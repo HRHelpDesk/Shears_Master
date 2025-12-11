@@ -22,7 +22,7 @@ export default function LoginPage({ appConfig, logo }) {
 
     setLoading(true);
     try {
-      await login(email, password);
+      await login(email, password, appConfig);
       navigate('/dashboard', { replace: true });
     } catch (err) {
       alert(err.message);

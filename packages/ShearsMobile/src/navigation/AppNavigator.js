@@ -19,7 +19,7 @@ const logo = AppLogos[CURRENT_APP][CURRENT_WHITE_LABEL];
 
 function AppRoutes() {
   const { isLoggedIn, loading, token, user } = useContext(AuthContext);
-  
+  console.log('appConfig in AppRoutes:', appConfig);  
   // ✅ Use ref to capture the latest user value
   const userRef = useRef(user);
   

@@ -4,22 +4,26 @@ import { useNavigate } from "react-router";
 import {
   Box,
   Typography,
-  TextField,
-  Button,
   Divider,
   Paper,
+  Button,
   CircularProgress,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
-import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { Elements, PaymentElement } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 
 import { registerUser } from "../../../../shears-shared/src/Services/Authentication";
 import { BASE_URL } from "../../../../shears-shared/src/config/api";
 import { getAppHeaders } from "../../../../shears-shared/src/config/appHeaders";
 
-// ✅ Stripe publishable key
+// Dynamic Components
+import DynamicField from "./components/DynamicField";
+import PasswordField from "./components/PasswordField";
+import AddressField from "./components/AddressField";
+import { buildUserPayload } from "shears-shared/src/utils/stringHelpers";
+
 const stripePromise = loadStripe(
   "pk_test_51SPNqR1OAQam7tPgFryvj6gCkIICX1ptrBIRX2ni67VXIYOrWr61l4dG2hTBILCVnNEtebdzxVnmLrbkFHQW4bYb002vB3Y8Mp"
 );
@@ -28,169 +32,153 @@ export default function Register({ appConfig, logo }) {
   const navigate = useNavigate();
   const theme = useTheme();
 
-  const [loading, setLoading] = useState(false);
-  const [clientSecret, setClientSecret] = useState("");
-  const [paymentLoading, setPaymentLoading] = useState(true);
+  const userFields = appConfig?.user?.fields || [];
 
-  const [formData, setFormData] = useState({
-    email: "",
-    fullName: "",
-    lastName: "",
-    password: "",
-    confirmPassword: "",
-    phone: "",
-    role: "owner",
-    businessName: "",
-    street: "",
-    suite: "",
-    city: "",
-    state: "",
-    postalCode: "",
-    country: "US",
-    membershipPlan: "solo",
+  /* ---------------------------------------------------------
+     BUILD INITIAL FORM STATE FROM SCHEMA
+  --------------------------------------------------------- */
+  const initialState = {};
+  userFields.forEach((f) => {
+    if (!f.displayInRegistration) return;
+
+    if (f.type === "object") {
+      initialState[f.field] = {};
+      f.objectConfig?.forEach((c) => {
+        initialState[f.field][c.field] = c.default ?? "";
+      });
+    } else {
+      initialState[f.field] = f.default ?? "";
+    }
   });
 
-  const handleChange = (e) =>
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const [formData, setFormData] = useState(initialState);
 
-  /* ======================================================
-     ✅ CREATE PAYMENT INTENT WHEN PAGE LOADS
-  ====================================================== */
+  const updateField = (field, value) =>
+    setFormData((prev) => ({ ...prev, [field]: value }));
+
+  /* ---------------------------------------------------------
+     DETERMINE STRIPE CONFIG FROM SCHEMA
+  --------------------------------------------------------- */
+  const stripeField = userFields.find(
+    (f) => f.field === "stripe" && f.displayInRegistration
+  );
+
+  const stripeEnabled =
+    stripeField && formData?.stripe?.enabled !== false && formData?.stripe;
+
+  const stripeAmount = stripeEnabled ? formData.stripe.amount : null;
+  const stripeCurrency = stripeEnabled ? formData.stripe.currency : "usd";
+  const stripeDescription = stripeEnabled
+    ? formData.stripe.description
+    : "Registration Payment";
+
+  /* ---------------------------------------------------------
+     STRIPE PAYMENT INTENT
+  --------------------------------------------------------- */
+  const [clientSecret, setClientSecret] = useState("");
+  const [paymentLoading, setPaymentLoading] = useState(!!stripeEnabled);
+
   useEffect(() => {
+    if (!stripeEnabled) return;
+
     const createPaymentIntent = async () => {
       try {
-        const amount = formData.membershipPlan === "solo" ? 1000 : 4900;
+        const response = await fetch(`${BASE_URL}/v1/stripe/create-payment-intent`, {
+          method: "POST",
+          headers: {
+            ...getAppHeaders(),
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            amount: Number(stripeAmount) || 1000,
+            currency: stripeCurrency,
+            description: stripeDescription,
+          }),
+        });
 
-     const response = await fetch(`${BASE_URL}/v1/stripe/create-payment-intent`, {
-      method: "POST",
-      headers: {
-        ...getAppHeaders(),            // X-App-Name + Authorization
-        "Content-Type": "application/json",   // ❗ REQUIRED
-      },
-      body: JSON.stringify({ amount }),
-    });
         if (!response.ok) throw new Error("Failed to create payment intent");
 
-        const { clientSecret } = await response.json();
-        setClientSecret(clientSecret);
+        const data = await response.json();
+
+        setClientSecret(data.clientSecret);
       } catch (err) {
-        alert("Failed to initialize payment.");
-      } finally {
-        setPaymentLoading(false);
+        alert("Payment initialization failed.");
       }
+
+      setPaymentLoading(false);
     };
 
     createPaymentIntent();
-  }, [formData.membershipPlan]);
+  }, [stripeEnabled, stripeAmount, stripeCurrency]);
 
-  /* ======================================================
-     ✅ SUBMIT REGISTRATION (called after Stripe payment success)
-  ====================================================== */
+  /* ---------------------------------------------------------
+     BUILD PAYLOAD BASED ON SCHEMA
+  --------------------------------------------------------- */
+  const buildPayload = () => {
+    const payload = {};
+
+    userFields.forEach((f) => {
+      if (!f.displayInRegistration) return;
+
+      if (f.type === "object") {
+        payload[f.field] = { ...formData[f.field] };
+      } else {
+        payload[f.field] = formData[f.field];
+      }
+    });
+
+    return payload;
+  };
+
+  /* ---------------------------------------------------------
+     FINAL REGISTRATION (CALLED AFTER PAYMENT SUCCESS)
+  --------------------------------------------------------- */
   const submitRegistration = async () => {
-    setLoading(true);
-
+    console.log(userFields, formData);
+  const payload = buildUserPayload(userFields, formData);
+console.log("Registration Payload:", payload);  
     try {
-      const payload = {
-        email: formData.email,
-        fullName: `${formData.firstName} ${formData.lastName}`,
-        firstName:formData.firstName,
-        lastName: formData.lastName,
-        password: formData.password,
-        phone: formData.phone,
-        role: "owner",
-        businessName: formData.businessName,
-        businessAddress: {
-          street1: `${formData.street}${formData.suite ? " Suite " + formData.suite : ""}`,
-          city: formData.city,
-          state: formData.state,
-          postalCode: formData.postalCode,
-          country: formData.country,
-        },
-        membershipPlan: formData.membershipPlan,
-      };
-
       await registerUser(payload);
-
-      alert("User registered successfully!");
-      navigate("/login", { replace: true });
+      alert("Registration successful!");
+      navigate("/login");
     } catch (err) {
-      alert(err.message || "Registration failed");
-    } finally {
-      setLoading(false);
+      alert(err.message || "Registration failed.");
     }
   };
 
-  /* ======================================================
-     ✅ STRIPE CHECKOUT FORM (NO REDIRECT)
-  ====================================================== */
-  const CheckoutForm = ({ onSuccess }) => {
-    const stripe = useStripe();
-    const elements = useElements();
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [errorMessage, setErrorMessage] = useState("");
+  /* ---------------------------------------------------------
+     STRIPE CHECKOUT FORM
+  --------------------------------------------------------- */
+  const CheckoutForm = ({ onSuccess }) => (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+      }}
+    >
+      <PaymentElement />
 
-    const handleSubmit = async (event) => {
-      event.preventDefault();
-      if (!stripe || !elements) return;
-
-      setIsProcessing(true);
-
-      // ✅ NO REDIRECT — handle everything inline
-      const { error, paymentIntent } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {},
-        redirect: "if_required",
-      });
-
-      if (error) {
-        setErrorMessage(error.message);
-        setIsProcessing(false);
-        return;
-      }
-
-      // ✅ Payment success
-      if (paymentIntent && paymentIntent.status === "succeeded") {
-        await onSuccess();
-      }
-
-      setIsProcessing(false);
-    };
-
-    return (
-      <form onSubmit={handleSubmit}>
-        <PaymentElement />
-
-        {errorMessage && (
-          <Typography color="error" sx={{ mt: 1 }}>
-            {errorMessage}
-          </Typography>
-        )}
-
-        <Button
-          fullWidth
-          variant="contained"
-          type="submit"
-          disabled={isProcessing}
-          sx={{
-            mt: 2,
-            py: 1.4,
-            textTransform: "none",
-            background: `linear-gradient(
+      <Button
+        fullWidth
+        variant="contained"
+        sx={{
+          mt: 2,
+          py: 1.4,
+          textTransform: "none",
+          background: `linear-gradient(
               to right,
               ${theme.palette.primary.main},
               ${theme.palette.secondary.main}
             )`,
-          }}
-        >
-          {isProcessing ? "Processing..." : "Pay & Register"}
-        </Button>
-      </form>
-    );
-  };
+        }}
+      >
+        Pay & Register
+      </Button>
+    </form>
+  );
 
-  /* ======================================================
-     ✅ UI MATCHES LOGIN SCREEN EXACTLY
-  ====================================================== */
+  /* ---------------------------------------------------------
+     UI (STYLES PRESERVED)
+  --------------------------------------------------------- */
   return (
     <Box
       sx={{
@@ -214,7 +202,7 @@ export default function Register({ appConfig, logo }) {
           maxWidth: 760,
           borderRadius: 3,
           backgroundColor: theme.palette.background.paper,
-          backdropFilter: theme.palette.mode === "light" ? "blur(12px)" : "none",
+          backdropFilter: "blur(12px)",
         }}
       >
         {/* LOGO */}
@@ -226,178 +214,164 @@ export default function Register({ appConfig, logo }) {
           variant="h5"
           fontWeight={600}
           mb={3}
-          sx={{ color: theme.palette.text.primary }}
           textAlign="center"
+          sx={{ color: theme.palette.text.primary }}
         >
           Create Your Account
         </Typography>
 
-        {/* ======================= USER INFO ======================= */}
+        {/* ==============================
+            SECTION: USER INFORMATION
+        =============================== */}
         <Typography variant="h6" fontWeight={600}>
           User Information
         </Typography>
         <Divider sx={{ mb: 3 }} />
 
-        {/* Email */}
-        <TextField
-          fullWidth
-          label="Email Address"
-          name="email"
-          value={formData.email}
-          onChange={handleChange}
-          margin="normal"
-          InputLabelProps={{ style: { color: theme.palette.text.secondary } }}
-          inputProps={{ style: { color: theme.palette.text.primary } }}
-        />
+        {/* GRID LAYOUT */}
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: "repeat(2, 1fr)",
+            gap: 3,
+          }}
+        >
+          {userFields
+            .filter((f) => f.displayInRegistration && f.display?.order < 7)
+            .sort((a, b) => (a.display?.order || 0) - (b.display?.order || 0))
+            .map((field) => {
+              const isAddress = field.field.toLowerCase().includes("address");
+              const isPassword = field.input === "password";
 
-        {/* First + Last */}
-        <Box sx={{ display: "flex", gap: 3 }}>
-          <TextField
-            fullWidth
-            label="First Name"
-            name="firstName"
-            value={formData.firstName}
-            onChange={handleChange}
-            InputLabelProps={{ style: { color: theme.palette.text.secondary } }}
-            inputProps={{ style: { color: theme.palette.text.primary } }}
-          />
-          <TextField
-            fullWidth
-            label="Last Name"
-            name="lastName"
-            value={formData.lastName}
-            onChange={handleChange}
-            InputLabelProps={{ style: { color: theme.palette.text.secondary } }}
-            inputProps={{ style: { color: theme.palette.text.primary } }}
-          />
+              if (isAddress)
+                return (
+                  <Box key={field.field} sx={{ gridColumn: "span 2" }}>
+                    <AddressField
+                      field={field}
+                      value={formData[field.field]}
+                      onChange={(v) => updateField(field.field, v)}
+                    />
+                  </Box>
+                );
+
+              if (isPassword)
+                return (
+                  <Box key={field.field} sx={{ gridColumn: "span 2" }}>
+                    <PasswordField
+                      field={field}
+                      value={formData[field.field]}
+                      onChange={(v) => updateField(field.field, v)}
+                    />
+                  </Box>
+                );
+
+              return (
+                <Box
+                  key={field.field}
+                  sx={{ gridColumn: field.fullWidth ? "span 2" : "span 1" }}
+                >
+                  <DynamicField
+                    field={field}
+                    value={formData[field.field]}
+                    onChange={(v) => updateField(field.field, v)}
+                  />
+                </Box>
+              );
+            })}
         </Box>
 
-        {/* Password */}
-        <TextField
-          fullWidth
-          label="Password"
-          type="password"
-          name="password"
-          value={formData.password}
-          onChange={handleChange}
-          margin="normal"
-          InputLabelProps={{ style: { color: theme.palette.text.secondary } }}
-          inputProps={{ style: { color: theme.palette.text.primary } }}
-        />
-
-        {/* Confirm Password */}
-        <TextField
-          fullWidth
-          label="Confirm Password"
-          type="password"
-          name="confirmPassword"
-          value={formData.confirmPassword}
-          onChange={handleChange}
-          margin="normal"
-          InputLabelProps={{ style: { color: theme.palette.text.secondary } }}
-          inputProps={{ style: { color: theme.palette.text.primary } }}
-        />
-
-        {/* ======================= COMPANY INFO ======================= */}
+        {/* ==============================
+            SECTION: COMPANY INFORMATION
+        =============================== */}
         <Typography variant="h6" fontWeight={600} sx={{ mt: 5 }}>
           Company Information
         </Typography>
         <Divider sx={{ mb: 3 }} />
 
-        <TextField
-          fullWidth
-          label="Company Name"
-          name="businessName"
-          value={formData.businessName}
-          onChange={handleChange}
-          margin="normal"
-          InputLabelProps={{ style: { color: theme.palette.text.secondary } }}
-          inputProps={{ style: { color: theme.palette.text.primary } }}
-        />
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: "repeat(2, 1fr)",
+            gap: 3,
+          }}
+        >
+          {userFields
+            .filter(
+              (f) =>
+                f.displayInRegistration &&
+                f.display?.order >= 7 &&
+                f.display?.order < 20
+            )
+            .sort((a, b) => (a.display?.order || 0) - (b.display?.order || 0))
+            .map((field) => {
+              const isAddress = field.field.toLowerCase().includes("address");
 
-        {/* Address / Suite */}
-        <Box sx={{ display: "flex", gap: 3 }}>
-          <TextField
-            label="Address"
-            name="street"
-            value={formData.street}
-            onChange={handleChange}
-            sx={{ width: "70%" }}
-            InputLabelProps={{ style: { color: theme.palette.text.secondary } }}
-            inputProps={{ style: { color: theme.palette.text.primary } }}
-          />
+              if (isAddress)
+                return (
+                  <Box key={field.field} sx={{ gridColumn: "span 2" }}>
+                    <AddressField
+                      field={field}
+                      value={formData[field.field]}
+                      onChange={(v) => updateField(field.field, v)}
+                    />
+                  </Box>
+                );
 
-          <TextField
-            label="Suite No."
-            name="suite"
-            value={formData.suite}
-            onChange={handleChange}
-            sx={{ width: "30%" }}
-            InputLabelProps={{ style: { color: theme.palette.text.secondary } }}
-            inputProps={{ style: { color: theme.palette.text.primary } }}
-          />
+              return (
+                <Box
+                  key={field.field}
+                  sx={{ gridColumn: field.fullWidth ? "span 2" : "span 1" }}
+                >
+                  <DynamicField
+                    field={field}
+                    value={formData[field.field]}
+                    onChange={(v) => updateField(field.field, v)}
+                  />
+                </Box>
+              );
+            })}
         </Box>
 
-        {/* City / State / Zip */}
-        <Box sx={{ display: "flex", gap: 3, mt: 3 }}>
-          <TextField
-            label="City"
-            name="city"
-            value={formData.city}
-            onChange={handleChange}
-            sx={{ width: "50%" }}
-            InputLabelProps={{ style: { color: theme.palette.text.secondary } }}
-            inputProps={{ style: { color: theme.palette.text.primary } }}
-          />
+        {/* ==============================
+            STRIPE PAYMENT SECTION (Dynamic!)
+        =============================== */}
+        {stripeEnabled && (
+          <>
+            <Typography variant="h6" fontWeight={600} sx={{ mt: 5 }}>
+              Payment Information
+            </Typography>
+            <Divider sx={{ mb: 3 }} />
 
-          <TextField
-            label="State"
-            name="state"
-            value={formData.state}
-            onChange={handleChange}
-            sx={{ width: "25%" }}
-            InputLabelProps={{ style: { color: theme.palette.text.secondary } }}
-            inputProps={{ style: { color: theme.palette.text.primary } }}
-          />
+            {paymentLoading ? (
+              <Box sx={{ textAlign: "center", my: 3 }}>
+                <CircularProgress />
+              </Box>
+            ) : clientSecret ? (
+              <Elements
+                stripe={stripePromise}
+                options={{
+                  clientSecret,
+                  appearance: { theme: theme.palette.mode }
+                }}
+              >
+                <CheckoutForm onSuccess={submitRegistration} />
+              </Elements>
+            ) : (
+              <Typography color="error">Payment could not be initialized.</Typography>
+            )}
+          </>
+        )}
 
-          <TextField
-            label="Zip"
-            name="postalCode"
-            value={formData.postalCode}
-            onChange={handleChange}
-            sx={{ width: "25%" }}
-            InputLabelProps={{ style: { color: theme.palette.text.secondary } }}
-            inputProps={{ style: { color: theme.palette.text.primary } }}
-          />
-        </Box>
-
-        <TextField
-          fullWidth
-          label="Phone Number"
-          name="phone"
-          value={formData.phone}
-          onChange={handleChange}
-          margin="normal"
-          InputLabelProps={{ style: { color: theme.palette.text.secondary } }}
-          inputProps={{ style: { color: theme.palette.text.primary } }}
-        />
-
-        {/* ======================= PAYMENT ======================= */}
-        <Typography variant="h6" fontWeight={600} sx={{ mt: 5 }}>
-          Payment Information
-        </Typography>
-        <Divider sx={{ mb: 3 }} />
-
-        {paymentLoading ? (
-          <Box sx={{ textAlign: "center", my: 3 }}>
-            <CircularProgress />
-          </Box>
-        ) : clientSecret ? (
-          <Elements stripe={stripePromise} options={{ clientSecret }}>
-            <CheckoutForm onSuccess={submitRegistration} />
-          </Elements>
-        ) : (
-          <Typography color="error">Payment could not be initialized.</Typography>
+        {/* NO PAYMENT REQUIRED */}
+        {!stripeEnabled && (
+          <Button
+            fullWidth
+            variant="contained"
+            sx={{ mt: 3, py: 1.4 }}
+            onClick={submitRegistration}
+          >
+            Register
+          </Button>
         )}
 
         <Typography

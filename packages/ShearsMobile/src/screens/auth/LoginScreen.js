@@ -20,7 +20,7 @@ export default function LoginScreen({ appConfig, logo }) {
     }
     setLoading(true);
     try {
-      await login(email, password);
+      await login(email, password, appConfig);
       navigation.replace('RootDrawer');
     } catch (err) {
       alert(err.message);
@@ -40,54 +40,71 @@ export default function LoginScreen({ appConfig, logo }) {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
+        {/* Logo */}
         <View style={styles.logoContainer}>
           <Image source={logo} style={styles.logo} resizeMode="contain" />
         </View>
 
-        <Card style={[styles.card, { backgroundColor: theme.colors.surface }]} elevation={6}>
-          <Card.Content style={styles.cardContent}>
-            <Text
-              variant="headlineSmall"
-              style={[styles.title, { color: theme.colors.onSurface }]}
-            >
-              Sign in
-            </Text>
+        {/* ⭐ Max-width wrapper JUST for the card */}
+        <View style={styles.cardWrapper}>
+          <Card
+            style={[styles.card, { backgroundColor: theme.colors.surface }]}
+            elevation={6}
+          >
+            <Card.Content style={styles.cardContent}>
+              <Text
+                variant="headlineSmall"
+                style={[styles.title, { color: theme.colors.onSurface }]}
+              >
+                Sign in
+              </Text>
 
-            <TextInput
-              label="Email"
-              value={email}
-              onChangeText={setEmail}
-              mode="outlined"
-              style={[styles.input, { backgroundColor: theme.colors.background }]}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              theme={{ colors: { primary: theme.colors.primary, text: theme.colors.text } }}
-            />
+              <TextInput
+                label="Email"
+                value={email}
+                onChangeText={setEmail}
+                mode="outlined"
+                style={[styles.input, { backgroundColor: theme.colors.background }]}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                theme={{
+                  colors: {
+                    primary: theme.colors.primary,
+                    text: theme.colors.text,
+                  },
+                }}
+              />
 
-            <TextInput
-              label="Password"
-              value={password}
-              onChangeText={setPassword}
-              mode="outlined"
-              secureTextEntry
-              style={[styles.input, { backgroundColor: theme.colors.background }]}
-              theme={{ colors: { primary: theme.colors.primary, text: theme.colors.text } }}
-            />
+              <TextInput
+                label="Password"
+                value={password}
+                onChangeText={setPassword}
+                mode="outlined"
+                secureTextEntry
+                style={[styles.input, { backgroundColor: theme.colors.background }]}
+                theme={{
+                  colors: {
+                    primary: theme.colors.primary,
+                    text: theme.colors.text,
+                  },
+                }}
+              />
 
-            <Button
-              mode="contained"
-              onPress={handleLogin}
-              style={styles.button}
-              loading={loading}
-              disabled={loading}
-              buttonColor={theme.colors.primary}
-              textColor={theme.colors.onPrimary}
-              contentStyle={{ paddingVertical: 8 }}
-            >
-              Login
-            </Button>
-          </Card.Content>
-        </Card>
+              <Button
+                mode="contained"
+                onPress={handleLogin}
+                style={styles.button}
+                loading={loading}
+                disabled={loading}
+                buttonColor={theme.colors.primary}
+                textColor={theme.colors.onPrimary}
+                contentStyle={{ paddingVertical: 8 }}
+              >
+                Login
+              </Button>
+            </Card.Content>
+          </Card>
+        </View>
       </KeyboardAvoidingView>
     </LinearGradient>
   );
@@ -95,12 +112,52 @@ export default function LoginScreen({ appConfig, logo }) {
 
 const styles = StyleSheet.create({
   gradient: { flex: 1 },
-  container: { flex: 1, justifyContent: 'center', padding: 20 },
-  logoContainer: { alignItems: 'center', marginBottom: 30 },
-  logo: { width: 180, height: 180 },
-  card: { borderRadius: 16, paddingVertical: 20, paddingHorizontal: 15 },
-  cardContent: { width: '100%' },
-  title: { textAlign: 'center', marginBottom: 16, fontWeight: 'bold' },
-  input: { marginBottom: 15 },
-  button: { marginTop: 10, borderRadius: 8 },
+
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 20,
+  },
+
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+
+  logo: {
+    width: 180,
+    height: 180,
+  },
+
+  /* ⭐ Max-width just for the Card */
+  cardWrapper: {
+    width: '100%',
+    maxWidth: 420,     // adjust to desired width
+    alignSelf: 'center',
+  },
+
+  card: {
+    borderRadius: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 15,
+  },
+
+  cardContent: {
+    width: '100%',
+  },
+
+  title: {
+    textAlign: 'center',
+    marginBottom: 16,
+    fontWeight: 'bold',
+  },
+
+  input: {
+    marginBottom: 15,
+  },
+
+  button: {
+    marginTop: 10,
+    borderRadius: 8,
+  },
 });

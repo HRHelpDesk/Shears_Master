@@ -2,16 +2,17 @@
 import shearLogo from 'shears-shared/assets/images/shear_logo.png';
 import purposeLogo from 'shears-shared/assets/images/purpose_logo.png';
 
-import splashLogo from 'shears-shared/assets/images/splash_logo.png';
-import swimtechLogo from 'shears-shared/assets/images/swimtech_logo.png';
+import bosscrownsLogo from 'shears-shared/assets/images/bosscrowns_logo.png';
 
 export const AppLogos = {
   shear: {
     shear: shearLogo,
     purpose: purposeLogo,
   },
-  splash: {
-    splash: splashLogo,
-    swimtech: swimtechLogo
+  wigventory: {
+    wigventory: bosscrownsLogo,
   },
+  influencerapp:{
+    influencerapp: bosscrownsLogo,
+  }
 };

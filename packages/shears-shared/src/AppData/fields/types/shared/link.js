@@ -9,6 +9,7 @@ export const SharedLinkField = [
     inputConfig: { recordType: 'contacts' },
     display: { placeholder: 'Select a record', order: 32 },
   },
+
   {
     field: 'linkField',
     type: 'array',
@@ -16,6 +17,15 @@ export const SharedLinkField = [
     input: 'linkSelect',
     inputConfig: { recordType: 'contacts' },
     display: { placeholder: 'Select a record', order: 32 },
+  },
+//User Link Field
+    {
+    field: 'userLinkField',
+    type: 'object',
+    label: 'User Link',
+    input: 'userSelect',
+    inputConfig: { recordType: 'users' },
+    display: { placeholder: 'Select a User', order: 32 },
   },
   
 ];

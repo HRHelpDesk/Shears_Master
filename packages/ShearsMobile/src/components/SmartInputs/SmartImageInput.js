@@ -129,10 +129,13 @@ export default function SmartImageInput({
   if (isReadMode) {
     return (
       <View style={styles.editContainer}>
-        <Text
-          variant="labelMedium"
-          style={[styles.label, { color: theme.colors.text }]}
-        >
+         <Text
+          variant="titleMedium"
+          style={[
+            styles.label,
+            { color: theme.colors.primary }
+          ]}
+            >
           {label}
         </Text>
 
