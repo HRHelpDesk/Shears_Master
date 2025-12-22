@@ -27,7 +27,7 @@ const requestFields = {
     type: "string",
     required: true,
     display: { order: 2 },
-    arrayConfig: { minItems: 1 }
+    displayInList:true
   },
   time: {
     field: "startTimeWithZone",
@@ -201,45 +201,47 @@ export const InfluencerApp = [
         views: [AnnouncementsInfluencer],
         fields: [
           {
+          field: "title",
+          override: {
             field: "announcementName",
             label: "Title",
+          },
+          input: "text",
+        },
+            {
+            field: "date",
+            label: "Date",
             type: "string",
-            input: "text",
+            input: "date",
             required: true,
+            arrayConfig: { minItems: 1 },
             display: { order: 1 }
           },
+         
           {
-            field: "user",
-            label: "User",
-            type: "object",
-            input: "userSelect",
-            required: true,
-            display: { order: 2 }
+          field: "description",
+          override: {
+            field: "message",
+             label: "Message",
           },
+          input: "textarea",
+        },
           {
-            field: "description",
-            label: "Message",
-            type: "string",
-            input: "textarea",
-            multiline: true,
-            required: true,
-            display: { order: 3 }
-          },
-          {
-            field: "announcementImage",
-            label: "Announcement Images",
-            type: "string",
+            field: "image",
+            override: {
+              field: "announcementImage",
+              label: "Announcement Images",
+            },
             input: "image",
-            displayInList: false,
-            display: { order: 4 }
           },
           {
+          field: "video",
+          override: {
             field: "videoUrl",
             label: "Video URL",
-            type: "string",
-            input: "video",
-            display: { order: 5 }
-          }
+          },
+          input: "video",
+        }
         ]
       },
 
@@ -262,9 +264,13 @@ export const InfluencerApp = [
           requestFields.notes,
           {
             field: "status",
+            override:{
+              field:'status',
+                 input: "readOnly",
+            },
             label: "Status",
             type: "string",
-            input: "readOnly",
+         
             inputConfig: {
               defaultValue: "Pending"
             },
@@ -293,10 +299,14 @@ export const InfluencerApp = [
           requestFields.notes,
           requestFields.salesCoupon,
           {
-            field: "status",
+            field: "requestStatusWidget",
+            override:{
+              field:"status",
+              input:"requestStatusWidget"
+            },
             label: "Status",
             type: "string",
-            input: "requestStatusWidget",
+       
             display: { order: 8 },
             inputConfig: {
               options: ["Pending", "Approved", "Rejected", "Completed"],

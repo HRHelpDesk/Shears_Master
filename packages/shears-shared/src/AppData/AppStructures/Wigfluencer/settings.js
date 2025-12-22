@@ -101,46 +101,51 @@ export const InfluencerSettings = [
     icon: { ios: "megaphone.fill", android: "bullhorn", web: "fa fa-bullhorn" },
     views: [AnnouncementsAdmin],
     fields: [
-      {
-        field: "announcementName",
-        label: "Title",
-        type: "string",
-        input: "text",
-        required: true,
-        display: { order: 1 }
-      },
-      {
-        field: "user",
-        label: "Target User(s)",
-        type: "object",
-        input: "userSelect",
-        required: true,
-        display: { order: 2 }
-      },
-      {
-        field: "description",
-        label: "Message",
-        type: "string",
-        input: "textarea",
-        multiline: true,
-        required: true,
-        display: { order: 3 }
-      },
-      {
-        field: "announcementImage",
-        label: "Announcement Images",
-        type: "string",
-        input: "image",
-        displayInList: false,
-        display: { order: 4 }
-      },
-      {
-        field: "videoUrl",
-        label: "Video URL",
-        type: "string",
-        input: "video",
-        display: { order: 5 }
-      }
+  {
+  field: "title",
+  override: {
+    field: "announcementName",
+    label: "Title",
+    displayInList:true,
+  },
+  input: "text",
+},
+
+    
+ {
+  field: "description",
+  override: {
+    field:'message',
+    label: "Message",
+  },
+  input: "textarea",
+},
+{
+    field: "date",
+    label: "Date",
+    type: "string",
+    input: "date",
+    required: true,
+    arrayConfig: { minItems: 1 },
+    display: { order: 1 }
+  },
+   {
+  field: "image",
+  override: {
+    field: "announcementImage",
+    label: "Announcement Images",
+    displayInList:false,
+  },
+  input: "image",
+},
+  {
+  field: "video",
+  override: {
+    field: "videoUrl",
+    label: "Video URL",
+  },
+  input: "video",
+}
     ]
   },
 

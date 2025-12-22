@@ -1,5 +1,5 @@
 // ListView.js
-import React, { useState, useMemo, useContext, useEffect } from 'react';
+import React, { useState, useMemo, useContext, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,119 +10,154 @@ import {
   Platform,
   Alert,
   Image,
-} from 'react-native';
-import { useTheme, FAB } from 'react-native-paper';
-import { useNavigation } from '@react-navigation/native';
-import { Swipeable } from 'react-native-gesture-handler';
-import { singularize } from 'shears-shared/src/utils/stringHelpers';
-import { deleteRecord } from 'shears-shared/src/Services/Authentication';
-import { AuthContext } from '../../context/AuthContext';
+} from "react-native";
+import { useTheme, FAB } from "react-native-paper";
+import { useNavigation } from "@react-navigation/native";
+import { Swipeable } from "react-native-gesture-handler";
+import { DateTime } from "luxon";
+
+import { singularize } from "shears-shared/src/utils/stringHelpers";
+import { deleteRecord } from "shears-shared/src/Services/Authentication";
+import { AuthContext } from "../../context/AuthContext";
 
 /* -------------------------------------------------------------------------- */
-/* 🔠 Primary Text Resolver (matches Web)                                      */
+/* 🔠 Primary Text Resolver                                                    */
 /* -------------------------------------------------------------------------- */
 function getPrimaryText(item) {
-  if (!item || typeof item !== 'object') return 'Untitled';
+  if (!item || typeof item !== "object") return "Untitled";
 
-  // 1. first + last
   if (item.firstName || item.lastName) {
-    return [item.firstName, item.lastName].filter(Boolean).join(' ');
+    return [item.firstName, item.lastName].filter(Boolean).join(" ");
   }
 
-  // 2. any “name” fields (but support nested objects!)
   const nameFields = Object.keys(item).filter((k) =>
-    k.toLowerCase().includes('name')
+    k.toLowerCase().includes("name")
   );
 
   for (const key of nameFields) {
     const val = item[key];
-
-    if (typeof val === 'string' && val.trim()) {
-      return val; // direct name string
-    }
-
-    if (val && typeof val === 'object' && !Array.isArray(val)) {
-      // try nested shape
-      if (val.name) return val.name;
-      if (val.fullName) return val.fullName;
-      if (val.raw?.fullName) return val.raw.fullName;
-      if (val.raw?.name) return val.raw.name;
-      if (val.raw?.productName) return val.raw.productName;
-      if (val.raw?.serviceName) return val.raw.serviceName;
-    }
+    if (typeof val === "string" && val.trim()) return val;
+    if (val?.raw?.fullName) return val.raw.fullName;
+    if (val?.raw?.name) return val.raw.name;
+    if (val?.name) return val.name;
   }
 
-  // 3. Deep nested fallback
-  const nested = Object.values(item).find(
-    (v) =>
-      v &&
-      typeof v === 'object' &&
-      !Array.isArray(v) &&
-      (v.name ||
-        v.fullName ||
-        v.raw?.name ||
-        v.raw?.fullName ||
-        v.raw?.productName ||
-        v.raw?.serviceName)
-  );
-
-  if (nested) {
-    return (
-      nested.name ||
-      nested.fullName ||
-      nested.raw?.name ||
-      nested.raw?.fullName ||
-      nested.raw?.productName ||
-      nested.raw?.serviceName
-    );
-  }
-
-  // 4. Fallbacks
-  return item.title || item.description || item.email || 'Untitled';
+  return item.title || item.description || item.email || "Untitled";
 }
 
+/* -------------------------------------------------------------------------- */
+/* 📅 Date Resolver                                                            */
+/* -------------------------------------------------------------------------- */
+function resolveDate(item) {
+  const raw =
+    item.date ||
+    item.startDate ||
+    item.requestDate ||
+    item.createdAt ||
+    item.updatedAt;
+
+  if (!raw) return null;
+
+  const d = new Date(raw);
+  if (isNaN(d)) return null;
+
+  return d.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
 
 /* -------------------------------------------------------------------------- */
-/* 🖼️ Avatar URL Resolver (handles nested raw.avatar etc.)                     */
+/* 🖼 Avatar Resolver                                                          */
 /* -------------------------------------------------------------------------- */
 function getAvatarUrl(item) {
-  if (!item || typeof item !== 'object') return null;
-
-  // Direct avatar field
   if (item.avatar) {
-    // array-style [{ url }]
-    if (Array.isArray(item.avatar) && item.avatar[0]?.url) {
-      return item.avatar[0].url;
-    }
-    // string URL
-    if (typeof item.avatar === 'string') return item.avatar;
+    if (Array.isArray(item.avatar) && item.avatar[0]?.url) return item.avatar[0].url;
+    if (typeof item.avatar === "string") return item.avatar;
   }
 
-  if (item.avatarUrl && typeof item.avatarUrl === 'string') {
-    return item.avatarUrl;
-  }
-
-  // Look into nested objects for raw.avatar / raw.avatarUrl / etc.
   for (const v of Object.values(item)) {
-    if (!v || typeof v !== 'object' || Array.isArray(v)) continue;
-
-    // If it's your { name, raw: { ...user } } shape
-    if (v.raw) {
-      const r = v.raw;
-      if (Array.isArray(r.avatar) && r.avatar[0]?.url) return r.avatar[0].url;
-      if (typeof r.avatar === 'string') return r.avatar;
-      if (typeof r.avatarUrl === 'string') return r.avatarUrl;
-      if (typeof r.profileImage === 'string') return r.profileImage;
-      if (typeof r.photo === 'string') return r.photo;
-    }
-
-    // Or just nested.avatar
-    if (Array.isArray(v.avatar) && v.avatar[0]?.url) return v.avatar[0].url;
-    if (typeof v.avatar === 'string') return v.avatar;
-    if (typeof v.avatarUrl === 'string') return v.avatarUrl;
+    if (v?.raw?.avatar) return v.raw.avatar;
+    if (Array.isArray(v?.avatar) && v.avatar[0]?.url) return v.avatar[0].url;
   }
 
   return null;
+}
+
+/* -------------------------------------------------------------------------- */
+/* 🕒 Time + Timezone                                                          */
+/* -------------------------------------------------------------------------- */
+function formatTimeWithZone(value) {
+  if (!value?.time || !value?.timezone) return "";
+
+  try {
+    const viewerTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const [hour, minute] = String(value.time).split(":").map(Number);
+
+    return DateTime.fromObject({ hour, minute }, { zone: value.timezone })
+      .setZone(viewerTZ)
+      .toFormat("h:mm a");
+  } catch {
+    return String(value.time);
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* ⏱ Duration                                                                  */
+/* -------------------------------------------------------------------------- */
+function formatDuration(value) {
+  if (!value || typeof value !== "object") return "";
+
+  const h = value.hours ? `${value.hours} hour${value.hours === "1" ? "" : "s"}` : "";
+  const m = value.minutes ? `${value.minutes} minute${value.minutes === "1" ? "" : "s"}` : "";
+
+  return [h, m].filter(Boolean).join(" ");
+}
+
+/* -------------------------------------------------------------------------- */
+/* 🧠 Unified Formatter                                                        */
+/* -------------------------------------------------------------------------- */
+function formatValueForList(value) {
+  if (value == null) return "";
+
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+
+  if (Array.isArray(value)) {
+    return value
+      .map(
+        (v) =>
+          v?.platform ||
+          v?.label ||
+          v?.name ||
+          v?.raw?.fullName ||
+          v?.raw?.name
+      )
+      .filter(Boolean)
+      .join(", ");
+  }
+
+  if (typeof value === "object") {
+    if (value.time && value.timezone) return formatTimeWithZone(value);
+    if (value.hours || value.minutes) return formatDuration(value);
+    if (value.name) return value.name;
+
+    if (value.raw) {
+      return (
+        value.raw.fullName ||
+        value.raw.name ||
+        value.raw.productName ||
+        value.raw.serviceName ||
+        value.raw.email ||
+        ""
+      );
+    }
+
+    return "";
+  }
+
+  return "";
 }
 
 /* -------------------------------------------------------------------------- */
@@ -131,38 +166,34 @@ function getAvatarUrl(item) {
 export default function ListView({
   data = [],
   fields = null,
-  name = 'Item',
+  name = "Item",
   appConfig,
-  type = 'alphabetical',
   recordType = null,
   onRefresh,
   refreshing = false,
 }) {
   const theme = useTheme();
   const navigation = useNavigation();
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [finalFields, setFinalFields] = useState([]);
   const [localData, setLocalData] = useState(data);
   const { token } = useContext(AuthContext);
 
-  // Sync incoming data
-  useEffect(() => {
-    console.log("Record Type in ListView:", recordType);  
-    setLocalData(data);
-  }, [data]);
+  useEffect(() => setLocalData(data), [data]);
 
-  // Flatten fieldsData into top-level, keep _id + recordType
-  const normalizedData = useMemo(() => {
-    return localData.map((item) =>
-      item.fieldsData
-        ? { ...item.fieldsData, _id: item._id, recordType: item.recordType }
-        : item
-    );
-  }, [localData]);
+  const normalizedData = useMemo(
+    () =>
+      localData.map((item) =>
+        item.fieldsData
+          ? { ...item.fieldsData, _id: item._id, recordType: item.recordType }
+          : item
+      ),
+    [localData]
+  );
 
-  /* -------------------------------------------------------------------------- */
-  /* ✅ Load Display Fields                                                     */
-  /* -------------------------------------------------------------------------- */
+  /* ------------------------------------------------------------------------ */
+  /* Display Fields                                                           */
+  /* ------------------------------------------------------------------------ */
   const displayFields = useMemo(() => {
     let appFields = [];
 
@@ -178,40 +209,42 @@ export default function ListView({
     }
 
     setFinalFields(appFields);
-    return appFields.filter((f) => f.displayInList === true);
+
+    return appFields
+      .filter((f) => {
+        if (f.displayInList === false) return false;
+        if (f.displayInList === true) return true;
+        return f.display?.order !== undefined;
+      })
+      .sort((a, b) => (a.display?.order ?? 999) - (b.display?.order ?? 999));
   }, [fields, appConfig, name]);
 
   const keys = displayFields.map((f) => f.field);
 
-  /* -------------------------------------------------------------------------- */
-  /* ✅ Search Filter                                                           */
-  /* -------------------------------------------------------------------------- */
+  /* ------------------------------------------------------------------------ */
+  /* Search                                                                    */
+  /* ------------------------------------------------------------------------ */
   const filteredData = useMemo(() => {
-    if (!keys.length) return normalizedData;
+    if (!search) return normalizedData;
+    const q = search.toLowerCase();
 
     return normalizedData.filter((item) =>
-      keys.some((field) => {
-        const value = item[field];
-        if (Array.isArray(value))
-          return value.some((v) =>
-            String(v.value || v).toLowerCase().includes(search.toLowerCase())
-          );
-        return String(value || '').toLowerCase().includes(search.toLowerCase());
-      })
+      keys.some((k) =>
+        formatValueForList(item[k]).toLowerCase().includes(q)
+      )
     );
   }, [normalizedData, search, keys]);
 
-  /* -------------------------------------------------------------------------- */
-  /* ✅ Alphabetical Grouping                                                   */
-  /* -------------------------------------------------------------------------- */
+  /* ------------------------------------------------------------------------ */
+  /* Grouping                                                                  */
+  /* ------------------------------------------------------------------------ */
   const sections = useMemo(() => {
-    if (!filteredData.length) return [{ title: '', data: [] }];
-    if (!keys.length) return [{ title: '', data: filteredData }];
+    if (!filteredData.length) return [{ title: "", data: [] }];
 
     const grouped = {};
     filteredData.forEach((item) => {
       const primary = getPrimaryText(item);
-      const key = primary?.[0]?.toUpperCase() || '#';
+      const key = primary?.[0]?.toUpperCase() || "#";
       if (!grouped[key]) grouped[key] = [];
       grouped[key].push(item);
     });
@@ -219,139 +252,66 @@ export default function ListView({
     return Object.keys(grouped)
       .sort()
       .map((k) => ({ title: k, data: grouped[k] }));
-  }, [filteredData, keys]);
+  }, [filteredData]);
 
-  /* -------------------------------------------------------------------------- */
-  /* ✅ Delete Action                                                            */
-  /* -------------------------------------------------------------------------- */
-  const handleDelete = (id) => {
-    Alert.alert(
-      'Delete record?',
-      'Are you sure?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteRecord(id, token);
-              setLocalData((prev) => prev.filter((i) => i._id !== id));
-            } catch (err) {
-              console.error('Delete failed', err);
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const renderRightActions = (item) => (
-    <TouchableOpacity
-      style={styles.deleteBtn}
-      onPress={() => handleDelete(item._id)}
-    >
-      <Text style={styles.deleteText}>Delete</Text>
-    </TouchableOpacity>
-  );
-
-  /* -------------------------------------------------------------------------- */
-  /* ✅ 🧠 Smart SubText Builder                                                */
-  /* -------------------------------------------------------------------------- */
+  /* ------------------------------------------------------------------------ */
+  /* SubText Builder (EXCLUDES *name* fields)                                  */
+  /* ------------------------------------------------------------------------ */
   const buildSubText = (item) => {
-    const orderedFields = displayFields
-      .filter((f) => !['firstName', 'lastName'].includes(f.field))
+    const ordered = displayFields
+      .filter(
+        (f) =>
+          !["firstName", "lastName"].includes(f.field) &&
+          !f.field.toLowerCase().includes("name") // 🔥 KEY CHANGE
+      )
       .sort((a, b) => (a.display?.order || 0) - (b.display?.order || 0));
 
     const lines = [];
 
-    for (const field of orderedFields) {
-      const val = item[field.field];
-      if (val === undefined || val === null || val === '') continue;
+    for (const field of ordered) {
+      const raw = item[field.field];
+      if (raw == null || raw === "") continue;
 
-      const label = field.label || field.field;
-
-      // ARRAY
-      if (field.type === 'array') {
-        if (Array.isArray(val) && val.length > 0) {
-          const formattedItems = val.map((entry) => {
-            if (typeof entry !== 'object') {
-              return String(entry);
-            }
-
-            const keys = Object.keys(entry);
-
-            const labelKey =
-              keys.find((k) => k.toLowerCase() === 'label') ||
-              keys.find((k) => k.toLowerCase().includes('label'));
-
-            const valueKey =
-              keys.find((k) => k.toLowerCase() === 'value') ||
-              keys.find((k) => k.toLowerCase().includes('phone')) ||
-              keys.find((k) => k.toLowerCase().includes('email')) ||
-              keys.find((k) => k.toLowerCase().includes('number')) ||
-              keys.find((k) => k.toLowerCase().includes('platform'));
-
-            if (labelKey && valueKey) {
-              return `${entry[labelKey]} • ${entry[valueKey]}`;
-            }
-
-            const parts = keys
-              .map((k) => (entry[k] ? `${entry[k]}` : null))
-              .filter(Boolean);
-
-            return parts.join(' • ');
-          });
-
-          lines.push(formattedItems.join(', '));
-        }
-        continue;
+      const formatted = formatValueForList(raw);
+      if (formatted) {
+        lines.push(`${field.label || field.field}: ${formatted}`);
       }
-
-      // OBJECT
-      if (field.type === 'object' && field.objectConfig && typeof val === 'object') {
-        const parts = field.objectConfig
-          .map((sub) => {
-            const v = val[sub.field];
-            if (!v) return null;
-            return `${sub.label}: ${v}`;
-          })
-          .filter(Boolean);
-
-        if (parts.length) lines.push(`${label}: ${parts.join(', ')}`);
-        continue;
-      }
-
-      // SCALAR
-      lines.push(`${label}: ${String(val)}`);
     }
 
-    return lines.join('\n');
+    return lines.join("\n");
   };
 
-  /* -------------------------------------------------------------------------- */
-  /* ✅ Render Item                                                              */
-  /* -------------------------------------------------------------------------- */
+  /* ------------------------------------------------------------------------ */
+  /* Render Item                                                              */
+  /* ------------------------------------------------------------------------ */
   const renderItem = ({ item }) => {
     const primary = getPrimaryText(item);
     const subText = buildSubText(item);
-
+    const dateLabel = resolveDate(item);
     const avatarUrl = getAvatarUrl(item);
 
-    const initials =
-      primary
-        .split(' ')
-        .map((p) => p[0])
-        .join('')
-        .substring(0, 2)
-        .toUpperCase() || '?';
+    const initials = primary
+      .split(" ")
+      .map((p) => p[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
 
     return (
-      <Swipeable renderRightActions={() => renderRightActions(item)}>
+      <Swipeable
+        renderRightActions={() => (
+          <TouchableOpacity
+            style={styles.deleteBtn}
+            onPress={() => deleteRecord(item._id, token)}
+          >
+            <Text style={styles.deleteText}>Delete</Text>
+          </TouchableOpacity>
+        )}
+      >
         <TouchableOpacity
           style={[styles.card, { backgroundColor: theme.colors.surface }]}
           onPress={() =>
-            navigation.navigate('ListItemDetail', {
+            navigation.navigate("ListItemDetail", {
               item,
               name,
               appConfig,
@@ -360,23 +320,13 @@ export default function ListView({
             })
           }
         >
-          {/* Avatar / Initials */}
+          {/* Avatar */}
           <View style={{ marginRight: 12 }}>
             {avatarUrl ? (
-              <View
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 8,
-                  overflow: 'hidden',
-                  backgroundColor: theme.colors.surfaceVariant,
-                }}
-              >
-                <Image
-                  source={{ uri: avatarUrl }}
-                  style={{ width: '100%', height: '100%', resizeMode: 'cover' }}
-                />
-              </View>
+              <Image
+                source={{ uri: avatarUrl }}
+                style={{ width: 48, height: 48, borderRadius: 8 }}
+              />
             ) : (
               <View
                 style={{
@@ -384,17 +334,11 @@ export default function ListView({
                   height: 48,
                   borderRadius: 8,
                   backgroundColor: theme.colors.primary,
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
-                <Text
-                  style={{
-                    color: theme.colors.onPrimary,
-                    fontSize: 18,
-                    fontWeight: 'bold',
-                  }}
-                >
+                <Text style={{ color: theme.colors.onPrimary, fontWeight: "700" }}>
                   {initials}
                 </Text>
               </View>
@@ -403,6 +347,12 @@ export default function ListView({
 
           {/* Text */}
           <View style={styles.textContainer}>
+            {dateLabel && (
+              <Text style={{ fontSize: 12, color: theme.colors.onSurfaceVariant }}>
+                {dateLabel}
+              </Text>
+            )}
+
             <Text style={[styles.name, { color: theme.colors.onSurface }]}>
               {primary}
             </Text>
@@ -418,58 +368,32 @@ export default function ListView({
     );
   };
 
-  const renderSectionHeader = ({ section: { title } }) => (
-    <View style={styles.sectionHeader}>
-      <Text style={[styles.sectionHeaderText, { color: theme.colors.primary }]}>
-        {title}
-      </Text>
-    </View>
-  );
-
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <TextInput
-        style={[
-          styles.searchInput,
-          {
-            borderColor: theme.colors.primary,
-            backgroundColor: theme.colors.surface,
-            color: theme.colors.onSurface,
-          },
-        ]}
+        style={[styles.searchInput, { borderColor: theme.colors.primary }]}
         placeholder={`Search ${singularize(name)}...`}
-        placeholderTextColor={theme.colors.onSurfaceVariant}
         value={search}
         onChangeText={setSearch}
       />
 
       <SectionList
         sections={sections}
-        keyExtractor={(item, index) => item._id ?? index.toString()}
+        keyExtractor={(item, i) => item._id ?? i.toString()}
         renderItem={renderItem}
-        renderSectionHeader={renderSectionHeader}
-        stickySectionHeadersEnabled
-        contentContainerStyle={{ paddingBottom: 80 }}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={{ color: theme.colors.onSurfaceVariant }}>
-              No {name} found.
-            </Text>
-          </View>
-        }
-        refreshing={refreshing}
-        onRefresh={onRefresh}
+        renderSectionHeader={({ section }) => (
+          <Text style={styles.sectionHeaderText}>{section.title}</Text>
+        )}
       />
 
       <FAB
         icon="plus"
         style={[styles.fab, { backgroundColor: theme.colors.primary }]}
-        color={theme.colors.onPrimary}
         onPress={() =>
-          navigation.navigate('ListItemDetail', {
+          navigation.navigate("ListItemDetail", {
             item: {},
             name,
-            mode: 'add',
+            mode: "add",
             appConfig,
             recordType,
             fields: finalFields,
@@ -481,45 +405,26 @@ export default function ListView({
 }
 
 /* -------------------------------------------------------------------------- */
-/* ✅ Styles                                                                   */
+/* Styles                                                                      */
 /* -------------------------------------------------------------------------- */
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 10 },
-  searchInput: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    marginBottom: 10,
-    fontSize: 16,
-  },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    padding: 14,
-    marginBottom: 8,
-    borderRadius: 14,
-    elevation: 3,
-  },
-  deleteBtn: {
-    backgroundColor: 'red',
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 80,
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  deleteText: { color: 'white', fontWeight: 'bold' },
-  textContainer: { marginLeft: 12, flex: 1 },
-  name: { fontSize: 16, fontWeight: '700', marginBottom: 4 },
+  searchInput: { borderWidth: 1, borderRadius: 10, padding: 10, marginBottom: 10 },
+  card: { flexDirection: "row", padding: 14, borderRadius: 14, marginBottom: 8 },
+  textContainer: { flex: 1 },
+  name: { fontSize: 16, fontWeight: "700" },
   subText: { fontSize: 13, lineHeight: 18 },
-  empty: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 50 },
-  sectionHeader: { paddingBottom: 6, paddingHorizontal: 10, marginTop: 12 },
-  sectionHeaderText: { fontWeight: 'bold', fontSize: 14 },
+  deleteBtn: {
+    backgroundColor: "red",
+    justifyContent: "center",
+    alignItems: "center",
+    width: 80,
+  },
+  deleteText: { color: "white", fontWeight: "bold" },
+  sectionHeaderText: { fontWeight: "700", marginVertical: 6 },
   fab: {
-    position: 'absolute',
+    position: "absolute",
     right: 20,
-    bottom: Platform.OS === 'ios' ? 100 : 20,
-    borderRadius: 30,
+    bottom: Platform.OS === "ios" ? 100 : 20,
   },
 });

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Box, Typography, TextField } from '@mui/material';
 import { useTheme, alpha } from '@mui/material/styles';
 
@@ -12,13 +12,13 @@ export default function SmartTextAreaInput({
   maxRows = 6,
 }) {
   const theme = useTheme();
-
+// useEffect((console.log('item', label, value)),[])
   /** READ MODE */
   if (mode === 'read') {
     return (
       <Box sx={{ my: 1 }}>
-        <Typography variant="subtitle2" color="text.primary">
-          {label}
+<Typography variant="subtitle1" sx={{ color: theme.palette.primary.main, fontWeight: 500 }}>    
+            {label}
         </Typography>
         <Typography
           variant="body2"

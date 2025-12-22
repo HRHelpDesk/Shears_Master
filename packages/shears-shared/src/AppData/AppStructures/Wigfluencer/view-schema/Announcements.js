@@ -9,7 +9,7 @@ export const AnnouncementsAdmin = {
 export const AnnouncementsInfluencer = {
        name: 'Announcements',
     displayName: 'Announcements',
-    component: 'BaseUI/ReadOnly/ListViewReadOnly',
-    mobileComponent:'ListViewReadOnly',
+    component: 'BaseUI/SmartLists/AnnouncementListView',
+    mobileComponent:'AnnouncementListView',
     display:3
 }

@@ -49,7 +49,7 @@ const formatDateDisplay = (val) => {
   if (mode === 'read') {
     return (
       <Box sx={{ my: 1 }}>
-        <Typography variant="subtitle2" color="text.primary">
+     <Typography variant="subtitle1" sx={{ color: theme.palette.primary.main, fontWeight: 500 }}>    
           {label}
         </Typography>
         <Typography
@@ -78,7 +78,7 @@ const formatDateDisplay = (val) => {
   /** EDIT MODE */
   return (
     <Box sx={{ my: 1 }}>
-      <Typography variant="subtitle2" color="text.primary">
+    <Typography variant="subtitle1" sx={{ color: theme.palette.primary.main, fontWeight: 500 }}>    
         {label}
       </Typography>
       <TextField
@@ -145,7 +145,7 @@ export function SmartTimeInput({
   if (mode === 'read') {
     return (
       <Box sx={{ my: 1 }}>
-        <Typography variant="subtitle2" color="text.primary">
+        <Typography variant="subtitle1" sx={{ color: theme.palette.primary.main, fontWeight: 500 }}>    
           {label}
         </Typography>
         <Typography

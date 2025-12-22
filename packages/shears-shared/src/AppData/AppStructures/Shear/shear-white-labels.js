@@ -1,6 +1,8 @@
+
 export const shearWhitelabels = [
   {
     whiteLabel: 'shear',
+    displayName:'The Shear App',
     app: 'shear',
     themeColors: {
   light: {
@@ -75,6 +77,7 @@ export const shearWhitelabels = [
   {
     whiteLabel: 'purpose',
     app: 'purpose',
+    displayName:'Purpose Barbershop',
     themeColors: {
       light: {
         primary: '#000000', // Deep black for brand identity

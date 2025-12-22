@@ -1,9 +1,8 @@
 // ListView.jsx
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from "react";
 import {
   Box,
   TextField,
-  Avatar,
   Paper,
   Table,
   TableBody,
@@ -15,15 +14,17 @@ import {
   InputAdornment,
   Button,
   Grid,
-} from '@mui/material';
-import { Search as SearchIcon, Add as AddIcon } from '@mui/icons-material';
-import { styled } from '@mui/material/styles';
+} from "@mui/material";
+import { Search as SearchIcon, Add as AddIcon } from "@mui/icons-material";
+import { styled } from "@mui/material/styles";
+import { DateTime } from "luxon";
+
 import {
   humanizeFieldName,
   singularize,
-} from 'shears-shared/src/utils/stringHelpers';
-import { mapFields } from 'shears-shared/src/config/fieldMapper';
-import ListItemDetail from './ListItemDetail';
+} from "shears-shared/src/utils/stringHelpers";
+import { mapFields } from "shears-shared/src/config/fieldMapper";
+import ListItemDetail from "./ListItemDetail";
 
 /* ============================================================
    Styled Components
@@ -33,249 +34,245 @@ const TableContainerStyled = styled(Paper)(({ theme }) => ({
   borderRadius: theme.shape.borderRadius,
   boxShadow: theme.shadows[2],
   flex: 1,
-  display: 'flex',
-  flexDirection: 'column',
-  position: 'relative',
+  display: "flex",
+  flexDirection: "column",
 }));
 
 const SearchField = styled(TextField)(({ theme }) => ({
-  width: '100%',
-  maxWidth: '100%',
-  [theme.breakpoints.up('sm')]: { maxWidth: 400 },
+  width: "100%",
+  maxWidth: 400,
 }));
 
 /* ============================================================
-   Avatar Resolver (matches Mobile)
+   Avatar Resolver
 ============================================================ */
 function getAvatarUrl(item) {
   const fd = item?.fieldsData ?? item;
-
   return (
     fd?.avatar?.[0]?.url ||
-    fd?.raw?.avatar?.[0]?.url ||
     fd?.raw?.avatar ||
-    fd?.influencerName?.raw?.avatar || // <-- ADD THIS
+    fd?.influencerName?.raw?.avatar ||
     null
   );
 }
 
-
 /* ============================================================
-   Primary text for initials (matches Mobile)
+   Primary Text Resolver
 ============================================================ */
 function getPrimaryText(item) {
-  if (item.firstName || item.lastName) {
-    return [item.firstName, item.lastName].filter(Boolean).join(' ');
+  const fd = item?.fieldsData ?? item;
+
+  if (fd.firstName || fd.lastName) {
+    return [fd.firstName, fd.lastName].filter(Boolean).join(" ");
   }
 
-  const nameFields = Object.keys(item).filter((k) =>
-    k.toLowerCase().includes('name')
+  const nameField = Object.values(fd).find(
+    (v) => v?.raw?.fullName || v?.raw?.name || v?.name
   );
-  if (nameFields.length) {
-    return nameFields.map((k) => item[k]).filter(Boolean).join(' ');
-  }
-
-  const nested = Object.values(item).find(
-    (v) =>
-      v &&
-      typeof v === 'object' &&
-      !Array.isArray(v) &&
-      (v.name ||
-        (v.raw &&
-          (v.raw.name || v.raw.productName || v.raw.serviceName)))
-  );
-  if (nested) {
-    return (
-      nested.name ||
-      nested.raw?.name ||
-      nested.raw?.productName ||
-      nested.raw?.serviceName ||
-      ''
-    );
-  }
 
   return (
-    item.title ||
-    item.serviceName ||
-    item.description ||
-    item.email ||
-    'Untitled'
+    nameField?.raw?.fullName ||
+    nameField?.raw?.name ||
+    nameField?.name ||
+    fd.title ||
+    fd.email ||
+    "Untitled"
   );
 }
 
 /* ============================================================
-   Field formatter (unchanged)
+   🕒 TIME + TIMEZONE → LOCAL (MATCHES SmartTimeTimeZone)
+============================================================ */
+function formatTimeWithZone(value) {
+  if (!value?.time || !value?.timezone) return "";
+
+  try {
+    const viewerTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const [hour, minute] = value.time.split(":").map(Number);
+
+    return DateTime.fromObject(
+      { hour, minute },
+      { zone: value.timezone }
+    )
+      .setZone(viewerTZ)
+      .toFormat("h:mm a");
+  } catch {
+    return value.time;
+  }
+}
+
+/* ============================================================
+   Smart Field Formatter
 ============================================================ */
 function formatFieldValue(value, field) {
-  if (!value && value !== 0) return '';
+  if (value == null) return "";
 
-  if (Array.isArray(value) && value.length > 0) {
-    const first = value[0];
-    if (first && typeof first === 'object') {
-      const names = value
-        .map((v) => v.name || v.raw?.name || v.raw?.productName || v.raw?.serviceName)
-        .filter(Boolean);
-
-      if (names.length) return names.join(', ');
-
-      return Object.values(first).filter(Boolean).join(' • ');
+  /* ---------- STRING ---------- */
+  if (typeof value === "string") {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      return new Date(`${value}T00:00:00`).toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
     }
-    return String(first);
+
+    if (!isNaN(Date.parse(value))) {
+      return new Date(value).toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    }
+
+    return value;
   }
 
-  if (typeof value === 'object' && value !== null) {
+  /* ---------- ARRAY ---------- */
+  if (Array.isArray(value)) {
+    return value
+      .map(
+        (v) =>
+          v.platform ||
+          v.label ||
+          v.name ||
+          v.raw?.fullName ||
+          v.raw?.name
+      )
+      .filter(Boolean)
+      .join(", ");
+  }
+
+  /* ---------- OBJECT ---------- */
+  if (typeof value === "object") {
+    // 🔥 FINAL FIX: time + timezone
+    if (value.time && value.timezone) {
+      return formatTimeWithZone(value);
+    }
+
     if (value.name) return value.name;
-    if (value.raw?.name) return value.raw.name;
-    if (value.raw?.productName) return value.raw.productName;
-    if (value.raw?.serviceName) return value.raw.serviceName;
-  }
 
-  if (field.type === 'object' && field.objectConfig && typeof value === 'object') {
-    const parts = field.objectConfig
-      .map((sub) => {
-        const val = value?.[sub.field];
-        return val ? `${val} ${sub.label.toLowerCase()}` : null;
-      })
-      .filter(Boolean);
-    return parts.length ? parts.join(' ') : '';
+    if (value.raw) {
+      return (
+        value.raw.fullName ||
+        value.raw.name ||
+        value.raw.productName ||
+        value.raw.serviceName ||
+        ""
+      );
+    }
+
+    if (value.hours || value.minutes) {
+      const h = value.hours
+        ? `${value.hours} hour${value.hours !== "1" ? "s" : ""}`
+        : "";
+      const m = value.minutes
+        ? `${value.minutes} minute${value.minutes !== "1" ? "s" : ""}`
+        : "";
+      return [h, m].filter(Boolean).join(" ");
+    }
+
+    return Object.values(value)
+      .filter((v) => typeof v === "string")
+      .join(" ");
   }
 
   return String(value);
 }
 
 /* ============================================================
+   Sorting Helpers
+============================================================ */
+function getSortValue(item, field, fieldConfig) {
+  const raw = item.fieldsData?.[field] ?? item[field];
+
+  if (fieldConfig?.type === "date" || fieldConfig?.field === "date") {
+    return raw ? new Date(raw).getTime() : 0;
+  }
+
+  const formatted = formatFieldValue(raw, fieldConfig);
+  return formatted?.toLowerCase?.() ?? formatted;
+}
+
+function compare(a, b, order) {
+  if (a === b) return 0;
+  if (a == null) return 1;
+  if (b == null) return -1;
+  return (a < b ? -1 : 1) * (order === "asc" ? 1 : -1);
+}
+
+/* ============================================================
    MAIN COMPONENT
 ============================================================ */
 export default function ListView({
-  data,
+  data = [],
   fields,
-  name = 'Item',
-  displayName= 'Item',
+  name = "Item",
+  displayName = "Item",
   recordType,
   appConfig,
   refreshing,
   onRefresh,
 }) {
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState(null);
-  const [sortOrder, setSortOrder] = useState('asc');
+  const [sortOrder, setSortOrder] = useState("asc");
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerMode, setDrawerMode] = useState('read');
+  const [drawerMode, setDrawerMode] = useState("read");
   const [selectedItem, setSelectedItem] = useState(null);
 
-  const matchedRoute =
-    appConfig?.mainNavigation?.find(
-      (r) =>
-        r.name?.toLowerCase() === name?.toLowerCase() ||
-        r.displayName?.toLowerCase() === name?.toLowerCase()
-    ) || {};
+  const rawFields = useMemo(() => {
+    if (Array.isArray(fields)) return fields;
+    if (fields && typeof fields === "object") return Object.values(fields);
+    return (
+      appConfig?.mainNavigation?.find(
+        (r) => r.name?.toLowerCase() === name.toLowerCase()
+      )?.fields || []
+    );
+  }, [fields, appConfig, name]);
 
-    console.log('Matched Route:', matchedRoute);
+  const mappedFields = mapFields(rawFields);
 
-  const mappedFields = mapFields(
-    fields?.length ? fields : matchedRoute.fields || []
-  );
-  console.log('Mapped Fields:', mappedFields);  
+  const displayFields = useMemo(() => {
+    return mappedFields
+      .filter((f) => f.displayInList !== false)
+      .sort(
+        (a, b) =>
+          (a.display?.order ?? 999) - (b.display?.order ?? 999)
+      );
+  }, [mappedFields]);
 
-  const resolvedData = Array.isArray(data) ? data : [];
-
- const displayFields = useMemo(() => {
-  return mappedFields.filter((field) => {
-    // If explicitly set to false → hide
-    if (field.displayInList === false) return false;
-
-    // If explicitly set to true → show
-    if (field.displayInList === true) return true;
-
-    // Otherwise → follow mobile rules:
-    // Show only if field.display?.order exists
-    return field.display?.order !== undefined;
-  });
-}, [mappedFields]);
-  console.log('Display Fields:', displayFields);
-
-  /* ------------------------------------------------------------
-     Sort
-  ------------------------------------------------------------ */
-  const handleSort = (fieldKey) => {
-    if (sortField === fieldKey) {
-      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortField(fieldKey);
-      setSortOrder('asc');
-    }
-  };
-
-  /* ------------------------------------------------------------
-     Search + Sort
-  ------------------------------------------------------------ */
   const filteredData = useMemo(() => {
-    if (!Array.isArray(resolvedData)) return [];
-
-    let filtered = resolvedData.filter((item) =>
+    let rows = data.filter((item) =>
       displayFields.some((field) => {
-        const raw = item.fieldsData?.[field.field] ?? '';
-        const txt = Array.isArray(raw)
-          ? raw.map((v) => v.value ?? '').join(' ')
-          : String(raw);
-        return txt.toLowerCase().includes(search.toLowerCase());
+        const raw = item.fieldsData?.[field.field] ?? item[field.field];
+        return formatFieldValue(raw, field)
+          .toLowerCase()
+          .includes(search.toLowerCase());
       })
     );
 
     if (sortField) {
       const fieldConfig = displayFields.find((f) => f.field === sortField);
-      filtered = [...filtered].sort((a, b) => {
-        const aVal = a.fieldsData?.[sortField] ?? '';
-        const bVal = b.fieldsData?.[sortField] ?? '';
-        const aStr = formatFieldValue(aVal, fieldConfig);
-        const bStr = formatFieldValue(bVal, fieldConfig);
-        return aStr.localeCompare(bStr) * (sortOrder === 'asc' ? 1 : -1);
-      });
+      rows = [...rows].sort((a, b) =>
+        compare(
+          getSortValue(a, sortField, fieldConfig),
+          getSortValue(b, sortField, fieldConfig),
+          sortOrder
+        )
+      );
     }
 
-    return filtered;
-  }, [search, resolvedData, displayFields, sortField, sortOrder]);
+    return rows;
+  }, [data, displayFields, search, sortField, sortOrder]);
 
-  /* ------------------------------------------------------------
-     Drawer
-  ------------------------------------------------------------ */
-  const handleAddClick = () => {
-    setSelectedItem(null);
-    setDrawerMode('add');
-    setDrawerOpen(true);
-  };
-
-  const handleRowClick = (item) => {
-    setSelectedItem(item);
-    setDrawerMode('read');
-    setDrawerOpen(true);
-  };
-
-  /* ------------------------------------------------------------
-     Render
-  ------------------------------------------------------------ */
   return (
-    <TableContainerStyled
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: 'calc(100vh - 200px)',
-        overflow: 'hidden',
-      }}
-    >
+    <TableContainerStyled>
       {/* Header */}
-      <Grid
-        container
-        spacing={2}
-        alignItems="center"
-        justifyContent="space-between"
-        sx={{ mb: 2, flexShrink: 0 }}
-      >
-        <Grid size={{ xs: 12, sm: 8, md: 9 }}>
+      <Grid container spacing={2} sx={{ mb: 2 }}>
+        <Grid item xs={12} sm={8}>
           <SearchField
-            fullWidth
             size="small"
-            variant="outlined"
             placeholder={`Search ${displayName}...`}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -289,14 +286,17 @@ export default function ListView({
           />
         </Grid>
 
-        <Grid size={{ xs: 12, sm: 4, md: 'auto' }}>
+        <Grid item xs={12} sm={4}>
           <Button
             fullWidth
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={handleAddClick}
+            onClick={() => {
+              setSelectedItem(null);
+              setDrawerMode("add");
+              setDrawerOpen(true);
+            }}
             disabled={refreshing}
-            sx={{ height: '40px', whiteSpace: 'nowrap' }}
           >
             {singularize(displayName)}
           </Button>
@@ -304,17 +304,24 @@ export default function ListView({
       </Grid>
 
       {/* Table */}
-      <Box sx={{ flex: 1, overflowY: 'auto' }}>
+      <Box sx={{ flex: 1, overflowY: "auto" }}>
         <Table stickyHeader>
           <TableHead>
             <TableRow>
-              <TableCell /> {/* Avatar */}
+              <TableCell />
               {displayFields.map((field) => (
                 <TableCell key={field.field}>
                   <TableSortLabel
                     active={sortField === field.field}
-                    direction={sortField === field.field ? sortOrder : 'asc'}
-                    onClick={() => handleSort(field.field)}
+                    direction={sortOrder}
+                    onClick={() => {
+                      setSortField(field.field);
+                      setSortOrder(
+                        sortField === field.field && sortOrder === "asc"
+                          ? "desc"
+                          : "asc"
+                      );
+                    }}
                   >
                     <b>{humanizeFieldName(field.label || field.field)}</b>
                   </TableSortLabel>
@@ -325,60 +332,50 @@ export default function ListView({
 
           <TableBody>
             {filteredData.map((item, idx) => {
-              const primaryText = getPrimaryText(item.fieldsData ?? item);
-              const initials =
-                (primaryText || 'U')
-                  .split(' ')
-                  .map((p) => p[0])
-                  .join('')
-                  .substring(0, 2)
-                  .toUpperCase();
+              const primary = getPrimaryText(item);
+              const initials = primary
+                .split(" ")
+                .map((p) => p[0])
+                .join("")
+                .slice(0, 2)
+                .toUpperCase();
 
-              const avatarUrl = getAvatarUrl(item);
+              const avatar = getAvatarUrl(item);
 
               return (
                 <TableRow
-                  key={item._id?.toString() ?? idx}
+                  key={item._id ?? idx}
                   hover
-                  sx={{ cursor: 'pointer' }}
-                  onClick={() => handleRowClick(item)}
+                  onClick={() => {
+                    setSelectedItem(item);
+                    setDrawerMode("read");
+                    setDrawerOpen(true);
+                  }}
                 >
-                  {/* Avatar Cell */}
-                  <TableCell sx={{ py: 1 }}>
-                    {avatarUrl ? (
-                      <Box
-                        sx={{
+                  <TableCell>
+                    {avatar ? (
+                      <img
+                        src={avatar}
+                        alt={initials}
+                        style={{
                           width: 40,
                           height: 40,
-                          borderRadius: 1, // square
-                          overflow: 'hidden',
-                          bgcolor: 'action.hover',
+                          borderRadius: 4,
+                          objectFit: "cover",
                         }}
-                      >
-                        <img
-                          src={avatarUrl}
-                          alt={initials}
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover',
-                            display: 'block',
-                          }}
-                        />
-                      </Box>
+                      />
                     ) : (
                       <Box
                         sx={{
                           width: 40,
                           height: 40,
+                          bgcolor: "primary.main",
+                          color: "primary.contrastText",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
                           borderRadius: 1,
-                          bgcolor: 'primary.main',
-                          color: 'primary.contrastText',
                           fontWeight: 700,
-                          fontSize: 16,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
                         }}
                       >
                         {initials}
@@ -386,16 +383,15 @@ export default function ListView({
                     )}
                   </TableCell>
 
-                  {/* Data Fields */}
-                  {displayFields.map((field) => {
-                    const rawValue = item.fieldsData?.[field.field] ?? '';
-                    const displayValue = formatFieldValue(rawValue, field);
-                    return (
-                      <TableCell key={field.field}>
-                        {displayValue}
-                      </TableCell>
-                    );
-                  })}
+                  {displayFields.map((field) => (
+                    <TableCell key={field.field}>
+                      {formatFieldValue(
+                        item.fieldsData?.[field.field] ??
+                          item[field.field],
+                        field
+                      )}
+                    </TableCell>
+                  ))}
                 </TableRow>
               );
             })}
@@ -407,10 +403,10 @@ export default function ListView({
       {drawerOpen && (
         <ListItemDetail
           open={drawerOpen}
-          recordType={recordType || name?.toLowerCase()}
+          recordType={recordType || name.toLowerCase()}
           onClose={() => {
             setDrawerOpen(false);
-            if (onRefresh) onRefresh();
+            onRefresh?.();
           }}
           item={selectedItem}
           appConfig={appConfig}

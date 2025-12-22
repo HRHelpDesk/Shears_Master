@@ -77,7 +77,9 @@ function RenderFieldReadOnly({ fieldDef, item, theme, parentPath = "" }) {
   const path = parentPath ? `${parentPath}.${fieldDef.field}` : fieldDef.field;
 
   const getValue = (src, path) =>
-    path.split(".").reduce((acc, key) => acc?.[key], src) ?? "";
+    path.replace(/\[(\d+)\]/g, ".$1")
+      .split(".")
+      .reduce((acc, key) => acc?.[key], src) ?? "";
 
   const value = getValue(item, path);
 
@@ -95,10 +97,11 @@ function RenderFieldReadOnly({ fieldDef, item, theme, parentPath = "" }) {
         <Text style={[styles.label, { color: theme.colors.primary }]}>
           {fieldDef.label}
         </Text>
+
         {value.length === 0 ? (
           <Text style={styles.emptyText}>No entries</Text>
         ) : (
-          value.map((entry, i) => (
+          value.map((_, i) => (
             <View
               key={i}
               style={[styles.arrayItem, { borderColor: theme.colors.outline }]}
@@ -125,6 +128,7 @@ function RenderFieldReadOnly({ fieldDef, item, theme, parentPath = "" }) {
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   overlay: {
