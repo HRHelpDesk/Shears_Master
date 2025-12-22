@@ -2,6 +2,9 @@
 import ListView from '../../components/BaseUI/ListView'
 import ListViewReadOnly from '../../components/BaseUI/ReadOnly/ListViewReadOnly'
 import AdminListView from '../../components/BaseUI/SmartLists/AdminListView'
+import AnnouncementListView from '../../components/BaseUI/SmartLists/AnnouncementListView'
+
+import CardListView from '../../components/BaseUI/SmartLists/CardListView'
 
 import CalendarView from '../../components/Calendar/CalendarView';
 import CalendarListView from '../../components/Calendar/CalendarListView';
@@ -29,7 +32,9 @@ const COMPONENTS = {
   TransactionsListView,
   CalendarHourlyView,
   ListViewReadOnly,
-  AdminListView
+  AdminListView,
+  CardListView,
+  AnnouncementListView
 };
 
 export default COMPONENTS;

@@ -2,8 +2,11 @@
 import React, { useState, useEffect } from "react";
 import {
   View,
+  ScrollView,
   TouchableOpacity,
   StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import {
   Text,
@@ -59,11 +62,12 @@ export default function SmartTimeTimeZone({
 
   const [visible, setVisible] = useState(false);
 
-  const navState = useNavigationState((s) => s);
-  const insideModal = navState?.routes?.some((r) =>
-    String(r?.name || "").toLowerCase().includes("modal")
+  // Detect if we're already in a modal (matches DialogSelectInput)
+  const navigationState = useNavigationState((state) => state);
+  const insideModalScreen = navigationState?.routes?.some(
+    (r) => r?.params?.presentation === 'modal' || r?.name?.toLowerCase().includes('modal')
   );
-  const shouldUseModal = insideModal;
+  const shouldUseModal = insideModalScreen;
 
   /* ------------------------------------------------------------
      ⏱ Apply default timezone if provided
@@ -96,17 +100,24 @@ export default function SmartTimeTimeZone({
 
     return (
       <View style={styles.readContainer}>
-        <Text style={[styles.label, { color: theme.colors.primary }]}>
+        <Text
+          variant="titleMedium"
+          style={[styles.label, { color: theme.colors.primary }]}
+        >
           {label}
         </Text>
 
-        <Text style={styles.readValue}>
+        <Text variant="bodyLarge" style={[styles.readValue, { color: theme.colors.text }]}>
           {converted || "Not set"}{" "}
-          <Text style={styles.caption}>(Your local time)</Text>
+          <Text style={[styles.caption, { color: theme.colors.textSecondary }]}>
+            (Your local time)
+          </Text>
         </Text>
 
         {time && (
-          <Text style={styles.caption}>Original timezone: {timezone}</Text>
+          <Text style={[styles.caption, { color: theme.colors.textSecondary }]}>
+            Original timezone: {timezone}
+          </Text>
         )}
       </View>
     );
@@ -117,7 +128,7 @@ export default function SmartTimeTimeZone({
 ------------------------------------------------------------ */
   const borderColor = visible
     ? theme.colors.primary
-    : theme.colors.outlineVariant;
+    : theme.colors.outlineVariant || theme.colors.border;
 
   const SelectorField = (
     <TouchableOpacity onPress={() => setVisible(true)} activeOpacity={0.8}>
@@ -144,6 +155,29 @@ export default function SmartTimeTimeZone({
     </TouchableOpacity>
   );
 
+  const SelectionContent = (
+    <ScrollView
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={{ paddingBottom: 12 }}
+      style={{ maxHeight: 320 }}
+    >
+      {US_TIMEZONES.map((tz) => (
+        <List.Item
+          key={tz.value}
+          title={tz.label}
+          onPress={() => {
+            update("timezone", tz.value);
+            setVisible(false);
+          }}
+          style={{
+            borderBottomWidth: 0.4,
+            borderBottomColor: theme.colors.outlineVariant,
+          }}
+        />
+      ))}
+    </ScrollView>
+  );
+
   return (
     <View style={styles.editContainer}>
       <Text variant="labelMedium" style={styles.label}>
@@ -165,46 +199,40 @@ export default function SmartTimeTimeZone({
           <Modal
             visible={visible}
             onDismiss={() => setVisible(false)}
-            contentContainerStyle={styles.modalContainer}
+            contentContainerStyle={[
+              styles.modalContainer,
+              { backgroundColor: theme.colors.background },
+            ]}
           >
             <Card>
               <Card.Title title="Select Timezone" />
-              <Card.Content>
-                {US_TIMEZONES.map((tz) => (
-                  <List.Item
-                    key={tz.value}
-                    title={tz.label}
-                    onPress={() => {
-                      update("timezone", tz.value);
-                      setVisible(false);
-                    }}
-                  />
-                ))}
-              </Card.Content>
-              <Card.Actions>
+              <Card.Content>{SelectionContent}</Card.Content>
+              <Card.Actions style={{ justifyContent: 'flex-end' }}>
                 <Button onPress={() => setVisible(false)}>Cancel</Button>
               </Card.Actions>
             </Card>
           </Modal>
         ) : (
-          <Dialog visible={visible} onDismiss={() => setVisible(false)}>
-            <Dialog.Title>Select Timezone</Dialog.Title>
-            <Dialog.Content>
-              {US_TIMEZONES.map((tz) => (
-                <List.Item
-                  key={tz.value}
-                  title={tz.label}
-                  onPress={() => {
-                    update("timezone", tz.value);
-                    setVisible(false);
-                  }}
-                />
-              ))}
-            </Dialog.Content>
-            <Dialog.Actions>
-              <Button onPress={() => setVisible(false)}>Cancel</Button>
-            </Dialog.Actions>
-          </Dialog>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+          >
+            <Dialog
+              visible={visible}
+              onDismiss={() => setVisible(false)}
+              style={[
+                styles.dialogContainer,
+                { backgroundColor: theme.colors.background },
+              ]}
+            >
+              <Dialog.Title>Select Timezone</Dialog.Title>
+              <Dialog.Content>{SelectionContent}</Dialog.Content>
+              <Dialog.Actions>
+                <Button onPress={() => setVisible(false)}>Cancel</Button>
+              </Dialog.Actions>
+            </Dialog>
+          </KeyboardAvoidingView>
         )}
       </Portal>
     </View>
@@ -212,22 +240,52 @@ export default function SmartTimeTimeZone({
 }
 
 const styles = StyleSheet.create({
-  readContainer: { marginBottom: 16 },
-  label: { fontWeight: "600", marginBottom: 8 },
-  readValue: { fontSize: 16, color: "#333" },
-  caption: { fontSize: 12, color: "#666", marginTop: 4 },
-  editContainer: { marginBottom: 16 },
+  // READ MODE
+  readContainer: { 
+    marginBottom: 4 
+  },
+  label: { 
+    fontWeight: "500", 
+    marginBottom: 4 
+  },
+  readValue: { 
+    lineHeight: 22 
+  },
+  caption: { 
+    fontSize: 12, 
+    marginTop: 4 
+  },
+  
+  // EDIT MODE
+  editContainer: { 
+    marginBottom: 12 
+  },
   selectorContainer: {
     borderRadius: 8,
     borderWidth: 1,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 10,
     marginTop: 12,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  selectorText: { fontSize: 16 },
-  dropdownIcon: { fontSize: 20, color: "#999" },
-  modalContainer: { margin: 32, backgroundColor: "white", borderRadius: 8 },
+  selectorText: { 
+    fontSize: 16,
+    fontFamily: 'System',
+  },
+  dropdownIcon: { 
+    fontSize: 18, 
+    color: "#999",
+    marginLeft: 6,
+  },
+  modalContainer: {
+    margin: 24,
+    borderRadius: 8,
+    elevation: 6,
+    padding: 16,
+  },
+  dialogContainer: {
+    borderRadius: 8,
+  },
 });

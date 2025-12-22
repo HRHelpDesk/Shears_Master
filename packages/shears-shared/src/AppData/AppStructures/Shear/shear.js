@@ -11,6 +11,7 @@ export const Shear = [
   {
     appName: 'shear',
     whiteLabels: shearWhitelabels,
+    displayName: 'The Shear App',
     defaultWhiteLabel: 'shear',
     user: shearUser,
 

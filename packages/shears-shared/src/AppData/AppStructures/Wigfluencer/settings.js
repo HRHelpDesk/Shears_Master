@@ -1,11 +1,12 @@
-//import { SlotRulesView } from "../../view-schema/slot-rules-view";
-
 import { Users } from "../../view-schema/user-view";
 import { AnnouncementsAdmin } from "./view-schema/Announcements";
 import { SalesCouponsView } from "./view-schema/SalesCoupons";
 
 export const InfluencerSettings = [
- 
+  
+  /* ----------------------------------------------------------
+     👥 USERS / INFLUENCER MANAGEMENT
+  ---------------------------------------------------------- */
   {
     name: 'Users',
     displayName: 'Add Influencers',
@@ -14,202 +15,200 @@ export const InfluencerSettings = [
     icon: { ios: 'people', android: 'account-group', web: 'fa fa-users' },
     views: [Users],
     fields: [
-        {
-      field: 'name', // refers to base field in SharedNameFields
-      override: {
-        field: 'firstName', // ← This changes the actual output key
+      {
+        field: 'firstName',
         label: 'First Name',
-        display: { placeholder: "Enter User's First Name", order: 1 },
+        type: 'string',
+        input: 'text',
         required: true,
         validations: {
           minLength: 2,
           maxLength: 50,
         },
+        display: { 
+          placeholder: "Enter User's First Name", 
+          order: 1 
+        }
       },
-    },
-    
-    {
-      field: 'name', // refers to base field in SharedNameFields
-      override: {
-        field: 'lastName', // ← This changes the actual output key
+      {
+        field: 'lastName',
         label: 'Last Name',
-        display: { placeholder: "Enter User's Last Name", order: 1 },
+        type: 'string',
+        input: 'text',
         required: true,
         validations: {
           minLength: 2,
           maxLength: 50,
         },
+        display: { 
+          placeholder: "Enter User's Last Name", 
+          order: 2 
+        }
       },
-    },
-  
-       {
-      field: 'name', // refers to base field in SharedNameFields
-      override: {
-        field: 'email', // ← This changes the actual output key
+      {
+        field: 'email',
         label: 'Email Address',
-        display: { placeholder: 'Enter the Brand Name', order: 1 },
+        type: 'string',
+        input: 'text',
         required: true,
         validations: {
           minLength: 2,
-          maxLength: 50,
+          maxLength: 100,
+          pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
         },
+        display: { 
+          placeholder: 'Enter Email Address', 
+          order: 3 
+        }
       },
-    },
-        {
-      field: 'name', // refers to base field in SharedNameFields
-      override: {
-        field: 'socialHandle', // ← This changes the actual output key
+      {
+        field: 'socialHandle',
         label: 'Social Media Handle',
-        display: { placeholder: 'Enter Social Media Handle', order: 1 },
+        type: 'string',
+        input: 'text',
         required: true,
         validations: {
           minLength: 2,
           maxLength: 50,
         },
+        display: { 
+          placeholder: 'Enter Social Media Handle (e.g., @username)', 
+          order: 4 
+        }
       },
-    },
-    {
-        field: 'category',
-        override: {
-          field:'role',
-          label: 'User Role',
-          inputConfig: {
-  
-            options: ['admin', 'influencer'],
-          },
-          display: { order: 3 },
+      {
+        field: 'role',
+        label: 'User Role',
+        type: 'string',
+        input: 'select',
+        required: true,
+        inputConfig: {
+          options: ['admin', 'influencer']
         },
-      },
-    ],
+        display: { order: 5 }
+      }
+    ]
   },
 
+  /* ----------------------------------------------------------
+     📢 ANNOUNCEMENTS
+  ---------------------------------------------------------- */
   {
-      name: "Announcements",
-      permissions: ["admin"],
-      recordType: "announcements",
-      displayName: "Add Announcements",
-      icon: { ios: "megaphone.fill", android: "bullhorn", web: "fa fa-bullhorn" },
-      views: [AnnouncementsAdmin],
-      fields: [
-        {
-          field: "name",
-          override: {
-            field: "annnouncementName",
-            label: "Title",
-            required: true,
-            display: { order: 1 }
-          }
-        },
-                {
-          field: "userSelect",
-          override: {
-            field: "user",
-            label: "User",
-            input: "userSelect",
-            required: true,
-            display: { order: 1 }
-          }
-        },
-        
-        {
-          field: "description",
-          override: {
-            label: "Message",
-            multiline: true,
-            required: true,
-            display: { order: 2 }
-          }
-        },
-        {
-          field: 'image',
-          override: {
-            field: 'announcementImage',
-            displayInList: false,
-            label: 'Announcement Images',
-            display: { order: 11 },
-          },
-        },
-        {
-          field: "video",
-          override: {
-            field: "videoUrl",
-            type: "string",
-            input: "video",
-            label: "Video URL",
-            display: { order: 3 }
-          }
-        }
-      ]
-    },
-    {
-  name: "SalesCoupons",
-  permissions: ["admin"],
-  recordType: "salescoupons",
-  displayName: "Sales & Coupons",
-  icon: { ios: "tag.fill", android: "tag", web: "fa fa-tags" },
-  views: [SalesCouponsView], // You can attach a dedicated view later
-  fields: [
-    {
-      field: "name",
-      override: {
+    name: "Announcements",
+    permissions: ["admin"],
+    recordType: "announcements",
+    displayName: "Add Announcements",
+    icon: { ios: "megaphone.fill", android: "bullhorn", web: "fa fa-bullhorn" },
+    views: [AnnouncementsAdmin],
+    fields: [
+  {
+  field: "title",
+  override: {
+    field: "announcementName",
+    label: "Title",
+    displayInList:true,
+  },
+  input: "text",
+},
+
+    
+ {
+  field: "description",
+  override: {
+    field:'message',
+    label: "Message",
+  },
+  input: "textarea",
+},
+{
+    field: "date",
+    label: "Date",
+    type: "string",
+    input: "date",
+    required: true,
+    arrayConfig: { minItems: 1 },
+    display: { order: 1 }
+  },
+   {
+  field: "image",
+  override: {
+    field: "announcementImage",
+    label: "Announcement Images",
+    displayInList:false,
+  },
+  input: "image",
+},
+  {
+  field: "video",
+  override: {
+    field: "videoUrl",
+    label: "Video URL",
+  },
+  input: "video",
+}
+    ]
+  },
+
+  /* ----------------------------------------------------------
+     🏷️ SALES & COUPONS
+  ---------------------------------------------------------- */
+  {
+    name: "SalesCoupons",
+    permissions: ["admin"],
+    recordType: "salescoupons",
+    displayName: "Sales & Coupons",
+    icon: { ios: "tag.fill", android: "tag", web: "fa fa-tags" },
+    views: [SalesCouponsView],
+    fields: [
+      {
         field: "saleName",
         label: "Title",
+        type: "string",
+        input: "text",
         placeholder: "e.g., Flash Sale, Holiday Special",
         required: true,
-        display: { order: 1 },
+        display: { order: 1 }
       },
-    },
-
-    {
-      field: "description",
-      override: {
+      {
+        field: "description",
         label: "Description",
+        type: "string",
+        input: "textarea",
         multiline: true,
         placeholder: "Describe the sale or promotion",
         required: false,
-        display: { order: 2 },
+        display: { order: 2 }
       },
-    },
-
-    {
-      field: "name",
-      override: {
+      {
         field: "code",
         label: "Coupon Code",
+        type: "string",
+        input: "text",
         placeholder: "Enter coupon or promo code",
         required: false,
-        display: { order: 3 },
+        display: { order: 3 }
       },
-    },
-
-    {
-      field: "price",
-      override: {
+      {
         field: "saleAmount",
         label: "Sale Amount (Currency)",
+        type: "number",
         input: "currency",
         required: false,
-        display: { order: 4 },
+        display: { order: 4 }
       },
-    },
-
-    {
-      field: "number",
-      override: {
+      {
         field: "percentage",
         label: "Discount Percentage",
+        type: "number",
         input: "number",
         placeholder: "0–100",
         required: false,
         validations: {
           min: 0,
-          max: 100,
+          max: 100
         },
-        display: { order: 5 },
-      },
-    },
-  ],
-},
-
-
+        display: { order: 5 }
+      }
+    ]
+  }
 ];

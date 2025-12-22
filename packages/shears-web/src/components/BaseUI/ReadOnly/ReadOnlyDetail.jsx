@@ -1,11 +1,11 @@
-// src/components/ReadOnlyDetail.jsx
+// src/components/ReadOnly/ReadOnlyDetail.jsx
 import React, { useMemo } from "react";
 import {
   Modal,
   Box,
   Typography,
   Divider,
-  IconButton
+  IconButton,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { useTheme } from "@mui/material/styles";
@@ -14,16 +14,24 @@ import SubtitleText from "../../UI/SubtitleText";
 import { FieldMap } from "../../../config/component-mapping/FieldMap";
 
 /* ============================================================
-   Utility — Safe deep getter
+   Utility — Safe deep getter (FIXED)
 ============================================================ */
 const getValue = (source, path) => {
   if (!source || !path) return "";
+
+  // ✅ CRITICAL FIX
+  const base = source.fieldsData ?? source;
   const normalized = path.replace(/\[(\d+)\]/g, ".$1");
-  return normalized.split(".").reduce((acc, key) => acc?.[key], source) ?? "";
+
+  return (
+    normalized
+      .split(".")
+      .reduce((acc, key) => acc?.[key], base) ?? ""
+  );
 };
 
 /* ============================================================
-   RenderField — same as ListItemDetail but READ ONLY
+   RenderField — READ ONLY
 ============================================================ */
 function RenderReadOnlyField({ fieldDef, item, theme, parentPath = "" }) {
   const inputType = fieldDef.input || fieldDef.type || "text";
@@ -38,7 +46,7 @@ function RenderReadOnlyField({ fieldDef, item, theme, parentPath = "" }) {
 
   const value = getValue(item, fieldPath);
 
-  /* IMAGE FIELD ---------------------------- */
+  /* IMAGE FIELD */
   if (inputType === "image") {
     return (
       <Box sx={{ mb: 2 }}>
@@ -52,7 +60,7 @@ function RenderReadOnlyField({ fieldDef, item, theme, parentPath = "" }) {
     );
   }
 
-  /* ARRAY FIELD ---------------------------- */
+  /* ARRAY FIELD */
   if (Array.isArray(value)) {
     return (
       <Box sx={{ mb: 3 }}>
@@ -65,7 +73,7 @@ function RenderReadOnlyField({ fieldDef, item, theme, parentPath = "" }) {
             No entries
           </Typography>
         ) : (
-          value.map((entry, idx) => (
+          value.map((_, idx) => (
             <Box
               key={`${fieldPath}[${idx}]`}
               sx={{
@@ -84,7 +92,6 @@ function RenderReadOnlyField({ fieldDef, item, theme, parentPath = "" }) {
                 {fieldDef.label} #{idx + 1}
               </Typography>
 
-              {/* Nested array object fields */}
               {nestedFields.map((nf) => (
                 <RenderReadOnlyField
                   key={nf.field}
@@ -101,7 +108,7 @@ function RenderReadOnlyField({ fieldDef, item, theme, parentPath = "" }) {
     );
   }
 
-  /* OBJECT FIELD ---------------------------- */
+  /* OBJECT FIELD */
   if (
     value &&
     typeof value === "object" &&
@@ -140,7 +147,7 @@ function RenderReadOnlyField({ fieldDef, item, theme, parentPath = "" }) {
     );
   }
 
-  /* BASIC FIELD ---------------------------- */
+  /* BASIC FIELD */
   return (
     <Box sx={{ mb: 2 }}>
       <FieldComponent
@@ -153,18 +160,30 @@ function RenderReadOnlyField({ fieldDef, item, theme, parentPath = "" }) {
 }
 
 /* ============================================================
-   MAIN READ-ONLY DETAIL MODAL
+   MAIN MODAL
 ============================================================ */
 export default function ReadOnlyDetail({ open, onClose, item, fields, name }) {
   const theme = useTheme();
 
   const title = useMemo(() => {
-    return (
-      item?.name ||
-      item?.title ||
-      `${item?.firstName || ""} ${item?.lastName || ""}`.trim() ||
-      "Details"
+    if (!item || typeof item !== "object") return "Details";
+
+    const source = item.fieldsData ?? item;
+
+    const nameKey = Object.keys(source).find(
+      (key) =>
+        key.toLowerCase().includes("name") &&
+        typeof source[key] === "string" &&
+        source[key].trim().length > 0
     );
+
+    if (nameKey) return source[nameKey];
+    if (source.title) return source.title;
+
+    const fullName = `${source.firstName || ""} ${source.lastName || ""}`.trim();
+    if (fullName) return fullName;
+
+    return "Details";
   }, [item]);
 
   return (
@@ -185,7 +204,6 @@ export default function ReadOnlyDetail({ open, onClose, item, fields, name }) {
           flexDirection: "column",
         }}
       >
-        {/* HEADER */}
         <Box
           sx={{
             p: 3,
@@ -207,7 +225,6 @@ export default function ReadOnlyDetail({ open, onClose, item, fields, name }) {
           </IconButton>
         </Box>
 
-        {/* CONTENT */}
         <Box sx={{ flex: 1, overflowY: "auto", p: 3 }}>
           {fields.map((field, idx) => (
             <React.Fragment key={field.field}>

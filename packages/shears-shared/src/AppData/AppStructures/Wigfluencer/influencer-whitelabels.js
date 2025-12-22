@@ -1,7 +1,9 @@
+
 export const influencerWhitelabels = [
   {
     whiteLabel: "influencerapp",
     app: "influencerapp",
+    displayName:'Boss Crowns Influencer App',
     themeColors: {
       light: {
         primary: "#8A51F5",
