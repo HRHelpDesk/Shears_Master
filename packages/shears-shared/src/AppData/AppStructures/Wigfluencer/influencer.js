@@ -9,6 +9,7 @@ import { AdminDashboardView, InfluencerDashboardView } from "../../view-schema/d
 import { AnnouncementsInfluencer } from "./view-schema/Announcements";
 import { RequestsAdminView, RequestsInfluencerView } from "./view-schema/Requests";
 import { NotificationsView } from "./view-schema/Notifications";
+import { CalendarScreen } from "./view-schema/Calendar";
 
 /* -------------------------------------------------------------------
    📋 SHARED FIELD DEFINITIONS
@@ -138,8 +139,15 @@ export const InfluencerApp = [
         displayName: "Calendar",
         recordType: "calendar",
         icon: { ios: "calendar", android: "calendar-month", web: "fa fa-calendar" },
-        views: [CalendarMonthView, CalendarToday],
+        views: [CalendarScreen, CalendarToday],
         fields: [
+            {
+          field: "influencerName",
+          label: "Influencer",
+          input: "autoUser",
+          required: true,
+          display: { order: 1 }
+        },
           {
             field: "date",
             label: "Date",
@@ -159,17 +167,28 @@ export const InfluencerApp = [
             display: { order: 2 }
           },
           {
-            field: "assignedInfluencer",
-            label: "Assigned Influencer",
-            type: "object",
-            input: "linkSelect",
-            inputConfig: {
-              recordType: "users",
-              searchField: "firstName",
-              filter: { role: "influencer" }
-            },
-            display: { order: 3 }
-          },
+          field: "platforms",
+          label: "Social Media Platform(s)",
+          type: "array",
+          input: "array",
+          required: true,
+          display: { order: 4 },
+          arrayConfig: {
+            minItems: 1,
+            object: [
+              {
+                field: "platform",
+                type: "string",
+                label: "Platform",
+                input: "select",
+                inputConfig: {
+                  options: ["Instagram", "TikTok", "Facebook", "YouTube"]
+                }
+              }
+            ]
+          }
+        },
+        
           {
             field: "discountCode",
             label: "Discount Code",

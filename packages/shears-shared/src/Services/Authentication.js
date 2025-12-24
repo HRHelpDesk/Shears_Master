@@ -579,13 +579,13 @@ export function buildCalendarAndNotification(request, user, notify = true) {
   // ------------------------------
   const calendarRecord = {
     date: request.date || null,
-
+    influencerName: request.influencerName,
     time: {
       start: startTime,
       end: endTime,
       timezone,
     },
-
+   platforms: request.socialMediaPlatforms || [],
     assignedInfluencer: influencer
       ? {
           userId: influencer.userId,
@@ -687,4 +687,48 @@ export async function saveCalendarAndNotification(request, user, token, notify =
     console.error("❌ Error saving calendar + notification:", err);
     throw err;
   }
+}
+
+
+// src/utils/normalizeCalendarRecord.js
+import { DateTime } from 'luxon';
+
+export function normalizeCalendarRecord(record) {
+  const fd = record.fieldsData || {};
+  const time = fd.time || {};
+
+  const sourceTZ = time.timezone || 'UTC';
+  const userTZ = DateTime.local().zoneName;
+
+  const start = DateTime.fromISO(
+    `${fd.date}T${time.start}`,
+    { zone: sourceTZ }
+  ).setZone(userTZ);
+
+  const end = time.end
+    ? DateTime.fromISO(
+        `${fd.date}T${time.end}`,
+        { zone: sourceTZ }
+      ).setZone(userTZ)
+    : null;
+
+  return {
+    id: record._id?.$oid || record._id,
+    dateISO: start.toISODate(), // LOCAL YYYY-MM-DD
+    start,
+    end,
+
+    startLabel: start.toFormat('h:mm a'),
+    endLabel: end?.toFormat('h:mm a'),
+
+    influencer:
+      fd.influencerName?.name ||
+      fd.assignedInfluencer?.fullName ||
+      '—',
+
+    service:
+      (fd.platforms || []).map(p => p.platform).join(', ') || '—',
+
+    raw: record,
+  };
 }

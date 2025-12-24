@@ -10,6 +10,9 @@ import CalendarView from '../../components/Calendar/CalendarView';
 import CalendarListView from '../../components/Calendar/CalendarListView';
 import CalendarHourlyView from '../../components/Calendar/CalendarHourlyView';
 
+import IACalendarHourlyView from '../../components/Calendar/InfluencerApp/IACalendarHourlyView';
+
+
 import ProfileView from '../../components/Profile/ProfileView';
 import PaymentSetup from '../../components/Stripe/PaymentSetup';
 
@@ -22,6 +25,7 @@ import TransactionsListView from '../../components//Payment/TransactionsListView
 const COMPONENTS = {
   ListView,
   CalendarView,
+  IACalendarHourlyView,
   ProfileView,
   CalendarListView,
   PaymentSetup,
@@ -34,7 +38,7 @@ const COMPONENTS = {
   ListViewReadOnly,
   AdminListView,
   CardListView,
-  AnnouncementListView
+  AnnouncementListView,
 };
 
 export default COMPONENTS;
