@@ -17,21 +17,19 @@ const Transition = React.forwardRef(function Transition(props, ref) {
   return <Slide direction="up" ref={ref} {...props} />;
 });
 
-/* ----------------------------------------------------------
-   Styled Components
----------------------------------------------------------- */
 const SheetContainer = styled(Box)(({ theme }) => ({
   height: "100%",
   overflowY: "auto",
   backgroundColor: theme.palette.background.default,
-  padding: theme.spacing(2),
+  padding: theme.spacing(3),
 }));
 
-export default function BottomSheetModal({
+export default function BottomSheetModalWeb({
   visible,
   onDismiss,
   component: Component,
   name,
+  actionName = "",
   ...props
 }) {
   return (
@@ -41,7 +39,6 @@ export default function BottomSheetModal({
       onClose={onDismiss}
       TransitionComponent={Transition}
     >
-      {/* HEADER BAR */}
       <AppBar
         sx={{
           position: "relative",
@@ -60,6 +57,7 @@ export default function BottomSheetModal({
             variant="h6"
             component="div"
           >
+            {actionName ? `${actionName} ` : ""}
             {capitalizeFirstLetter(name)}
           </Typography>
 
@@ -69,7 +67,6 @@ export default function BottomSheetModal({
         </Toolbar>
       </AppBar>
 
-      {/* CONTENT AREA */}
       <SheetContainer>
         {Component && <Component {...props} />}
       </SheetContainer>

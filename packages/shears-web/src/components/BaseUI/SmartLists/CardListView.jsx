@@ -1,22 +1,24 @@
 // CardListViewReadOnly.jsx
 import React, { useState, useMemo } from "react";
 import {
+  Box,
   Card,
   CardContent,
   CardMedia,
   Typography,
   CardActionArea,
-  Box,
   Chip,
+  IconButton,
+  Badge,
 } from "@mui/material";
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 
 import { mapFields } from "shears-shared/src/config/fieldMapper";
-import ReadOnlyDetail from "../ReadOnly/ReadOnlyDetail";
+import ListItemDetail from "../ListItemDetail";
 
 /* ============================================================
-   Helpers
+   Helpers (unchanged)
 ============================================================ */
-
 function getImage(item) {
   return item?.fieldsData?.announcementImage?.[0]?.url || null;
 }
@@ -62,19 +64,29 @@ export default function CardListViewReadOnly({
   data = [],
   fields = [],
   name = "Announcements",
+  recordType,
+  modes = ["read"],
+  actionsMenu = [],
+  appConfig,
+  onRefresh,
 }) {
-  const [detailOpen, setDetailOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerMode, setDrawerMode] = useState("read");
   const [selectedItem, setSelectedItem] = useState(null);
 
-  // ✅ Normalize schema fields so overrides + labels work
-  const mappedFields = useMemo(() => {
-    return mapFields(fields || []);
-  }, [fields]);
+  const mappedFields = useMemo(() => mapFields(fields || []), [fields]);
 
-  // ✅ IMPORTANT: pass the FULL record, not fieldsData
-  const openDetail = (item) => {
+  const handleCardClick = (item) => {
     setSelectedItem(item);
-    setDetailOpen(true);
+    setDrawerMode("read");
+    setDrawerOpen(true);
+  };
+
+  const handleClose = (result) => {
+    setDrawerOpen(false);
+    if (result?.shouldRefresh || onRefresh) {
+      onRefresh?.();
+    }
   };
 
   return (
@@ -82,15 +94,17 @@ export default function CardListViewReadOnly({
       <Box sx={{ width: "100%" }}>
         <Box
           sx={{
-            display: { xs: "block", md: "contents" },
-            height: { xs: "calc(100vh - 120px)" },
-            overflowY: { xs: "auto" },
+            display: "block",
+            height: "calc(100vh - 120px)",
+            overflowY: "auto",
           }}
         >
           <Box
             sx={{
               maxWidth: 1400,
               px: 2,
+              py: 2,
+              mx: "auto",
               display: "flex",
               flexWrap: "wrap",
               justifyContent: "flex-start",
@@ -105,6 +119,13 @@ export default function CardListViewReadOnly({
               const description = getDescription(item);
               const dateLabel = getDate(item);
 
+              // Safely get comment count
+              const commentCount = Array.isArray(item?.comments)
+                ? item.comments.length
+                : Array.isArray(item?.fieldsData?.comments)
+                  ? item.fieldsData.comments.length
+                  : 0;
+
               return (
                 <Card
                   key={item._id}
@@ -118,8 +139,13 @@ export default function CardListViewReadOnly({
                   }}
                 >
                   <CardActionArea
-                    onClick={() => openDetail(item)}
-                    sx={{ height: "100%" }}
+                    onClick={() => handleCardClick(item)}
+                    sx={{
+                      height: "100%",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "stretch",
+                    }}
                   >
                     {(imageUrl || videoUrl) && (
                       <Box
@@ -159,7 +185,15 @@ export default function CardListViewReadOnly({
                       </Box>
                     )}
 
-                    <CardContent sx={{ flexGrow: 1 }}>
+                    <CardContent
+                      sx={{
+                        flexGrow: 1,
+                        pb: 6,          // Extra bottom padding to clear space below text
+                        pt: 2,
+                        px: 3,
+                        position: "relative",
+                      }}
+                    >
                       {dateLabel && (
                         <Typography
                           variant="caption"
@@ -176,7 +210,10 @@ export default function CardListViewReadOnly({
                       <Typography
                         variant="h6"
                         gutterBottom
-                        sx={{ fontWeight: 600, lineHeight: 1.3 }}
+                        sx={{
+                          fontWeight: 600,
+                          lineHeight: 1.3,
+                        }}
                       >
                         {title}
                       </Typography>
@@ -195,22 +232,92 @@ export default function CardListViewReadOnly({
                           {description}
                         </Typography>
                       )}
+
+                      {/* Comment icon + count badge – bottom RIGHT, side by side */}
+                      <Box
+                        sx={{
+                          position: "absolute",
+                          bottom: 16,
+                          right: 16,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 0.75,
+                        }}
+                      >
+                        <IconButton
+                          size="small"
+                          color={commentCount > 0 ? "primary" : "action"}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCardClick(item);
+                          }}
+                          sx={{
+                            p: 0.5,
+                            '&:hover': {
+                              bgcolor: "action.hover",
+                              color: "primary.main",
+                            },
+                          }}
+                        >
+                          <ChatBubbleOutlineIcon fontSize="small" />
+                        </IconButton>
+
+                        <Badge
+                          badgeContent={commentCount}
+                          color="primary"
+                          showZero={false}           // hide when 0
+                          sx={{
+                            "& .MuiBadge-badge": {
+                              fontSize: 11,
+                              minWidth: 18,
+                              height: 18,
+                              borderRadius: "50%",
+                            },
+                          }}
+                        />
+                      </Box>
                     </CardContent>
                   </CardActionArea>
                 </Card>
               );
             })}
+
+            {data.length === 0 && (
+              <Box
+                sx={{
+                  width: "100%",
+                  py: 8,
+                  textAlign: "center",
+                  color: "text.secondary",
+                }}
+              >
+                <Typography variant="body1">
+                  No {name.toLowerCase()} available
+                </Typography>
+              </Box>
+            )}
           </Box>
         </Box>
       </Box>
 
-      {detailOpen && selectedItem && (
-        <ReadOnlyDetail
-          open={detailOpen}
-          onClose={() => setDetailOpen(false)}
+      {/* Drawer */}
+      {drawerOpen && (
+        <ListItemDetail
+          open={drawerOpen}
+          recordType={recordType || name.toLowerCase()}
+          onClose={(result) => {
+            setDrawerOpen(false);
+            if (result?.shouldRefresh || onRefresh) {
+              onRefresh?.();
+            }
+          }}
           item={selectedItem}
-          fields={mappedFields}
+          appConfig={appConfig}
+          fields={fields}
+          mode={drawerMode}
           name={name}
+          modes={modes}
+          actionsMenu={actionsMenu}
         />
       )}
     </>

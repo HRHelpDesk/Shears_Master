@@ -16,6 +16,7 @@ import ResetPasswordPage from '../screens/auth/ResetPasswordPage';
 function AppRoutes() {
   const { isLoggedIn } = useContext(AuthContext); // ✅ get login state
   const appConfig = getAppConfig(CURRENT_APP, CURRENT_WHITE_LABEL);
+  console.log('AppNavigator: appConfig=', appConfig);
   const logo = AppLogos[CURRENT_APP][CURRENT_WHITE_LABEL];
 
   return (

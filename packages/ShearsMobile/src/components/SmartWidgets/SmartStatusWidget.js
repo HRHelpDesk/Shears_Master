@@ -1,134 +1,242 @@
 // SmartStatusWidget.native.js
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import {
   View,
+  ScrollView,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
-import { Button, Text, useTheme, Portal, Switch } from "react-native-paper";
+import {
+  Text,
+  Dialog,
+  Portal,
+  Button,
+  List,
+  Modal,
+  Card,
+  Switch,
+  useTheme,
+} from "react-native-paper";
+import { useNavigationState } from "@react-navigation/native";
 
+import { AuthContext } from "../../context/AuthContext";
 import {
   saveCalendarAndNotification,
   updateRecord,
 } from "shears-shared/src/Services/Authentication";
 
-import { AuthContext } from "../../context/AuthContext";
-
 const STATUS_OPTIONS = ["Pending", "Approved", "Rejected", "Completed"];
 
-export default function SmartStatusWidgetNative({
+export default function SmartStatusWidget({
   label = "Status",
   value,
   item,
-  mode = "read",        // NOW ALLOWED IN READ MODE
-  onChangeText,         // parent state setter
-  onStatusUpdated,      // optional callback: update localItem
+  onChangeText,
+  onStatusUpdated,
 }) {
   const theme = useTheme();
   const { user, token } = useContext(AuthContext);
 
   const [visible, setVisible] = useState(false);
-  const [status, setStatus] = useState(value || "Pending");
+  const [selectedStatus, setSelectedStatus] = useState(value || "Pending");
   const [notify, setNotify] = useState(true);
 
-  const openSheet = () => setVisible(true);
-  const closeSheet = () => setVisible(false);
+  // Modal vs Dialog detection — same as DialogSelectInput
+  const navigationState = useNavigationState((state) => state);
+  const insideModalScreen = navigationState?.routes?.some(
+    (r) => r?.params?.presentation === "modal" || r?.name?.toLowerCase().includes("modal")
+  );
+  const shouldUseModal = insideModalScreen;
 
-  /* ---------------------------------------------------------
-     MAIN STATUS CONFIRM LOGIC
-  --------------------------------------------------------- */
+  // Keep internal selection in sync with prop value
+  useEffect(() => {
+    if (value !== undefined && value !== selectedStatus) {
+      setSelectedStatus(value);
+    }
+  }, [value]);
+
   const handleConfirm = async () => {
-    console.log("📌 MOBILE Status update:", { item, status, notify });
-
     try {
-      // 1️⃣ UPDATE RECORD STATUS IN DATABASE
-      await updateRecord(item._id, {
-        ...item,
-        status,
-      }, token);
+      await updateRecord(
+        item._id,
+        { ...item, status: selectedStatus },
+        token
+      );
 
-      console.log("✅ Status updated in DB");
+      if (onStatusUpdated) onStatusUpdated(selectedStatus);
+      if (onChangeText) onChangeText(selectedStatus);
 
-      // 2️⃣ UPDATE LOCAL ITEM (UI)
-      if (onStatusUpdated) onStatusUpdated(status);
-      if (onChangeText) onChangeText(status);
-
-      // 3️⃣ CALENDAR + NOTIFICATION (ONLY WHEN APPROVED)
-      if (status === "Approved") {
-        console.log("📅 Building calendar + notification…");
+      if (selectedStatus === "Approved") {
         await saveCalendarAndNotification(item, user, token, notify);
       }
 
+      setVisible(false);
     } catch (err) {
-      console.error("❌ Status update failed:", err);
+      console.error("Status update failed:", err);
+      // ← you might want to add error feedback here (snackbar, alert…)
     }
-
-    closeSheet();
   };
 
+  // Status color helper
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "Approved":  return theme.colors.success   || "#4CAF50";
+      case "Rejected":  return theme.colors.error     || "#F44336";
+      case "Completed": return theme.colors.tertiary  || "#9C27B0";
+      default:          return theme.colors.warning   || "#FF9800"; // Pending
+    }
+  };
+
+  // ── Selector Field (same style as DialogSelectInput) ───────────────
+  const borderColor = visible
+    ? theme.colors.primary
+    : theme.colors.outlineVariant || theme.colors.border;
+
+  const SelectorField = (
+    <TouchableOpacity onPress={() => setVisible(true)} activeOpacity={0.8}>
+      <View
+        style={[
+          styles.selectorContainer,
+          {
+            backgroundColor: theme.colors.surface,
+            borderColor,
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.selectorText,
+            {
+              color: value
+                ? getStatusColor(value)
+                : theme.colors.onSurfaceVariant,
+              fontWeight: value ? "600" : "normal",
+            },
+          ]}
+        >
+          {value || "Select status..."}
+        </Text>
+        <Text style={styles.dropdownIcon}>⌄</Text>
+      </View>
+    </TouchableOpacity>
+  );
+
+  // ── Selection Content (very similar structure) ──────────────────────
+  const SelectionContent = (
+    <ScrollView
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={{ paddingBottom: 12 }}
+      style={{ maxHeight: 320 }}
+    >
+      {STATUS_OPTIONS.map((status) => (
+        <List.Item
+          key={status}
+          title={status}
+          onPress={() => setSelectedStatus(status)}
+          titleStyle={{
+            color:
+              status === selectedStatus
+                ? theme.colors.primary
+                : theme.colors.onSurface,
+          }}
+          style={{
+            borderBottomWidth: 0.4,
+            borderBottomColor: theme.colors.outlineVariant,
+          }}
+        />
+      ))}
+    </ScrollView>
+  );
+
   return (
-    <View style={{ marginVertical: 8 }}>
-      <Button mode="contained" onPress={openSheet}>
-        {label}: {value || "Pending"}
-      </Button>
+    <View style={styles.container}>
+      {/* Label - same as DialogSelectInput */}
+      <Text
+        variant="labelMedium"
+        style={{
+          color: theme.colors.text,
+          marginBottom: 6,
+          fontWeight: "500",
+        }}
+      >
+        {label}
+      </Text>
+
+      {SelectorField}
 
       <Portal>
-        {visible && (
-          <>
-            <TouchableOpacity style={styles.backdrop} onPress={closeSheet} />
+        {shouldUseModal ? (
+          <Modal
+            visible={visible}
+            onDismiss={() => setVisible(false)}
+            contentContainerStyle={[
+              styles.modalContainer,
+              { backgroundColor: theme.colors.background },
+            ]}
+          >
+            <Card>
+              <Card.Title title="Update Status" />
+              <Card.Content>
+                {SelectionContent}
 
-            <View style={[styles.sheet, { backgroundColor: theme.colors.surface }]}>
-              <ScrollView contentContainerStyle={styles.sheetContent}>
-                <Text style={styles.title}>Update Status</Text>
-
-                {STATUS_OPTIONS.map((opt) => (
-                  <TouchableOpacity
-                    key={opt}
-                    style={[
-                      styles.option,
-                      {
-                        borderColor:
-                          opt === status
-                            ? theme.colors.primary
-                            : theme.colors.outline,
-                      },
-                    ]}
-                    onPress={() => setStatus(opt)}
-                  >
-                    <Text
-                      style={{
-                        color:
-                          opt === status
-                            ? theme.colors.primary
-                            : theme.colors.onSurface,
-                      }}
-                    >
-                      {opt}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-
-                {/* Notification Switch */}
+                {/* Notification switch */}
                 <View style={styles.switchRow}>
-                  <Text style={styles.notifyText}>Send Notification?</Text>
+                  <Text variant="bodyMedium">Send notification?</Text>
                   <Switch
                     value={notify}
                     onValueChange={setNotify}
                     color={theme.colors.primary}
                   />
                 </View>
+              </Card.Content>
 
-                <Button mode="contained" onPress={handleConfirm} style={{ marginTop: 20 }}>
-                  Save Status
+              <Card.Actions style={{ justifyContent: "flex-end" }}>
+                <Button onPress={() => setVisible(false)}>Cancel</Button>
+                <Button mode="contained" onPress={handleConfirm}>
+                  Save
                 </Button>
+              </Card.Actions>
+            </Card>
+          </Modal>
+        ) : (
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+          >
+            <Dialog
+              visible={visible}
+              onDismiss={() => setVisible(false)}
+              style={[
+                styles.dialogContainer,
+                { backgroundColor: theme.colors.background },
+              ]}
+            >
+              <Dialog.Title>Update Status</Dialog.Title>
+              <Dialog.Content>{SelectionContent}</Dialog.Content>
 
-                <Button mode="outlined" onPress={closeSheet} style={{ marginTop: 10 }}>
-                  Cancel
+              {/* Switch placed in content area like many designs */}
+              <View style={styles.switchRow}>
+                <Text variant="bodyMedium" style={{ flex: 1}}>
+                  Send notification?
+                </Text>
+                <Switch
+                  value={notify}
+                  onValueChange={setNotify}
+                  color={theme.colors.primary}
+                />
+              </View>
+
+              <Dialog.Actions>
+                <Button style={{borderRadius:5, width:'50%'}}  onPress={() => setVisible(false)}>Cancel</Button>
+                <Button style={{borderRadius:5, width:'50%'}} mode="contained" onPress={handleConfirm}>
+                  Save
                 </Button>
-              </ScrollView>
-            </View>
-          </>
+              </Dialog.Actions>
+            </Dialog>
+          </KeyboardAvoidingView>
         )}
       </Portal>
     </View>
@@ -136,45 +244,49 @@ export default function SmartStatusWidgetNative({
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.4)",
+  container: {
+    marginBottom: 12, // same bottom spacing as DialogSelectInput
   },
-  sheet: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: "55%",
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-    padding: 20,
-  },
-  sheetContent: {
-    alignItems: "center",
-    paddingBottom: 50,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "600",
-    marginBottom: 20,
-  },
-  option: {
-    width: "100%",
-    padding: 14,
+
+  selectorContainer: {
+    borderRadius: 8,
     borderWidth: 1,
-    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
+    justifyContent: "space-between",
   },
+
+  selectorText: {
+    fontSize: 16,
+    fontFamily: "System",
+  },
+
+  dropdownIcon: {
+    fontSize: 18,
+    color: "#999",
+    marginLeft: 6,
+  },
+
   switchRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%",
-    marginTop: 20,
     alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 16,
+    paddingVertical: 15,
+    paddingHorizontal: 15,
   },
-  notifyText: {
-    fontSize: 16,
+
+  // ── Exact same container styles as DialogSelectInput ───────
+  modalContainer: {
+    margin: 24,
+    borderRadius: 8,
+    elevation: 6,
+    padding: 16,
+  },
+
+  dialogContainer: {
+    borderRadius: 8,
   },
 });

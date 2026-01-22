@@ -21,7 +21,7 @@ import {
   useNavigation,
   useRoute,
 } from '@react-navigation/native';
-import { getRecords } from 'shears-shared/src/Services/Authentication';
+import { canSeeCalendarEvent, getRecords } from 'shears-shared/src/Services/Authentication';
 import { mapFields } from 'shears-shared/src/config/fieldMapper';
 import { AuthContext } from '../../../context/AuthContext';
 import formatTime12 from 'shears-shared/src/utils/stringHelpers';
@@ -122,7 +122,7 @@ export default function IACalendarHourlyView(props) {
 
   /* ------------------------------------------------------------
      Fetch records
------------------------------------------------------------- */
+  ------------------------------------------------------------ */
   useFocusEffect(
     React.useCallback(() => {
       let active = true;
@@ -132,19 +132,18 @@ export default function IACalendarHourlyView(props) {
           recordType: 'calendar',
           token,
           subscriberId: user.subscriberId,
-          userId: user.userId,
         });
         if (active) setLocalData(res || []);
       };
 
       load();
       return () => (active = false);
-    }, [token, user.subscriberId, user.userId])
+    }, [token, user.subscriberId])
   );
 
   /* ------------------------------------------------------------
      Date range
------------------------------------------------------------- */
+  ------------------------------------------------------------ */
   const dateRange = useMemo(
     () => generateDateRange(selectedDate),
     [selectedDate]
@@ -152,7 +151,7 @@ export default function IACalendarHourlyView(props) {
 
   /* ------------------------------------------------------------
      Center dropdown on open
------------------------------------------------------------- */
+  ------------------------------------------------------------ */
   useEffect(() => {
     if (!showDateSelector || !dateScrollRef.current) return;
 
@@ -180,26 +179,30 @@ export default function IACalendarHourlyView(props) {
 
   /* ------------------------------------------------------------
      Filter + normalize events
------------------------------------------------------------- */
+  ------------------------------------------------------------ */
   const dayAppointments = useMemo(() => {
     const targetDay = DateTime.fromJSDate(selectedDate).toISODate();
 
     const normalized = localData
       .map((item) => {
         const fd = item.fieldsData || {};
-        if (!fd.date || !fd.time?.start) return null;
+        if (!fd.date || !fd.timeZoneTime?.start) return null;
+
+         if (!canSeeCalendarEvent(item, user)) {
+        return null;
+      }
 
         const startLocal = DateTime.fromISO(
-          `${fd.date}T${fd.time.start}`,
-          { zone: fd.time.timezone || 'UTC' }
+          `${fd.date}T${fd.timeZoneTime.start}`,
+          { zone: fd.timeZoneTime.timezone || 'UTC' }
         ).setZone(DateTime.local().zoneName);
 
         if (startLocal.toISODate() !== targetDay) return null;
 
-        const endLocal = fd.time.end
+        const endLocal = fd.timeZoneTime.end
           ? DateTime.fromISO(
-              `${fd.date}T${fd.time.end}`,
-              { zone: fd.time.timezone || 'UTC' }
+              `${fd.date}T${fd.timeZoneTime.end}`,
+              { zone: fd.timeZoneTime.timezone || 'UTC' }
             ).setZone(DateTime.local().zoneName)
           : startLocal.plus({ minutes: 30 });
 
@@ -228,7 +231,7 @@ export default function IACalendarHourlyView(props) {
 
   /* ------------------------------------------------------------
      Scroll to now
------------------------------------------------------------- */
+  ------------------------------------------------------------ */
   useEffect(() => {
     const now = new Date();
     setTimeout(() => {
@@ -241,7 +244,7 @@ export default function IACalendarHourlyView(props) {
 
   /* ------------------------------------------------------------
      Now line
------------------------------------------------------------- */
+  ------------------------------------------------------------ */
   const renderNowLine = () => {
     const now = DateTime.local();
     if (!now.hasSame(DateTime.fromJSDate(selectedDate), 'day')) return null;
@@ -250,33 +253,46 @@ export default function IACalendarHourlyView(props) {
     const top = (minutes / 60) * HOUR_HEIGHT;
 
     return (
-      <View style={[styles.nowLine, { top }]}>
-        <View style={styles.nowDot} />
+      <View style={[styles.nowLine, { top, backgroundColor: theme.colors.error }]}>
+        <View style={[styles.nowDot, { backgroundColor: theme.colors.error }]} />
       </View>
     );
   };
 
   /* ------------------------------------------------------------
      Quarter rows
------------------------------------------------------------- */
+  ------------------------------------------------------------ */
   const renderQuarterHourRow = ({ hour, minutes, index }) => (
     <View key={index} style={styles.quarterHourRow}>
       <View style={[styles.timeLabel, { width: TIME_COLUMN_WIDTH }]}>
-        <Text style={minutes === 0 ? styles.timeText : styles.minuteText}>
+        <Text style={[
+          minutes === 0 ? styles.timeText : styles.minuteText,
+          { color: theme.colors.textSecondary }
+        ]}>
           {minutes === 0 ? formatTime12(`${hour}:00`) : minutes}
         </Text>
       </View>
-      <View style={styles.hourLine} />
+      <View style={[
+        styles.hourLine,
+        { borderTopColor: theme.colors.border }
+      ]} />
     </View>
   );
 
   /* =============================================================
      RENDER
-============================================================= */
+  ============================================================= */
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[
+        styles.header,
+        { 
+          backgroundColor: theme.colors.surface,
+          borderBottomWidth: 1,
+          borderBottomColor: theme.colors.border
+        }
+      ]}>
         <TouchableOpacity
           onPress={() =>
             setSelectedDate(d => {
@@ -293,7 +309,10 @@ export default function IACalendarHourlyView(props) {
           style={styles.headerCenter}
           onPress={() => setShowDateSelector(v => !v)}
         >
-          <Text style={styles.dateText}>
+          <Text style={[
+            styles.dateText,
+            { color: theme.colors.onSurface }
+          ]}>
             {selectedDate.toDateString()}
           </Text>
           <Icon
@@ -322,7 +341,10 @@ export default function IACalendarHourlyView(props) {
           ref={dateScrollRef}
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={styles.dateScroll}
+          style={[
+            styles.dateScroll,
+            { backgroundColor: theme.colors.surface }
+          ]}
         >
           {dateRange.map((d, i) => {
             const selected =
@@ -335,7 +357,9 @@ export default function IACalendarHourlyView(props) {
                 key={i}
                 style={[
                   styles.dateButton,
-                  selected && { backgroundColor: theme.colors.primary },
+                  selected && {
+                    backgroundColor: theme.colors.primary,
+                  },
                 ]}
                 onPress={() => {
                   setSelectedDate(new Date(d));
@@ -344,13 +368,13 @@ export default function IACalendarHourlyView(props) {
               >
                 <Text style={[
                   styles.weekdayText,
-                  { color: selected ? '#fff' : '#666' }
+                  { color: selected ? theme.colors.onPrimary : theme.colors.textSecondary }
                 ]}>
                   {d.toLocaleDateString(undefined, { weekday: 'short' })}
                 </Text>
                 <Text style={[
                   styles.dayNumber,
-                  { color: selected ? '#fff' : '#000' }
+                  { color: selected ? theme.colors.onPrimary : theme.colors.onSurface }
                 ]}>
                   {d.getDate()}
                 </Text>
@@ -390,6 +414,8 @@ export default function IACalendarHourlyView(props) {
                       height,
                       width: colWidth - 6,
                       left: appt._col * colWidth,
+                      backgroundColor: theme.colors.primaryContainer,
+                      borderLeftColor: theme.colors.primary,
                     },
                   ]}
                   onPress={() =>
@@ -403,14 +429,28 @@ export default function IACalendarHourlyView(props) {
                         )?.fields || []
                       ),
                       mode: 'read',
+                      modes: props.modes || ['read', 'add', 'edit'],
                     })
                   }
                 >
-                  <Text style={styles.eventTime}>
+                  <Text style={[
+                    styles.eventTime,
+                    { color: theme.colors.onPrimaryContainer }
+                  ]}>
                     {formatTime12(appt.startTime)} – {formatTime12(appt.endTime)}
                   </Text>
-                  <Text style={styles.eventTitle}>{appt.contactName}</Text>
-                  <Text style={styles.eventSub}>{appt.serviceName}</Text>
+                  <Text style={[
+                    styles.eventTitle,
+                    { color: theme.colors.onPrimaryContainer }
+                  ]}>
+                    {appt.contactName}
+                  </Text>
+                  <Text style={[
+                    styles.eventSub,
+                    { color: theme.colors.onPrimaryContainer }
+                  ]}>
+                    {appt.serviceName}
+                  </Text>
                 </TouchableOpacity>
               );
             })}
@@ -420,13 +460,18 @@ export default function IACalendarHourlyView(props) {
 
       <FAB
         icon="plus"
-        style={styles.fab}
+        style={[
+          styles.fab,
+          { backgroundColor: theme.colors.primary }
+        ]}
+        color={theme.colors.onPrimary}
         onPress={() =>
           navigation.navigate('ListItemDetail', {
             item: { date: DateTime.fromJSDate(selectedDate).toISODate() },
             name,
             appConfig,
             mode: 'add',
+            modes: props.modes || ['read', 'add', 'edit'],
           })
         }
       />
@@ -438,7 +483,9 @@ export default function IACalendarHourlyView(props) {
    STYLES
 ============================================================= */
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { 
+    flex: 1,
+  },
 
   header: {
     flexDirection: 'row',
@@ -451,60 +498,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  dateText: { fontSize: 18, fontWeight: '600' },
-
-  quarterHourRow: {
-    height: HOUR_HEIGHT / 4,
-    flexDirection: 'row',
+  dateText: { 
+    fontSize: 18, 
+    fontWeight: '600' 
   },
-  timeLabel: {
-    alignItems: 'flex-end',
-    paddingRight: 8,
-  },
-  timeText: { fontSize: 11, opacity: 0.6 },
-  minuteText: { fontSize: 9, opacity: 0.3 },
-  hourLine: {
-    flex: 1,
-    borderTopWidth: 0.25,
-    borderColor: '#ddd',
-  },
-
-  appointments: {
-    position: 'absolute',
-    top: 0,
-    height: DAY_HEIGHT,
-  },
-
-  event: {
-    position: 'absolute',
-    backgroundColor: '#DBEAFE',
-    borderLeftWidth: 4,
-    borderLeftColor: '#3B82F6',
-    borderRadius: 8,
-    padding: 8,
-  },
-  eventTime: { fontSize: 11, fontWeight: 'bold' },
-  eventTitle: { fontSize: 14, fontWeight: '600' },
-  eventSub: { fontSize: 12 },
-
- nowLine: {
-  position: 'absolute',
-  left: TIME_COLUMN_WIDTH,
-  right: 0,
-  height: 2,                 // slightly thicker
-  backgroundColor: 'red',
-  zIndex: 1000,              // ⭐ ABOVE events
-},
-nowDot: {
-  width: 8,
-  height: 8,
-  borderRadius: 4,
-  backgroundColor: 'red',
-  position: 'absolute',
-  left: -4,
-  top: -4,
-  zIndex: 1001,              // ⭐ ABOVE the line itself
-},
 
   dateScroll: {
     paddingVertical: 8,
@@ -525,6 +522,72 @@ nowDot: {
     fontSize: 20,
     fontWeight: '600',
     marginTop: 2,
+  },
+
+  quarterHourRow: {
+    height: HOUR_HEIGHT / 4,
+    flexDirection: 'row',
+  },
+  timeLabel: {
+    alignItems: 'flex-end',
+    paddingRight: 8,
+  },
+  timeText: { 
+    fontSize: 11, 
+    fontWeight: '500',
+  },
+  minuteText: { 
+    fontSize: 9,
+  },
+  hourLine: {
+    flex: 1,
+    borderTopWidth: 0.5,
+  },
+
+  appointments: {
+    position: 'absolute',
+    top: 0,
+    height: DAY_HEIGHT,
+  },
+
+  event: {
+    position: 'absolute',
+    borderLeftWidth: 4,
+    borderRadius: 8,
+    padding: 8,
+    elevation: 2,
+  },
+  eventTime: { 
+    fontSize: 11, 
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  eventTitle: { 
+    fontSize: 14, 
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  eventSub: { 
+    fontSize: 12,
+  },
+
+  nowLine: {
+    position: 'absolute',
+    left: TIME_COLUMN_WIDTH,
+    right: 0,
+    height: 3,
+    zIndex: 1000,
+  },
+  nowDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    position: 'absolute',
+    left: -6,
+    top: -4.5,
+    zIndex: 1001,
+    borderWidth: 2,
+    borderColor: '#fff',  // keeps contrast in both modes
   },
 
   fab: {

@@ -69,24 +69,47 @@ export default function TimePickerInput({
     setVisible(false);
   };
 
+  // Android-specific handler
+  const handleAndroidChange = (event, selectedTime) => {
+    if (event.type === 'dismissed') {
+      // User cancelled
+      setVisible(false);
+      setTempTime(value ? parseTime(value) : new Date());
+      return;
+    }
+
+    if (event.type === 'set' && selectedTime) {
+      // User confirmed - update value and close
+      setTempTime(selectedTime);
+      onChangeText(formatTo24(selectedTime));
+      setVisible(false);
+    }
+  };
+
   const displayValue = value ? formatTo12(parseTime(value)) : 'Select time';
 
   /* ---------------- READ MODE ---------------- */
   if (mode === 'read') {
     return (
       <View style={styles.readContainer}>
+        <Text
+          variant="titleMedium"
+          style={[styles.label, { color: theme.colors.primary }]}
+        >
+          {label}
+        </Text>
         <View style={styles.inlineRead}>
           <Icon
             source="clock-outline"
-            size={20}
+            size={30}
             color={theme.colors.onSurfaceVariant}
-            style={{ marginRight: 8 }}
+            style={{ marginRight: 35 }}
           />
           <Text
             variant="bodyLarge"
             style={[
               styles.readValue,
-              { color: value ? theme.colors.onSurface : theme.colors.onSurfaceVariant, marginLeft:35 },
+              { color: value ? theme.colors.onSurface : theme.colors.onSurfaceVariant, marginLeft: 35 },
             ]}
           >
             {value ? displayValue : 'Not set'}
@@ -105,6 +128,12 @@ export default function TimePickerInput({
 
   return (
     <View style={styles.editContainer}>
+      <Text
+        variant="titleMedium"
+        style={[styles.label, { color: theme.colors.primary }]}
+      >
+        {label}
+      </Text>
       <TouchableOpacity
         activeOpacity={0.8}
         onPress={() => setVisible(true)}
@@ -119,7 +148,7 @@ export default function TimePickerInput({
             source="clock-outline"
             size={20}
             color={value ? theme.colors.onSurface : theme.colors.onSurfaceVariant}
-            style={{ marginRight: 8 }}
+            style={{ marginRight: 18 }}
           />
           <Text
             style={[
@@ -128,7 +157,7 @@ export default function TimePickerInput({
                 color: value
                   ? theme.colors.onSurface
                   : theme.colors.onSurfaceVariant,
-                  marginLeft:35
+                marginLeft: 35
               },
             ]}
           >
@@ -156,33 +185,48 @@ export default function TimePickerInput({
         </Text>
       )}
 
-      {/* Dialog Picker */}
-      <Portal>
-        <Dialog
-          visible={visible}
-          onDismiss={handleCancel}
-          style={[styles.dialogContainer, { backgroundColor: theme.colors.background }]}
-        >
-          <Dialog.Title>Select {label}</Dialog.Title>
-          <Dialog.Content>
-            <DateTimePicker
-              value={tempTime}
-              mode="time"
-              display={Platform.OS === 'ios' ? 'spinner' : 'clock'}
-              is24Hour={false}
-              minuteInterval={5}
-              onChange={(event, selected) => {
-                if (selected) setTempTime(selected);
-              }}
-              style={{ width: '100%' }}
-            />
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={handleCancel}>Cancel</Button>
-            <Button onPress={handleConfirm}>OK</Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      {/* Time Picker - Platform Specific */}
+      {Platform.OS === 'android' ? (
+        // Android: Native picker (no dialog wrapper)
+        visible && (
+          <DateTimePicker
+            value={tempTime}
+            mode="time"
+            display="default"
+            is24Hour={false}
+            minuteInterval={5}
+            onChange={handleAndroidChange}
+          />
+        )
+      ) : (
+        // iOS: Dialog with spinner
+        <Portal>
+          <Dialog
+            visible={visible}
+            onDismiss={handleCancel}
+            style={[styles.dialogContainer, { backgroundColor: theme.colors.background }]}
+          >
+            <Dialog.Title>Select {label}</Dialog.Title>
+            <Dialog.Content>
+              <DateTimePicker
+                value={tempTime}
+                mode="time"
+                display="spinner"
+                is24Hour={false}
+                minuteInterval={5}
+                onChange={(event, selected) => {
+                  if (selected) setTempTime(selected);
+                }}
+                style={{ width: '100%' }}
+              />
+            </Dialog.Content>
+            <Dialog.Actions>
+              <Button onPress={handleCancel}>Cancel</Button>
+              <Button onPress={handleConfirm}>OK</Button>
+            </Dialog.Actions>
+          </Dialog>
+        </Portal>
+      )}
     </View>
   );
 }
@@ -201,6 +245,10 @@ const styles = StyleSheet.create({
   readValue: {
     fontSize: 16,
     fontFamily: 'System',
+  },
+  label: {
+    marginBottom: 8,
+    fontWeight: '600',
   },
 
   // EDIT MODE

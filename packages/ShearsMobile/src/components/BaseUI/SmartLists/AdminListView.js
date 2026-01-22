@@ -5,12 +5,15 @@ import { ActivityIndicator } from "react-native-paper";
 import { AuthContext } from "../../../context/AuthContext";
 import { getRecords } from "shears-shared/src/Services/Authentication";
 import ListView from "../ListView";
+import { ZoomInEasyUp } from "react-native-reanimated";
 
 export default function AdminListView({
   name,
   recordType,
   fields,
-  appConfig
+  appConfig,
+  modes,
+  sortBy
 }) {
   const { token, user } = useContext(AuthContext);
 
@@ -20,7 +23,6 @@ export default function AdminListView({
 const [isFirstLoad, setIsFirstLoad] = useState(true);
 
   const effectiveRecordType = recordType || name?.toLowerCase();
-
   const loadData = useCallback(async (isRefresh = false) => {
     if (!token || !user?.subscriberId) return;
 
@@ -78,6 +80,8 @@ const [isFirstLoad, setIsFirstLoad] = useState(true);
       appConfig={appConfig}
       refreshing={refreshing}
       onRefresh={() => loadData(true)}  // ⭐ Trigger refresh mode
+      modes={modes}
+      sortBy={sortBy}
     />
   );
 }

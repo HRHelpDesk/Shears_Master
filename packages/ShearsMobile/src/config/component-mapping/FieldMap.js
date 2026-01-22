@@ -20,6 +20,7 @@ import SmartImageInput from "../../components/SmartInputs/SmartImageInput";
 import SmartVideoInput from "../../components/SmartInputs/SmartVideoInput";
 import SmartAutoUserInput from "../../components/SmartInputs/SmartAutoUserInput";
 import SmartReadOnlyField from "../../components/SmartInputs/SmartReadOnlyField";
+import CalendarTimeZoneInput from "../../components/SmartInputs/CalendarTimeZoneInput";
 
 import {WidgetMap} from './WidgetMap'
 
@@ -33,7 +34,7 @@ export const FieldMap = {
   number: PlainTextInput,
   time: TimePickerInput,
   timeTimeZone: SmartTimeTimeZone,
-
+  calendarTimeZone: CalendarTimeZoneInput,
   phone: PhoneTextInput,
   paymentButton: PaymentButton,
   currency: SmartCurrencyInput,

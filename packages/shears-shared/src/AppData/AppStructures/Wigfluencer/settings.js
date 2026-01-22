@@ -46,10 +46,13 @@ export const InfluencerSettings = [
         }
       },
       {
-        field: 'email',
+        field: 'singleEmail',
+        override:{
+          field: 'email',
+        },
         label: 'Email Address',
         type: 'string',
-        input: 'text',
+        input: 'email',
         required: true,
         validations: {
           minLength: 2,
@@ -102,11 +105,12 @@ export const InfluencerSettings = [
     views: [AnnouncementsAdmin],
     fields: [
   {
-  field: "title",
+  field: "name",
   override: {
     field: "announcementName",
     label: "Title",
     displayInList:true,
+    required: true,
   },
   input: "text",
 },
@@ -117,6 +121,7 @@ export const InfluencerSettings = [
   override: {
     field:'message',
     label: "Message",
+    required: true,
   },
   input: "textarea",
 },
@@ -149,66 +154,5 @@ export const InfluencerSettings = [
     ]
   },
 
-  /* ----------------------------------------------------------
-     🏷️ SALES & COUPONS
-  ---------------------------------------------------------- */
-  {
-    name: "SalesCoupons",
-    permissions: ["admin"],
-    recordType: "salescoupons",
-    displayName: "Sales & Coupons",
-    icon: { ios: "tag.fill", android: "tag", web: "fa fa-tags" },
-    views: [SalesCouponsView],
-    fields: [
-      {
-        field: "saleName",
-        label: "Title",
-        type: "string",
-        input: "text",
-        placeholder: "e.g., Flash Sale, Holiday Special",
-        required: true,
-        display: { order: 1 }
-      },
-      {
-        field: "description",
-        label: "Description",
-        type: "string",
-        input: "textarea",
-        multiline: true,
-        placeholder: "Describe the sale or promotion",
-        required: false,
-        display: { order: 2 }
-      },
-      {
-        field: "code",
-        label: "Coupon Code",
-        type: "string",
-        input: "text",
-        placeholder: "Enter coupon or promo code",
-        required: false,
-        display: { order: 3 }
-      },
-      {
-        field: "saleAmount",
-        label: "Sale Amount (Currency)",
-        type: "number",
-        input: "currency",
-        required: false,
-        display: { order: 4 }
-      },
-      {
-        field: "percentage",
-        label: "Discount Percentage",
-        type: "number",
-        input: "number",
-        placeholder: "0–100",
-        required: false,
-        validations: {
-          min: 0,
-          max: 100
-        },
-        display: { order: 5 }
-      }
-    ]
-  }
+  
 ];

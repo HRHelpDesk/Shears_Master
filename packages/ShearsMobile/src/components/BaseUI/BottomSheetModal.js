@@ -72,7 +72,7 @@ export default function BottomSheetModal({
           ]}
         >
            <View style={styles.headerRow}>
-                  <Text style={[styles.pageTitle, { color: theme.colors.primary }]}>{capitalizeFirstLetter(props?.name)}</Text>
+                  <Text style={[styles.pageTitle, { color: theme.colors.primary }]}>{props.actionName? props.actionName : ''} { capitalizeFirstLetter(props?.name)}</Text>
                   
                   <TouchableOpacity
                     style={styles.editButton} // absolute positioning

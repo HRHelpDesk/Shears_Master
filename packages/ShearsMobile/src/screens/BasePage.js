@@ -157,12 +157,16 @@ export default function BasePage({ appConfig, name, viewData = [], displayName, 
 
   const dynamicProps = {
     name: activeView?.displayName || name,
+    sortBy: activeView?.sortBy || null,
     recordType: recordType.toLowerCase() || name.toLowerCase(),
     fields: mappedFields,
     data: data,
     appConfig,
     refreshing,
     onRefresh: () => fetchRecords(true),
+    modes: activeView?.modes || ['read', 'add', 'edit', 'delete'], // ⭐ Add this line
+    actionsMenu: activeView?.actionsMenu || [],
+
   };
 
   if (loading) {

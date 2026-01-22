@@ -176,6 +176,7 @@ const isAdmin = user.role === "admin";
 
   /* Initial load */
   useEffect(() => {
+    console.log('appconfig in BasePage:', appConfig);
     fetchRecords(false);
   }, [fetchRecords]);
 
@@ -227,6 +228,9 @@ const isAdmin = user.role === "admin";
     onRefresh: () => fetchRecords(true),
     data,
     appConfig,
+    modes: activeView?.modes || ['read', 'add', 'edit', 'delete'],
+    sortBy: activeView?.sortBy || 'name',
+    actionsMenu: activeView?.actionsMenu || [],
   };
 
   const showMainLoader = loadingComponent || loadingData;

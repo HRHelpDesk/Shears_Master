@@ -6,9 +6,13 @@ import SettingsStack from './SettingsNavigator';
 import { Icon, useTheme } from 'react-native-paper';
 import BasePage from '../screens/BasePage';
 import { AuthContext } from '../context/AuthContext';
-import { DrawerContentScrollView, DrawerItemList } from "@react-navigation/drawer";
+import { 
+  DrawerContentScrollView, 
+  DrawerItemList,
+  DrawerItem 
+} from "@react-navigation/drawer";
 import SmartProfileCard from "../components/SmartWidgets/SmartProfileCard";
-import { View } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 
 const Drawer = createDrawerNavigator();
 
@@ -20,15 +24,29 @@ function CustomDrawerContent(props) {
     <DrawerContentScrollView
       {...props}
       contentContainerStyle={{
-        //backgroundColor: theme.colors.background,
+        backgroundColor: theme.colors.surface,
+        flex: 1,
         paddingTop: 60,
       }}
+      style={{ backgroundColor: theme.colors.surface }}
     >
       {/* Profile Card */}
       <SmartProfileCard user={user} />
-     <View style={{ height: 20 }} />
-      {/* Drawer Items */}
-      <DrawerItemList {...props} />
+
+      <View style={{ height: 20 }} />
+
+      {/* Drawer Items - main list */}
+      <DrawerItemList 
+        {...props} 
+        itemStyle={{ 
+          borderRadius: 8,
+          marginHorizontal: 8,
+          marginVertical: 2,
+        }}
+        activeTintColor={theme.colors.primary}
+        inactiveTintColor={theme.colors.onSurfaceVariant}
+        activeBackgroundColor={theme.colors.primaryContainer}
+      />
     </DrawerContentScrollView>
   );
 }
@@ -42,16 +60,12 @@ export default function RootDrawer({ appConfig }) {
   }, []);
 
   /* ===========================================================
-     MODE LOGIC:
-     - If mainNavigation is empty & subNavigation exists → SUBNAV ONLY MODE
-     =========================================================== */
+     MODE LOGIC
+  =========================================================== */
   const hasMainNav = appConfig.mainNavigation?.length > 0;
   const hasSubNav = appConfig.subNavigation?.length > 0;
   const subNavOnly = !hasMainNav && hasSubNav;
 
-  /* ===========================================================
-     Build filtered subNav (permissions)
-     =========================================================== */
   const filteredSubNav = (appConfig.subNavigation || []).filter(item => {
     if (!item.permissions) return true;
     return item.permissions.includes(user.role);
@@ -65,17 +79,28 @@ export default function RootDrawer({ appConfig }) {
         headerShown: false,
         drawerType: 'front',
         overlayColor: 'rgba(0,0,0,0.5)',
+        drawerStyle: {
+          backgroundColor: theme.colors.surface,
+          borderRightWidth: 0,
+        },
         drawerActiveTintColor: theme.colors.primary,
-        drawerInactiveTintColor: theme.colors.textSecondary || '#222',
-        drawerLabelStyle: { fontSize: 16, fontWeight: '500' },
+        drawerActiveBackgroundColor: theme.colors.primaryContainer,
+        drawerInactiveTintColor: theme.colors.onSurfaceVariant,
+        drawerLabelStyle: { 
+          fontSize: 16, 
+          fontWeight: '500',
+          marginLeft: -4, // reduced from -12 for better spacing between icon and text
+        },
+        drawerItemStyle: {
+          borderRadius: 8,
+          marginHorizontal: 8,
+        },
       }}
       drawerContent={(props) => <CustomDrawerContent {...props} />}
       initialRouteName={subNavOnly ? firstSubNav?.name : "Home"}
     >
 
-      {/* ===========================================================
-         SUBNAV ONLY MODE → NO HOME BUTTON, NO MAIN NAV
-      =========================================================== */}
+      {/* SUBNAV ONLY MODE */}
       {subNavOnly ? (
         <>
           {filteredSubNav.map((route) => (
@@ -103,9 +128,7 @@ export default function RootDrawer({ appConfig }) {
         </>
       ) : (
         <>
-          {/* ===========================================================
-             NORMAL MODE → Home + subNav + settings
-          =========================================================== */}
+          {/* NORMAL MODE – Home + subNav */}
           <Drawer.Screen
             name="Home"
             options={{
@@ -142,7 +165,7 @@ export default function RootDrawer({ appConfig }) {
         </>
       )}
 
-      {/* SETTINGS IF AVAILABLE */}
+      {/* SETTINGS */}
       {appConfig.settings.length > 0 && (
         <Drawer.Screen
           name="Settings"
@@ -156,7 +179,7 @@ export default function RootDrawer({ appConfig }) {
         </Drawer.Screen>
       )}
 
-      {/* LOGOUT */}
+      {/* LOGOUT – special styling */}
       <Drawer.Screen
         name="Logout"
         component={() => null}
@@ -167,7 +190,17 @@ export default function RootDrawer({ appConfig }) {
             <Icon source="logout" color={color} size={size} />
           ),
           drawerActiveTintColor: theme.colors.error,
-          drawerItemStyle: { marginTop: 20 },
+          drawerInactiveTintColor: theme.colors.error,
+          drawerLabelStyle: {
+            color: theme.colors.error,
+            fontWeight: '600',
+            marginLeft: -4, // same spacing as other items
+          },
+          drawerItemStyle: { 
+            marginTop: 32,
+            marginHorizontal: 8,
+            borderRadius: 8,
+          },
           unmountOnBlur: true,
         }}
       />

@@ -12,33 +12,84 @@ import { useTheme } from "@mui/material/styles";
 
 import SubtitleText from "../../UI/SubtitleText";
 import { FieldMap } from "../../../config/component-mapping/FieldMap";
+import PlainTextInput from "../SmartInputs/PlainTextInput";
+import { singularize } from "shears-shared/src/utils/stringHelpers";
 
 /* ============================================================
    Utility — Safe deep getter (FIXED)
 ============================================================ */
 const getValue = (source, path) => {
   if (!source || !path) return "";
-
-  // ✅ CRITICAL FIX
+  
+  // ✅ Check fieldsData first, just like the title calculation does
   const base = source.fieldsData ?? source;
+  
   const normalized = path.replace(/\[(\d+)\]/g, ".$1");
+  return normalized.split(".").reduce((acc, key) => acc?.[key], base) ?? "";
+};
+
+/* ============================================================
+   🧩 Render Nested Groups (objectConfig or array item)
+============================================================ */
+const RenderNestedFields = ({
+  nestedFields = [],
+  item,
+  theme,
+  parentPath,
+}) => {
+  const grouped = nestedFields.reduce((acc, f) => {
+    const row = f.layout?.row || 1;
+    if (!acc[row]) acc[row] = [];
+    acc[row].push(f);
+    return acc;
+  }, {});
 
   return (
-    normalized
-      .split(".")
-      .reduce((acc, key) => acc?.[key], base) ?? ""
+    <>
+      {Object.keys(grouped).map((rowKey) => {
+        const rowFields = grouped[rowKey];
+        const totalSpan = rowFields.reduce(
+          (total, f) => total + (f.layout?.span || 1),
+          0
+        );
+
+        return (
+          <Box
+            key={rowKey}
+            sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 1 }}
+          >
+            {rowFields.map((nf) => {
+              const span = nf.layout?.span || 1;
+              const width = `calc(${(span / totalSpan) * 100}% - 8px)`;
+
+              return (
+                <Box key={nf.field} sx={{ flex: `0 0 ${width}`, minWidth: 200 }}>
+                  {RenderReadOnlyField({
+                    fieldDef: nf,
+                    item,
+                    theme,
+                    parentPath,
+                  })}
+                </Box>
+              );
+            })}
+          </Box>
+        );
+      })}
+    </>
   );
 };
 
 /* ============================================================
-   RenderField — READ ONLY
+   🧩 RenderField — READ ONLY (matches ListItemDetail structure)
 ============================================================ */
 function RenderReadOnlyField({ fieldDef, item, theme, parentPath = "" }) {
   const inputType = fieldDef.input || fieldDef.type || "text";
   const nestedFields =
     fieldDef.objectConfig || fieldDef.arrayConfig?.object || [];
+    console.log('Rendering field:', fieldDef.field, 'of type:', inputType);
 
-  const FieldComponent = FieldMap[inputType] || FieldMap.text;
+  const FieldComponent = FieldMap[inputType] || PlainTextInput;
 
   const fieldPath = parentPath
     ? `${parentPath}.${fieldDef.field}`
@@ -46,7 +97,9 @@ function RenderReadOnlyField({ fieldDef, item, theme, parentPath = "" }) {
 
   const value = getValue(item, fieldPath);
 
-  /* IMAGE FIELD */
+  /* ------------------------------------------------------------
+     ⭐ IMAGE FIELD
+  ------------------------------------------------------------ */
   if (inputType === "image") {
     return (
       <Box sx={{ mb: 2 }}>
@@ -54,26 +107,36 @@ function RenderReadOnlyField({ fieldDef, item, theme, parentPath = "" }) {
           label={fieldDef.label}
           value={value}
           mode="read"
+          item={item}
           inputConfig={fieldDef.inputConfig}
         />
       </Box>
     );
   }
 
-  /* ARRAY FIELD */
+  /* ------------------------------------------------------------
+     ⭐ ARRAY FIELD
+  ------------------------------------------------------------ */
   if (Array.isArray(value)) {
     return (
       <Box sx={{ mb: 3 }}>
-        <Typography sx={{ mb: 1 }} variant="subtitle1">
-          {fieldDef.label}
-        </Typography>
+        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+          <Typography sx={{ color: theme.palette.primary.main }} variant="subtitle1">
+            {fieldDef.label}
+          </Typography>
+          {/* NO ADD BUTTON IN READ ONLY */}
+        </Box>
+
+        <Divider sx={{ mb: 2 }} />
 
         {value.length === 0 ? (
-          <Typography sx={{ opacity: 0.6, fontStyle: "italic" }}>
+          <Typography
+            sx={{ fontStyle: "italic", color: "text.secondary" }}
+          >
             No entries
           </Typography>
         ) : (
-          value.map((_, idx) => (
+          value.map((entry, idx) => (
             <Box
               key={`${fieldPath}[${idx}]`}
               sx={{
@@ -88,19 +151,38 @@ function RenderReadOnlyField({ fieldDef, item, theme, parentPath = "" }) {
                     : "rgba(74,144,226,0.04)",
               }}
             >
-              <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                {fieldDef.label} #{idx + 1}
-              </Typography>
+              {/* HEADER */}
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 1,
+                }}
+              >
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  {singularize(fieldDef.label)} #{idx + 1}
+                </Typography>
+                {/* NO ACTIONS IN READ ONLY */}
+              </Box>
 
-              {nestedFields.map((nf) => (
-                <RenderReadOnlyField
-                  key={nf.field}
-                  fieldDef={nf}
+              {/* FIELDS */}
+              {fieldDef.input === "linkSelect" ? (
+                <FieldMap.linkSelect
+                  label={fieldDef.label}
+                  value={entry}
+                  mode="read"
+                  item={item}
+                  recordTypeName={fieldDef.inputConfig?.recordType}
+                />
+              ) : (
+                <RenderNestedFields
+                  nestedFields={nestedFields}
                   item={item}
                   theme={theme}
                   parentPath={`${fieldPath}[${idx}]`}
                 />
-              ))}
+              )}
             </Box>
           ))
         )}
@@ -108,16 +190,35 @@ function RenderReadOnlyField({ fieldDef, item, theme, parentPath = "" }) {
     );
   }
 
-  /* OBJECT FIELD */
+  /* ------------------------------------------------------------
+     ⭐ LINK SELECT
+  ------------------------------------------------------------ */
+  if (inputType === "linkSelect") {
+    return (
+      <Box sx={{ mb: 2 }}>
+        <FieldComponent
+          label={fieldDef.label}
+          value={value}
+          mode="read"
+          item={item}
+          recordTypeName={fieldDef.inputConfig?.recordType}
+        />
+      </Box>
+    );
+  }
+
+  /* ------------------------------------------------------------
+     ⭐ OBJECT FIELD
+  ------------------------------------------------------------ */
   if (
     value &&
     typeof value === "object" &&
-    fieldDef.objectConfig &&
-    !Array.isArray(value)
+    !Array.isArray(value) &&
+    fieldDef.objectConfig
   ) {
     return (
       <Box sx={{ mb: 2 }}>
-        <Typography sx={{ mb: 1 }} variant="subtitle2">
+        <Typography sx={{ mb: 1 }} variant="body2" color="text.secondary">
           {fieldDef.label}
         </Typography>
 
@@ -133,27 +234,57 @@ function RenderReadOnlyField({ fieldDef, item, theme, parentPath = "" }) {
                 : "rgba(74,144,226,0.04)",
           }}
         >
-          {fieldDef.objectConfig.map((nf) => (
-            <RenderReadOnlyField
-              key={nf.field}
-              fieldDef={nf}
-              item={item}
-              theme={theme}
-              parentPath={fieldPath}
-            />
-          ))}
+          <RenderNestedFields
+            nestedFields={fieldDef.objectConfig}
+            item={item}
+            parentPath={fieldPath}
+            theme={theme}
+          />
         </Box>
       </Box>
     );
   }
 
-  /* BASIC FIELD */
+  /* ------------------------------------------------------------
+     ⭐ PAYMENT BUTTON (READ ONLY)
+  ------------------------------------------------------------ */
+  if (inputType === "paymentButton") {
+    // Use the actual PaymentButton component in read mode
+    const FieldComponent = FieldMap.paymentButton || PlainTextInput;
+    
+    return (
+      <Box sx={{ mb: 2 }}>
+        <FieldComponent
+          label={fieldDef.label || "Payment"}
+          mode="read"
+          item={item}
+          amount={0}
+          tax={0}
+        />
+      </Box>
+    );
+  }
+
+  /* ------------------------------------------------------------
+     ⭐ BASIC FIELD
+  ------------------------------------------------------------ */
+  const isSelect =
+    fieldDef.input === "select" ||
+    (fieldDef.inputConfig && Array.isArray(fieldDef.inputConfig.options));
+
+  const selectOptions = isSelect ? fieldDef.inputConfig?.options : null;
+  const defaultValue = isSelect ? fieldDef.inputConfig?.defaultValue : null;
+
   return (
     <Box sx={{ mb: 2 }}>
       <FieldComponent
         label={fieldDef.label}
         value={value}
         mode="read"
+        item={item}
+        options={selectOptions}
+        defaultValue={defaultValue}
+        multiline={fieldDef.input === "textarea"}
       />
     </Box>
   );

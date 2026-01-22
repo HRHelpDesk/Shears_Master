@@ -29,27 +29,25 @@ export default function DatePickerText({
   const [visible, setVisible] = useState(false);
   const [tempDate, setTempDate] = useState(value ? parseDate(value) : new Date());
 
-  // Parse "YYYY-MM-DD" → Date
-// Parse "YYYY-MM-DD" → Date (local-safe)
-function parseDate(dateStr) {
-  if (!dateStr) return new Date();
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day, 12, 0, 0); // local noon
-}
+  // Parse "YYYY-MM-DD" → Date (local-safe)
+  function parseDate(dateStr) {
+    if (!dateStr) return new Date();
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day, 12, 0, 0); // local noon
+  }
 
-// Display human-readable value
-const displayValue = (() => {
-  if (!value) return 'Not set';
-  const [year, month, day] = value.split('-').map(Number);
-  const local = new Date(year, month - 1, day, 12, 0, 0);
-  return local.toLocaleDateString(undefined, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-})();
-
+  // Display human-readable value
+  const displayValue = (() => {
+    if (!value) return 'Not set';
+    const [year, month, day] = value.split('-').map(Number);
+    const local = new Date(year, month - 1, day, 12, 0, 0);
+    return local.toLocaleDateString(undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  })();
 
   // Sync state with prop
   useEffect(() => {
@@ -69,7 +67,25 @@ const displayValue = (() => {
     setVisible(false);
   };
 
+  // Android-specific handler
+  const handleAndroidChange = (event, selectedDate) => {
+    if (event.type === 'dismissed') {
+      // User cancelled
+      setVisible(false);
+      setTempDate(value ? parseDate(value) : new Date());
+      return;
+    }
 
+    if (event.type === 'set' && selectedDate) {
+      // User confirmed - update value and close
+      setTempDate(selectedDate);
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      onChangeText(`${year}-${month}-${day}`);
+      setVisible(false);
+    }
+  };
 
   /* -------------------------------------------------------------------------- */
   /*                                 READ MODE                                  */
@@ -77,7 +93,7 @@ const displayValue = (() => {
   if (mode === 'read') {
     return (
       <View style={styles.readContainer}>
-            <Text
+        <Text
           variant="titleMedium"
           style={[styles.label, { color: theme.colors.primary }]}
         >
@@ -94,7 +110,7 @@ const displayValue = (() => {
             variant="bodyLarge"
             style={[
               styles.readValue,
-              { color: value ? theme.colors.onSurface : theme.colors.onSurfaceVariant, marginLeft:35 },
+              { color: value ? theme.colors.onSurface : theme.colors.onSurfaceVariant, marginLeft: 35 },
             ]}
           >
             {displayValue}
@@ -115,12 +131,12 @@ const displayValue = (() => {
 
   return (
     <View style={styles.editContainer}>
-            <Text
-          variant="titleMedium"
-          style={[styles.label, { color: theme.colors.primary }]}
-        >
-          {label}
-        </Text>
+      <Text
+        variant="titleMedium"
+        style={[styles.label, { color: theme.colors.primary }]}
+      >
+        {label}
+      </Text>
       <TouchableOpacity
         activeOpacity={0.8}
         onPress={() => setVisible(true)}
@@ -143,9 +159,8 @@ const displayValue = (() => {
                 color: value
                   ? theme.colors.onSurface
                   : theme.colors.onSurfaceVariant,
-                  marginLeft:35
+                marginLeft: 35
               },
-              
             ]}
           >
             {value ? displayValue : 'Select date'}
@@ -171,34 +186,47 @@ const displayValue = (() => {
         </Text>
       )}
 
-      {/* Date Dialog */}
-      <Portal>
-        <Dialog
-          visible={visible}
-          onDismiss={handleCancel}
-          style={[
-            styles.dialogContainer,
-            { backgroundColor: theme.colors.background },
-          ]}
-        >
-          <Dialog.Title>Select {label}</Dialog.Title>
-          <Dialog.Content>
-            <DateTimePicker
-              value={tempDate}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'inline' : 'calendar'}
-              onChange={(event, selectedDate) => {
-                if (selectedDate) setTempDate(selectedDate);
-              }}
-              style={{ width: '100%' }}
-            />
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={handleCancel}>Cancel</Button>
-            <Button onPress={handleConfirm}>OK</Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      {/* Date Picker - Platform Specific */}
+      {Platform.OS === 'android' ? (
+        // Android: Native picker (no dialog wrapper)
+        visible && (
+          <DateTimePicker
+            value={tempDate}
+            mode="date"
+            display="default"
+            onChange={handleAndroidChange}
+          />
+        )
+      ) : (
+        // iOS: Dialog with inline picker
+        <Portal>
+          <Dialog
+            visible={visible}
+            onDismiss={handleCancel}
+            style={[
+              styles.dialogContainer,
+              { backgroundColor: theme.colors.background },
+            ]}
+          >
+            <Dialog.Title>Select {label}</Dialog.Title>
+            <Dialog.Content>
+              <DateTimePicker
+                value={tempDate}
+                mode="date"
+                display="inline"
+                onChange={(event, selectedDate) => {
+                  if (selectedDate) setTempDate(selectedDate);
+                }}
+                style={{ width: '100%' }}
+              />
+            </Dialog.Content>
+            <Dialog.Actions>
+              <Button onPress={handleCancel}>Cancel</Button>
+              <Button onPress={handleConfirm}>OK</Button>
+            </Dialog.Actions>
+          </Dialog>
+        </Portal>
+      )}
     </View>
   );
 }
@@ -219,6 +247,10 @@ const styles = StyleSheet.create({
   readValue: {
     fontSize: 16,
     fontFamily: 'System',
+  },
+  label: {
+    marginBottom: 8,
+    fontWeight: '600',
   },
 
   // EDIT MODE

@@ -1,17 +1,28 @@
 // src/components/SmartInputs/SmartReadOnlyField.native.js
-import React, { useContext } from "react";
+import React, { useContext, useEffect } from "react";
 import { View, Text } from "react-native";
 import { useTheme } from "react-native-paper";
 import { AuthContext } from "../../context/AuthContext";
 
-export default function SmartReadOnlyField({ label, value }) {
+export default function SmartReadOnlyField({
+  label,
+  value,
+  defaultValue = "Not set",
+  onChangeText,
+}) {
   const theme = useTheme();
   const { user } = useContext(AuthContext);
-
+useEffect(() => {
+    onChangeText(defaultValue);
+  }, [defaultValue]);
   const isAdmin =
     user?.role === "admin" ||
     user?.permissions?.includes("admin") ||
     false;
+
+  // Display value or fallback to defaultValue
+  const displayValue =
+    value != null && value !== "" ? String(value).trim() : defaultValue;
 
   return (
     <View style={{ marginBottom: 16 }}>
@@ -27,7 +38,7 @@ export default function SmartReadOnlyField({ label, value }) {
         {label}
       </Text>
 
-      {/* Plain text value */}
+      {/* Value or default */}
       <Text
         style={{
           paddingVertical: 6,
@@ -35,10 +46,10 @@ export default function SmartReadOnlyField({ label, value }) {
           fontSize: 16,
         }}
       >
-        {value && value.toString().trim() !== "" ? value.toString() : "Not set"}
+        {displayValue}
       </Text>
 
-      {/* Only show this message for non-admins */}
+      {/* Admin hint */}
       {!isAdmin && (
         <Text
           style={{

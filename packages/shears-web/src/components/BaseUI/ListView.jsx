@@ -14,6 +14,7 @@ import {
   InputAdornment,
   Button,
   Grid,
+  Chip,
 } from "@mui/material";
 import { Search as SearchIcon, Add as AddIcon } from "@mui/icons-material";
 import { styled } from "@mui/material/styles";
@@ -25,6 +26,23 @@ import {
 } from "shears-shared/src/utils/stringHelpers";
 import { mapFields } from "shears-shared/src/config/fieldMapper";
 import ListItemDetail from "./ListItemDetail";
+
+/* ============================================================
+   🎨 Status Color Configuration
+============================================================ */
+const STATUS_COLORS = {
+  pending: "#FF9800",    // Orange
+  approved: "#4CAF50",   // Green
+  rejected: "#F44336",   // Red
+  completed: "#2196F3",  // Blue
+  cancelled: "#9E9E9E",  // Gray
+  // Add more status-color mappings here as needed
+};
+
+function getStatusColor(status) {
+  if (!status || typeof status !== "string") return null;
+  return STATUS_COLORS[status.toLowerCase()] || null;
+}
 
 /* ============================================================
    Styled Components
@@ -41,6 +59,12 @@ const TableContainerStyled = styled(Paper)(({ theme }) => ({
 const SearchField = styled(TextField)(({ theme }) => ({
   width: "100%",
   maxWidth: 400,
+}));
+
+const StatusChip = styled(Chip)(({ statuscolor }) => ({
+  backgroundColor: statuscolor || "#9E9E9E",
+  color: "#ffffff",
+  fontWeight: 700,
 }));
 
 /* ============================================================
@@ -213,6 +237,9 @@ export default function ListView({
   appConfig,
   refreshing,
   onRefresh,
+  modes,
+  sortBy,
+  actionsMenu = [],
 }) {
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState(null);
@@ -220,7 +247,6 @@ export default function ListView({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState("read");
   const [selectedItem, setSelectedItem] = useState(null);
-
   const rawFields = useMemo(() => {
     if (Array.isArray(fields)) return fields;
     if (fields && typeof fields === "object") return Object.values(fields);
@@ -252,7 +278,21 @@ export default function ListView({
       })
     );
 
-    if (sortField) {
+    // Apply sorting
+    if (sortBy === "date") {
+      // Sort by date (newest to oldest)
+      rows = [...rows].sort((a, b) => {
+        const dateA = a.fieldsData?.date ?? a.date;
+        const dateB = b.fieldsData?.date ?? b.date;
+        
+        if (!dateA && !dateB) return 0;
+        if (!dateA) return 1;
+        if (!dateB) return -1;
+        
+        return new Date(dateB) - new Date(dateA);
+      });
+    } else if (sortField) {
+      // Manual column sorting
       const fieldConfig = displayFields.find((f) => f.field === sortField);
       rows = [...rows].sort((a, b) =>
         compare(
@@ -261,47 +301,67 @@ export default function ListView({
           sortOrder
         )
       );
+    } else {
+      // Default: sort by name (alphabetically)
+      rows = [...rows].sort((a, b) => {
+        const nameA = getPrimaryText(a).toLowerCase();
+        const nameB = getPrimaryText(b).toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
     }
 
     return rows;
-  }, [data, displayFields, search, sortField, sortOrder]);
+  }, [data, displayFields, search, sortField, sortOrder, sortBy]);
 
   return (
     <TableContainerStyled>
-      {/* Header */}
-      <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid item xs={12} sm={8}>
-          <SearchField
-            size="small"
-            placeholder={`Search ${displayName}...`}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-          />
-        </Grid>
+     {/* Header */}
+<Grid 
+  container 
+  spacing={2} 
+  sx={{ 
+    mb: 2,
+    alignItems: "center",
+    justifyContent: "space-between",
+  }}
+>
+  <Grid item xs={12} sm={8} md={6}>
+    <SearchField
+      size="small"
+      placeholder={`Search ${displayName}...`}
+      value={search}
+      onChange={(e) => setSearch(e.target.value)}
+      InputProps={{
+        startAdornment: (
+          <InputAdornment position="start">
+            <SearchIcon />
+          </InputAdornment>
+        ),
+      }}
+    />
+  </Grid>
 
-        <Grid item xs={12} sm={4}>
-          <Button
-            fullWidth
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => {
-              setSelectedItem(null);
-              setDrawerMode("add");
-              setDrawerOpen(true);
-            }}
-            disabled={refreshing}
-          >
-            {singularize(displayName)}
-          </Button>
-        </Grid>
-      </Grid>
+  <Grid item xs={12} sm="auto">
+    {modes.includes("add") && (
+    <Button
+      variant="contained"
+      startIcon={<AddIcon />}
+      onClick={() => {
+        setSelectedItem(null);
+        setDrawerMode("add");
+        setDrawerOpen(true);
+      }}
+      disabled={refreshing}
+      sx={{ 
+        minWidth: 150,
+        whiteSpace: "nowrap",
+      }}
+    >
+      Add {singularize(displayName)}
+    </Button>
+    )}
+  </Grid>
+</Grid>
 
       {/* Table */}
       <Box sx={{ flex: 1, overflowY: "auto" }}>
@@ -351,6 +411,7 @@ export default function ListView({
                     setDrawerMode("read");
                     setDrawerOpen(true);
                   }}
+                  sx={{ cursor: "pointer" }}
                 >
                   <TableCell>
                     {avatar ? (
@@ -383,15 +444,26 @@ export default function ListView({
                     )}
                   </TableCell>
 
-                  {displayFields.map((field) => (
-                    <TableCell key={field.field}>
-                      {formatFieldValue(
-                        item.fieldsData?.[field.field] ??
-                          item[field.field],
-                        field
-                      )}
-                    </TableCell>
-                  ))}
+                  {displayFields.map((field) => {
+                    const rawValue = item.fieldsData?.[field.field] ?? item[field.field];
+                    const formattedValue = formatFieldValue(rawValue, field);
+                    const isStatusField = field.field.toLowerCase() === "status";
+                    const statusColor = isStatusField ? getStatusColor(formattedValue) : null;
+
+                    return (
+                      <TableCell key={field.field}>
+                        {isStatusField && statusColor ? (
+                          <StatusChip
+                            label={formattedValue}
+                            statuscolor={statusColor}
+                            size="small"
+                          />
+                        ) : (
+                          formattedValue
+                        )}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               );
             })}
@@ -413,6 +485,8 @@ export default function ListView({
           fields={fields}
           mode={drawerMode}
           name={name}
+          modes={modes}
+          actionsMenu={actionsMenu}
         />
       )}
     </TableContainerStyled>

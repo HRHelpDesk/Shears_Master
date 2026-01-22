@@ -22,4 +22,27 @@ export const BoolFields = [
     },
   },
 
+     {
+    field: 'isPivate',
+    type: 'boolean',
+    label: 'Make this calendar Item Private',
+    displayInList: false,
+    required: true,
+    defaultValue: true, // ✅ optional but recommended
+    validations: {
+      // ✅ boolean has no length/min/max but schema consistency matters
+      allowedValues: [true, false],
+    },
+    display: {
+      placeholder: 'Toggle active status',
+      order: 1,
+      helper: 'Determines whether this item is currently enabled.',
+    },
+    input: 'boolean', // ✅ maps to SmartSwitchInput via FieldMap
+    inputConfig: {
+      onLabel: 'Active',   // ✅ optional config for UI
+      offLabel: 'Inactive',
+    },
+  },
+
 ]

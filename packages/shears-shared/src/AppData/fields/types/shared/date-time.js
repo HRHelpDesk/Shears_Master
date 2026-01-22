@@ -3,7 +3,7 @@ export const TimeDateFields = [
     field: 'date',
     type: 'string',
     label: 'Date',
-    displayInList: false,
+    displayInList: true,
     required: true,
     validations: {
       minLength: 2,
@@ -83,4 +83,15 @@ export const TimeDateFields = [
       },
     ],
   },
+  {
+  field: 'timeZoneTime',
+  type: 'string',
+  label: 'Time',
+  displayInList: true,
+  required: false,
+  input: 'calendarTimeZone',
+  columns: 1, // stack vertically for better UX
+  display: { order: 5 },
+  
+}
 ];

@@ -15,6 +15,7 @@ import SmartUserLinkSelect from "../../components/BaseUI/SmartInputs/SmartUserLi
 import SmartAutoUserInput from "../../components/BaseUI/SmartInputs/SmartAutoUserInput";
 import SmartReadOnlyField from "../../components/BaseUI/SmartInputs/SmartReadOnlyField";
 import SmartTimeTimeZone from "../../components/BaseUI/SmartInputs/SmartTimeTimeZone";
+import CalendarTimeZoneInput from "../../components/BaseUI/SmartInputs/CalendarTimeZoneInput";
 
 export const FieldMap = {
    text: PlainTextInput,
@@ -28,6 +29,7 @@ export const FieldMap = {
   currency: SmartCurrencyInput,
   number: PlainTextInput,
   time: SmartTimeInput,
+  calendarTimeZone: CalendarTimeZoneInput,
   boolean: SmartSwitchInput,
   image: SmartImageInput,
   video: SmartVideoInputWeb,

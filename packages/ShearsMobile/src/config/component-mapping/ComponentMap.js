@@ -8,7 +8,7 @@ import CardListView from '../../components/BaseUI/SmartLists/CardListView'
 
 import CalendarView from '../../components/Calendar/CalendarView';
 import CalendarListView from '../../components/Calendar/CalendarListView';
-import CalendarHourlyView from '../../components/Calendar/CalendarHourlyView';
+import CalendarHourlyView from '../../components/Calendar/Shear/CalendarHourlyView';
 
 import IACalendarHourlyView from '../../components/Calendar/InfluencerApp/IACalendarHourlyView';
 

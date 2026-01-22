@@ -22,6 +22,7 @@ import {
 } from "shears-shared/src/utils/stringHelpers";
 import { FieldMap } from "../../config/component-mapping/FieldMap";
 import {
+  autofillFromRecordWithFields,
   createRecord,
   deleteRecord,
   updateRecord,
@@ -33,7 +34,8 @@ import { getDisplayTitle } from "shears-shared/src/utils/stringHelpers";
 import LinearGradient from "react-native-linear-gradient";
 import SubtitleText from "../UI/SubtitleText";
 import FieldActionsForEntry from "../BaseUI/ActionMenu/FieldActionsForEntry";
-
+import ActionMenu from "../BaseUI/ActionMenu/ActionMenu";
+import SmartCommentWidget from "../SmartWidgets/SmartCommentWidget"
 /* ============================================================
    Utility
 ============================================================ */
@@ -97,7 +99,6 @@ const RenderNestedFields = ({
                     theme={theme}
                     parentPath={parentPath}
                     onPaymentComplete={onPaymentComplete}
-
                   />
                 </View>
               );
@@ -149,6 +150,7 @@ const RenderField = ({
           value={value}
           onChangeText={(newVal) => handleChange(fieldPath, newVal)}
           inputConfig={fieldDef.inputConfig || {}}
+          required={fieldDef.required}
         />
       </View>
     );
@@ -156,6 +158,20 @@ const RenderField = ({
 
   /* ARRAY FIELD */
   if (Array.isArray(value)) {
+
+     if (fieldDef.field === "comments") {
+    return (
+      <SmartCommentWidget
+        comments={value || []}
+        mode={mode}
+        item={item}                    // full item with _id
+        // onCommentAdded={(updated) => {
+        //   // Optional: refresh full item if needed
+        // }}
+      />
+    );
+  }
+
     const handleAddArrayItem = () => {
       const newItem =
         fieldDef.input === "linkSelect"
@@ -177,6 +193,7 @@ const RenderField = ({
         <View style={styles.sectionHeader}>
           <Text variant="titleMedium" style={{ color: theme.colors.primary }}>
             {fieldDef.label || fieldDef.field}
+            {fieldDef.required && <Text style={{ color: 'red' }}> *</Text>}
           </Text>
 
           {(mode === "edit" || mode === "add") && (
@@ -301,6 +318,7 @@ const RenderField = ({
             "contacts"
           }
           onChangeText={(newVal) => handleChange(fieldPath, newVal)}
+          required={fieldDef.required}
         />
       </View>
     );
@@ -320,6 +338,7 @@ const RenderField = ({
           style={{ color: theme.colors.textSecondary, marginBottom: 8 }}
         >
           {fieldDef.label || fieldDef.field}
+          {fieldDef.required && <Text style={{ color: 'red' }}> *</Text>}
         </Text>
 
         <View
@@ -343,7 +362,6 @@ const RenderField = ({
             parentPath={fieldPath}
             columns={fieldDef.columns || 3}
             onPaymentComplete={onPaymentComplete}
-
           />
         </View>
       </View>
@@ -404,6 +422,7 @@ const RenderField = ({
             ? fieldDef.inputConfig?.options || []
             : []
         }
+        required={fieldDef.required}
       />
     </View>
   );
@@ -413,13 +432,58 @@ const RenderField = ({
    MAIN SCREEN
 ============================================================ */
 export default function ListItemDetailScreen({ route, navigation }) {
-  const { item = {}, name, fields = [], mode: initialMode = "read", recordType } =
-    route.params;
-    useEffect(() => {
-        console.log("Record type:", recordType);
-    }, [recordType]);
+  const { 
+    item = {}, 
+    name, 
+    fields = [], 
+    mode: initialMode = "read", 
+    recordType,
+    modes = ['read', 'add', 'edit', 'delete'],
+    actionsMenu = [],
+    
+  } = route.params;
+  console.log('recordType', recordType)
+  console.log('actionsMenu', actionsMenu)
+
   const theme = useTheme();
-  const { token, user } = useContext(AuthContext);
+  const { token, user, appConfig } = useContext(AuthContext);
+
+  const handleAutofill = (selectedItem) => {
+  console.log("Autofilling from:", selectedItem);
+  
+  const autofillData = autofillFromRecordWithFields(
+    selectedItem,
+    localItem,
+    fields, // ⭐ Pass the fields schema
+    {
+      excludeFields: ["status"], // Add any additional fields you want to exclude
+      preserveCurrentDates: true, // Keep existing dates in the form
+    }
+  );
+  
+  console.log("Autofilled data:", autofillData);
+  setLocalItem(autofillData);
+};
+
+  /* ============================================================
+     Mode Configuration Helpers
+  ============================================================ */
+  const isModeAllowed = (modeToCheck) => modes.includes(modeToCheck);
+
+  // ⭐ Validate initial mode is allowed
+  const validatedInitialMode = useMemo(() => {
+    if (isModeAllowed(initialMode)) {
+      return initialMode;
+    }
+    // Fallback: prefer 'read', then first available mode
+    if (isModeAllowed('read')) return 'read';
+    return modes[0] || 'read';
+  }, [initialMode, modes]);
+
+  useEffect(() => {
+    console.log("Record type:", recordType);
+    console.log("Allowed modes:", modes);
+  }, [recordType, modes]);
 
   /* Prepare initial data */
   const initializeItemFromFields = (fields) => {
@@ -439,114 +503,113 @@ export default function ListItemDetailScreen({ route, navigation }) {
   }, [item, fields]);
 
   const [localItem, setLocalItem] = useState(initialData);
-  const [mode, setMode] = useState(initialMode);
+  const [mode, setMode] = useState(validatedInitialMode);
   const originalItemRef = useRef(JSON.parse(JSON.stringify(initialData)));
 
-// --------------------------------------------------------------
-// AUTO CALC KEY — triggers recalculation when data changes
-// --------------------------------------------------------------
-const buildAutoKey = (obj) => {
-  if (!obj || typeof obj !== "object") return "";
+  // --------------------------------------------------------------
+  // AUTO CALC KEY — triggers recalculation when data changes
+  // --------------------------------------------------------------
+  const buildAutoKey = (obj) => {
+    if (!obj || typeof obj !== "object") return "";
 
-  if (Array.isArray(obj)) {
-    return obj.map(buildAutoKey).join("|");
-  }
-
-  return Object.keys(obj)
-    .sort()
-    .map((k) => {
-      const v = obj[k];
-      if (typeof v === "object") return `${k}:${buildAutoKey(v)}`;
-      return `${k}:${String(v)}`;
-    })
-    .join(",");
-};
-
-const autoKey = useMemo(() => buildAutoKey(localItem), [localItem]);
-const lastAutoAmount = useRef(0);
-
-// --------------------------------------------------------------
-// AUTO CALC (mobile version) — full parity with Web
-// --------------------------------------------------------------
-useEffect(() => {
-  if (!localItem) return;
-
-  let totalAmount = 0;
-  let totalMinutes = 0;
-
-  // Walk all linkSelect entries and accumulate price + duration
-  const walk = (node) => {
-    if (!node || typeof node !== "object") return;
-
-    // linkSelect raw.price
-    if (node.raw?.price != null) {
-      const p = currencyToNumber(node.raw.price);
-      const q = Number(node.quantity ?? 1);
-      totalAmount += p * q;
+    if (Array.isArray(obj)) {
+      return obj.map(buildAutoKey).join("|");
     }
 
-    // linkSelect raw.duration
-    if (node.raw?.duration) {
-      const h = Number(node.raw.duration.hours || 0);
-      const m = Number(node.raw.duration.minutes || 0);
-      totalMinutes += h * 60 + m;
-    }
-
-    // Continue deep walk
-    if (Array.isArray(node)) node.forEach(walk);
-    else Object.values(node).forEach(walk);
+    return Object.keys(obj)
+      .sort()
+      .map((k) => {
+        const v = obj[k];
+        if (typeof v === "object") return `${k}:${buildAutoKey(v)}`;
+        return `${k}:${String(v)}`;
+      })
+      .join(",");
   };
 
-  walk(localItem);
+  const autoKey = useMemo(() => buildAutoKey(localItem), [localItem]);
+  const lastAutoAmount = useRef(0);
 
-  // APPLY CALCULATED FIELDS
-  setLocalItem((prev) => {
-    const updated = { ...prev };
+  // --------------------------------------------------------------
+  // AUTO CALC (mobile version) — full parity with Web
+  // --------------------------------------------------------------
+  useEffect(() => {
+    if (!localItem) return;
 
-    // ------------------------------
-    // 1️⃣ Duration (hours/minutes)
-    // ------------------------------
-    if (totalMinutes > 0) {
-      const h = Math.floor(totalMinutes / 60);
-      const m = totalMinutes % 60;
+    let totalAmount = 0;
+    let totalMinutes = 0;
 
-      if (!updated.duration) updated.duration = {};
+    // Walk all linkSelect entries and accumulate price + duration
+    const walk = (node) => {
+      if (!node || typeof node !== "object") return;
 
-      updated.duration = {
-        hours: h.toString(),
-        minutes: m.toString().padStart(2, "0"),
-      };
-
-      // Auto-calc endTime if startTime exists
-      if (updated.time?.startTime) {
-        const [sh, sm] = updated.time.startTime.split(":").map(Number);
-        const start = new Date(0, 0, 0, sh, sm);
-        const end = new Date(start.getTime() + totalMinutes * 60000);
-
-        if (!updated.time) updated.time = {};
-
-        updated.time.endTime =
-          `${String(end.getHours()).padStart(2, "0")}:` +
-          `${String(end.getMinutes()).padStart(2, "0")}`;
+      // linkSelect raw.price
+      if (node.raw?.price != null) {
+        const p = currencyToNumber(node.raw.price);
+        const q = Number(node.quantity ?? 1);
+        totalAmount += p * q;
       }
-    }
 
-    // ------------------------------
-    // 2️⃣ Payment auto amount
-    // ------------------------------
-    if (!updated.payment) updated.payment = {};
+      // linkSelect raw.duration
+      if (node.raw?.duration) {
+        const h = Number(node.raw.duration.hours || 0);
+        const m = Number(node.raw.duration.minutes || 0);
+        totalMinutes += h * 60 + m;
+      }
 
-    const current = currencyToNumber(updated.payment.amount);
+      // Continue deep walk
+      if (Array.isArray(node)) node.forEach(walk);
+      else Object.values(node).forEach(walk);
+    };
 
-    if (!updated.payment.amount || current === lastAutoAmount.current) {
-      updated.payment.amount = formatCurrency(String(totalAmount));
-      lastAutoAmount.current = totalAmount;
-    }
+    walk(localItem);
 
-    return updated;
-  });
-}, [autoKey]);
+    // APPLY CALCULATED FIELDS
+    setLocalItem((prev) => {
+      const updated = { ...prev };
 
+      // ------------------------------
+      // 1️⃣ Duration (hours/minutes)
+      // ------------------------------
+      if (totalMinutes > 0) {
+        const h = Math.floor(totalMinutes / 60);
+        const m = totalMinutes % 60;
+
+        if (!updated.duration) updated.duration = {};
+
+        updated.duration = {
+          hours: h.toString(),
+          minutes: m.toString().padStart(2, "0"),
+        };
+
+        // Auto-calc endTime if startTime exists
+        if (updated.time?.startTime) {
+          const [sh, sm] = updated.time.startTime.split(":").map(Number);
+          const start = new Date(0, 0, 0, sh, sm);
+          const end = new Date(start.getTime() + totalMinutes * 60000);
+
+          if (!updated.time) updated.time = {};
+
+          updated.time.endTime =
+            `${String(end.getHours()).padStart(2, "0")}:` +
+            `${String(end.getMinutes()).padStart(2, "0")}`;
+        }
+      }
+
+      // ------------------------------
+      // 2️⃣ Payment auto amount
+      // ------------------------------
+      if (!updated.payment) updated.payment = {};
+
+      const current = currencyToNumber(updated.payment.amount);
+
+      if (!updated.payment.amount || current === lastAutoAmount.current) {
+        updated.payment.amount = formatCurrency(String(totalAmount));
+        lastAutoAmount.current = totalAmount;
+      }
+
+      return updated;
+    });
+  }, [autoKey]);
 
   /* ----------------------------------------------------------
      Handle Payment Completion → create Transaction + update appt
@@ -557,7 +620,8 @@ useEffect(() => {
     try {
       const newID = paymentUpdate?.paymentIntent ? paymentUpdate?.paymentIntent.id : uuid.v4();
       const tx = buildTransactionFromAppointment(localItem, paymentUpdate, newID);
-  console.log("Built transaction:", tx);
+      console.log("Built transaction:", tx);
+      
       await createRecord(
         tx,
         "transactions",
@@ -570,7 +634,6 @@ useEffect(() => {
       if (item?._id) {
         await updateRecord(item._id, localItem, token);
       }
-
     } catch (err) {
       console.error("Transaction/save failed:", err);
     }
@@ -594,22 +657,134 @@ useEffect(() => {
     });
   };
 
+  /* ============================================================
+     ✅ validateRequiredFields
+  ============================================================ */
+  const validateRequiredFields = (fields, item, parentPath = "", parentLabel = "") => {
+    const missingFields = [];
+
+    fields.forEach((field) => {
+      const fieldPath = parentPath ? `${parentPath}.${field.field}` : field.field;
+      const value = getValue(item, fieldPath);
+      const fieldLabel = parentLabel ? `${parentLabel} > ${field.label}` : field.label;
+
+      // Check if this field is required
+      if (field.required === true) {
+        // Check for empty values
+        if (value === undefined || value === null || value === "" || 
+            (Array.isArray(value) && value.length === 0)) {
+          missingFields.push(fieldLabel);
+        }
+      }
+
+      // Recursively check nested object fields
+      if (field.objectConfig && Array.isArray(field.objectConfig)) {
+        const nestedMissing = validateRequiredFields(
+          field.objectConfig,
+          item,
+          fieldPath,
+          fieldLabel
+        );
+        missingFields.push(...nestedMissing);
+      }
+
+      // Check array items for required sub-fields
+      if (field.arrayConfig?.object && Array.isArray(value)) {
+        value.forEach((arrayItem, idx) => {
+          const arrayLabel = `${fieldLabel} #${idx + 1}`;
+          const nestedMissing = validateRequiredFields(
+            field.arrayConfig.object,
+            item,
+            `${fieldPath}[${idx}]`,
+            arrayLabel
+          );
+          missingFields.push(...nestedMissing);
+        });
+      }
+    });
+
+    return missingFields;
+  };
+
   /* ----------------------------------------------------------
      Saving Logic
   ---------------------------------------------------------- */
   const handleSave = async () => {
-  try {
-    const isUser = name?.toLowerCase() === "users";
-    let savedId = item?._id;
+    // ⭐ Validate mode is allowed
+    if (mode === 'add' && !isModeAllowed('add')) {
+      console.warn('Add mode not allowed');
+      Alert.alert('Not Allowed', 'Creating new records is not permitted in this view.');
+      return;
+    }
+    
+    if (mode === 'edit' && !isModeAllowed('edit')) {
+      console.warn('Edit mode not allowed');
+      Alert.alert('Not Allowed', 'Editing records is not permitted in this view.');
+      return;
+    }
 
-    // -----------------------------------------
-    // USERS
-    // -----------------------------------------
-    if (isUser) {
-      if (mode === "add") {
-        const created = await createRecord(
+    // ✅ Validate required fields
+    const missingFields = validateRequiredFields(fields, localItem);
+    
+    if (missingFields.length > 0) {
+      const fieldList = missingFields.map((f, i) => `${i + 1}. ${f}`).join('\n');
+      Alert.alert(
+        'Required Fields Missing',
+        `Please fill out the following required fields:\n\n${fieldList}`,
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    try {
+      const isUser = name?.toLowerCase() === "users";
+      let savedId = item?._id;
+
+      // -----------------------------------------
+      // USERS
+      // -----------------------------------------
+      if (isUser) {
+        if (mode === "add") {
+          const created = await createRecord(
+            localItem,
+            "user",
+            token,
+            user.userId,
+            user.subscriberId,
+            user
+          );
+
+          // NEW RECORD → CLOSE SCREEN
+          return navigation.goBack();
+
+        } else {
+          const idToUpdate = item?.userId || item?._id;
+          localItem.__isUser = true;
+
+          await updateRecord(idToUpdate, localItem, token);
+
+          // EDIT EXISTING USER → STAY ON SCREEN
+          originalItemRef.current = JSON.parse(JSON.stringify(localItem));
+          return setMode("read");
+        }
+      }
+
+      // -----------------------------------------
+      // NON-USER RECORDS (appointments, transactions, etc)
+      // -----------------------------------------
+      if (mode === "edit" && item._id) {
+        // Updating existing record
+        await updateRecord(item._id, localItem, token);
+
+        // STAY ON SCREEN → SWITCH TO READ MODE
+        originalItemRef.current = JSON.parse(JSON.stringify(localItem));
+        return setMode("read");
+
+      } else {
+        // Creating new record
+        await createRecord(
           localItem,
-          "user",
+          recordType,
           token,
           user.userId,
           user.subscriberId,
@@ -618,55 +793,25 @@ useEffect(() => {
 
         // NEW RECORD → CLOSE SCREEN
         return navigation.goBack();
-
-      } else {
-        const idToUpdate = item?.userId || item?._id;
-        localItem.__isUser = true;
-
-        await updateRecord(idToUpdate, localItem, token);
-
-        // EDIT EXISTING USER → STAY ON SCREEN
-        originalItemRef.current = JSON.parse(JSON.stringify(localItem));
-        return setMode("read");
       }
+
+    } catch (err) {
+      console.error("Save failed:", err);
+      Alert.alert('Save Failed', 'Unable to save changes. Please try again.');
     }
-
-    // -----------------------------------------
-    // NON-USER RECORDS (appointments, transactions, etc)
-    // -----------------------------------------
-    if (mode === "edit" && item._id) {
-      // Updating existing record
-      await updateRecord(item._id, localItem, token);
-
-      // STAY ON SCREEN → SWITCH TO READ MODE
-      originalItemRef.current = JSON.parse(JSON.stringify(localItem));
-      return setMode("read");
-
-    } else {
-      // Creating new record
-      await createRecord(
-        localItem,
-        recordType.toLowerCase(),
-        token,
-        user.userId,
-        user.subscriberId,
-        user
-      );
-
-      // NEW RECORD → CLOSE SCREEN
-      return navigation.goBack();
-    }
-
-  } catch (err) {
-    console.error("Save failed:", err);
-  }
-};
-
+  };
 
   /* ----------------------------------------------------------
      Delete Logic
   ---------------------------------------------------------- */
   const handleDelete = async () => {
+    // ⭐ Validate delete is allowed
+    if (!isModeAllowed('delete')) {
+      console.warn('Delete mode not allowed');
+      Alert.alert('Not Allowed', 'Deleting records is not permitted in this view.');
+      return;
+    }
+
     const isUser = name?.toLowerCase() === "users";
     const idToDelete = isUser ? item?.userId || item?._id : item?._id;
     if (!idToDelete) return;
@@ -692,6 +837,7 @@ useEffect(() => {
       navigation.goBack({ shouldRefresh: true });
     } catch (err) {
       console.error("Delete failed:", err);
+      Alert.alert('Delete Failed', 'Unable to delete record. Please try again.');
     }
   };
 
@@ -730,6 +876,7 @@ useEffect(() => {
                 </Text>
 
                 <SubtitleText name={name} item={localItem} />
+               
 
                 {mode === "read" && localItem?.createdAt && (
                   <Text
@@ -747,7 +894,8 @@ useEffect(() => {
               <View style={styles.headerActions}>
                 {mode === "read" ? (
                   <>
-                    {item?._id && (
+                    {/* ⭐ Delete only if delete mode is allowed and item exists */}
+                    {isModeAllowed('delete') && item?._id && (
                       <GlassActionButton
                         icon="trash-can-outline"
                         color={theme.colors.error}
@@ -756,45 +904,50 @@ useEffect(() => {
                       />
                     )}
 
-                    <GlassActionButton
-                      icon="pencil"
-                      onPress={() => {
-                        originalItemRef.current = JSON.parse(JSON.stringify(localItem));
-                        setMode("edit");
-                      }}
-                      color={theme.colors.primary}
-                      theme={theme}
-                    />
+                    {/* ⭐ Edit only if edit mode is allowed */}
+                    {isModeAllowed('edit') && (
+                      <GlassActionButton
+                        icon="pencil"
+                        onPress={() => {
+                          originalItemRef.current = JSON.parse(JSON.stringify(localItem));
+                          setMode("edit");
+                        }}
+                        color={theme.colors.primary}
+                        theme={theme}
+                      />
+                    )}
 
+                    {/* Close always available */}
                     <GlassActionButton
                       icon="close"
-                      onPress={() =>navigation.goBack()}
-                  
+                      onPress={() => navigation.goBack()}
                       theme={theme}
                     />
                   </>
                 ) : (
                   <>
+                    {/* Save button (visible in edit/add mode) */}
                     <GlassActionButton
                       icon="check"
                       onPress={handleSave}
                       color={theme.colors.primary}
                       theme={theme}
                     />
+                    
+                    {/* Cancel button */}
                     <GlassActionButton
                       icon="close"
                       onPress={() => {
                         if (mode === "add") {
                           navigation.goBack();
                         } else {
-                          // ❌ Restore snapshot
+                          // ⭐ Restore snapshot and return to read
                           setLocalItem(JSON.parse(JSON.stringify(originalItemRef.current)));
                           setMode("read");
                         }
                       }}
                       theme={theme}
                     />
-
                   </>
                 )}
               </View>
@@ -805,12 +958,29 @@ useEffect(() => {
             />
           </View>
 
+             {/* ⭐ ACTION MENU - ADD THIS SECTION */}
+        {mode === "add" && actionsMenu.length > 0 && (
+          <View style={{ paddingHorizontal: 15 }}>
+      <ActionMenu 
+      item={localItem}
+      recordType={recordType}
+      recordTypeName={name}
+      fields={fields} // ⭐ PASS FIELDS
+      onAutofill={handleAutofill}
+      appConfig={appConfig}
+      actionsMenu={actionsMenu}
+    />
+          </View>
+        )}
+
           {/* CONTENT */}
           <ScrollView
             style={{ flex: 1 }}
             contentContainerStyle={styles.scrollContent}
           >
+     
             <View style={styles.fieldsContainer}>
+              
               {fields.map((field, index) => (
                 <React.Fragment key={`${field.field}-${index}`}>
                   <RenderField
@@ -885,6 +1055,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 12,
   },
+  arrayItemContent: {},
   objectSection: {
     marginBottom: 5,
   },

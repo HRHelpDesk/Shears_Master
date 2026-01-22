@@ -33,6 +33,22 @@ export const CommunicationFields = [
     display: { order: 4 },
     input: 'array',
   },
+ {
+  field: 'singleEmail',
+  type: 'string',
+  label: 'Email',
+  displayInList: false,
+  required: false,
+  validations: {
+    pattern: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+  },
+  input: 'email',
+  inputConfig: { 
+    autoComplete: 'email', 
+    lowercase: true 
+  },
+  display: { order: 4 },
+},
   {
     field: 'phone',
     type: 'Array',

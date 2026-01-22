@@ -1,5 +1,5 @@
 // src/components/ActionMenu/ActionMenu.jsx
-import React from "react";
+import React, { useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { useTheme, Text } from "react-native-paper";
 
@@ -7,9 +7,7 @@ import PhoneCallActionMenuItem from "./PhoneCallActionMenuItem";
 import TextMessageActionMenuItem from "./TextMessageActionMenuItem";
 import EmailActionMenuItem from "./EmailActionMenuItem";
 import MapsActionMenuItem from "./MapsActionMenuItem";
-
-// import EmailActionMenuItem ...
-// import MapsActionMenuItem ...
+import AutofillActionMenuItem from "./AutofillActionMenuItem"; // ⭐ UPDATED IMPORT
 
 /* ===================================================================
    ✅ Extract Helpers — Recursively scan for actionable fields
@@ -20,20 +18,16 @@ const extractPhoneNumbers = (obj) => {
   const walk = (node) => {
     if (!node || typeof node !== "object") return;
 
-    // ✅ Schema: { raw: { phone: [{ value }] } }
     if (node?.raw?.phone && Array.isArray(node.raw.phone)) {
       node.raw.phone.forEach((p) => phones.push(p.value));
     }
 
-    // ✅ Schema: phone: "123"
     if (typeof node.phone === "string") phones.push(node.phone);
 
-    // ✅ Schema: phone: [{label, value}]
     if (Array.isArray(node.phone)) {
       node.phone.forEach((p) => p?.value && phones.push(p.value));
     }
 
-    // ✅ Deep scan everything
     Object.values(node).forEach(walk);
   };
 
@@ -47,22 +41,18 @@ const extractEmails = (obj) => {
   const walk = (node) => {
     if (!node || typeof node !== "object") return;
 
-    // ✅ Schema 1: raw.email = [{ label, value }]
     if (node?.raw?.email && Array.isArray(node.raw.email)) {
       node.raw.email.forEach((e) => e?.value && emails.push(e.value));
     }
 
-    // ✅ Schema 2: email = "string"
     if (typeof node.email === "string") {
       emails.push(node.email);
     }
 
-    // ✅ Schema 3: email = [{ label, value }]
     if (Array.isArray(node.email)) {
       node.email.forEach((e) => e?.value && emails.push(e.value));
     }
 
-    // ✅ Deep scan
     Object.values(node).forEach(walk);
   };
 
@@ -70,29 +60,24 @@ const extractEmails = (obj) => {
   return emails;
 };
 
-
 const extractAddresses = (obj) => {
   const addresses = [];
 
   const walk = (node) => {
     if (!node || typeof node !== "object") return;
 
-    // ✅ Schema 1: raw.address (your inventory/services schema)
     if (node?.raw?.address && Array.isArray(node.raw.address)) {
       node.raw.address.forEach((a) => addresses.push(a));
     }
 
-    // ✅ Schema 2: address: [{ street, city, ... }]
     if (Array.isArray(node.address)) {
       node.address.forEach((a) => addresses.push(a));
     }
 
-    // ✅ Schema 3: address: "123 Fake St"
     if (typeof node.address === "string") {
       addresses.push(node.address);
     }
 
-    // ✅ Continue deep scan
     Object.values(node).forEach(walk);
   };
 
@@ -100,22 +85,29 @@ const extractAddresses = (obj) => {
   return addresses;
 };
 
-
 /* ===================================================================
    ✅ MAIN ACTION MENU COMPONENT
 =================================================================== */
-export default function ActionMenu({ item }) {
+export default function ActionMenu({ 
+  item, 
+  recordType, 
+  recordTypeName,
+  onAutofill,
+  fields, // ⭐ ADD THIS PROP
+  appConfig,
+  actionsMenu = [], // ⭐ ADD THIS PROP
+}) {
   const theme = useTheme();
+  const [showAutofillModal, setShowAutofillModal] = useState(false);
 
+console.log('AppConfig in ActionMenu:', appConfig); 
   const phones = extractPhoneNumbers(item);
   const emails = extractEmails(item);
   const addresses = extractAddresses(item);
-console.log('addresses', addresses)
+
   const hasActions = phones.length || emails.length || addresses.length;
 
-  if (!hasActions) return null;
-
-  return (
+   return (
     <View style={[styles.container, { borderColor: theme.colors.outline }]}>
       <Text
         variant="labelLarge"
@@ -129,25 +121,23 @@ console.log('addresses', addresses)
       </Text>
 
       <View style={styles.actionsRow}>
-        {/* ✅ PHONE CALL */}
-        {phones.map((p, idx) => (
-          <PhoneCallActionMenuItem key={`phone-${idx}`} phone={p} />
-        ))}
+        {actionsMenu.includes('autofill') && (
+        <AutofillActionMenuItem
+          visible={showAutofillModal}
+          onPress={() => setShowAutofillModal(true)}
+          onDismiss={() => setShowAutofillModal(false)}
+          onAutofill={onAutofill}
+          recordType={recordType}
+          recordTypeName={recordTypeName}
+          fields={fields} // ⭐ PASS FIELDS
+        />
+        )}
 
-        {/* ✅ TEXT MESSAGE */}
-        {phones.map((p, idx) => (
-          <TextMessageActionMenuItem key={`sms-${idx}`} phone={p} />
-        ))}
-
-        {/* ✅ EMAIL — (implement next) */}
-        {emails.map((e, idx) => (
-          <EmailActionMenuItem key={`email-${idx}`} email={e} />
-        ))}
-
-        {/* ✅ MAPS — (implement next) */}
-        {addresses.map((a, idx) => (
-          <MapsActionMenuItem key={`addr-${idx}`} address={a} />
-        ))}
+        {/* {hasActions && (
+          <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>
+            • More actions coming soon
+          </Text>
+        )} */}
       </View>
     </View>
   );

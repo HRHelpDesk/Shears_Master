@@ -18,6 +18,7 @@ export default function AnnouncementListView({
   recordType = "announcements",
   fields = [],
   appConfig,
+  
 }) {
   const { token, user } = useContext(AuthContext);
   const theme = useTheme();
@@ -63,6 +64,7 @@ export default function AnnouncementListView({
       data={data}
       fields={fields}
       appConfig={appConfig}
+      onRefresh={loadData}
     />
   );
 }

@@ -1,4 +1,4 @@
-// UserListView.js
+// src/components/UserListView.js  (or wherever it's located)
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import {
   View,
@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Platform,
   Alert,
+  Image,
 } from 'react-native';
 import { Avatar, useTheme, FAB } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
@@ -17,9 +18,9 @@ import { AuthContext } from '../../context/AuthContext';
 import { getSubUsers } from 'shears-shared/src/Services/Authentication';
 
 export default function UserListView({
-    data = [],
+  data = [],           // optional – if you ever want to pass pre-loaded data
   fields = null,
-  name = 'Item',
+  name = 'users',      // default to lowercase plural
   appConfig,
   type = 'alphabetical',
   onRefresh,
@@ -28,41 +29,42 @@ export default function UserListView({
   const theme = useTheme();
   const navigation = useNavigation();
   const { user, token } = useContext(AuthContext);
-  const [finalFields, setFinalFields] = useState([]);
 
   const [search, setSearch] = useState('');
   const [users, setUsers] = useState([]);
-
+  const [finalFields, setFinalFields] = useState([]);
 
   /* -------------------------------------------------------------------------- */
-    /* ✅ Load Display Fields                                                     */
-    /* -------------------------------------------------------------------------- */
-    const displayFields = useMemo(() => {
-      let appFields = [];
-  
-      if (fields?.length) {
-        appFields = fields;
-      } else if (appConfig) {
-        const route = appConfig.mainNavigation.find(
-          (r) =>
-            r.displayName?.toLowerCase() === name.toLowerCase() ||
-            r.name?.toLowerCase() === name.toLowerCase()
-        );
-        appFields = route?.fields || [];
-      }
-  
-      setFinalFields(appFields);
-      return appFields.filter((f) => f.displayInList === true);
-    }, [fields, appConfig, name]);
+  /* Load Display Fields                                                        */
+  /* -------------------------------------------------------------------------- */
+  const displayFields = useMemo(() => {
+    let appFields = [];
 
+    if (fields?.length) {
+      appFields = fields;
+    } else if (appConfig?.mainNavigation) {
+      const route = appConfig.mainNavigation.find(
+        (r) =>
+          r.displayName?.toLowerCase() === name.toLowerCase() ||
+          r.name?.toLowerCase() === name.toLowerCase()
+      );
+      appFields = route?.fields || [];
+    }
 
+    setFinalFields(appFields);
+    return appFields.filter((f) => f.displayInList === true);
+  }, [fields, appConfig, name]);
+
+  /* -------------------------------------------------------------------------- */
+  /* Fetch Sub-Users                                                            */
+  /* -------------------------------------------------------------------------- */
   const fetchUsers = async () => {
     try {
       if (!user?.subscriberId || !token) return;
       const data = await getSubUsers(user.subscriberId, token);
       setUsers(data || []);
     } catch (err) {
-      console.log('Error loading users:', err);
+      console.error('Error loading users:', err);
     }
   };
 
@@ -71,7 +73,7 @@ export default function UserListView({
   }, [user]);
 
   /* ----------------------------------------------- */
-  /* ✅ Helper: Combine first+last name if needed     */
+  /* Helper: Combine first+last name if needed       */
   /* ----------------------------------------------- */
   const getDisplayName = (u) =>
     u.fullName ||
@@ -79,18 +81,18 @@ export default function UserListView({
     'Unnamed User';
 
   /* ----------------------------------------------- */
-  /* ✅ Apply Search                                 */
+  /* Apply Search                                    */
   /* ----------------------------------------------- */
   const filtered = useMemo(() => {
     return users.filter((u) =>
-      `${getDisplayName(u)} ${u.email} ${u.phone}`
+      `${getDisplayName(u)} ${u.email || ''} ${u.phone || ''} ${u.role || ''}`
         .toLowerCase()
         .includes(search.toLowerCase())
     );
   }, [users, search]);
 
   /* ----------------------------------------------- */
-  /* ✅ Alphabetical Sections                        */
+  /* Alphabetical Sections                           */
   /* ----------------------------------------------- */
   const sections = useMemo(() => {
     const grouped = {};
@@ -111,19 +113,21 @@ export default function UserListView({
   }, [filtered]);
 
   /* ----------------------------------------------- */
-  /* ✅ Swipe-to-delete (optional)                   */
+  /* Swipe-to-delete (placeholder – implement API later if needed) */
   /* ----------------------------------------------- */
   const handleDelete = (u) => {
     Alert.alert(
       'Delete user?',
-      `Remove ${getDisplayName(u)}?`,
+      `Remove ${getDisplayName(u)}? This cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            console.log('TODO delete'); // optional
+            // TODO: Call deleteRecord(u._id, token) here when ready
+            console.log('Delete user:', u._id);
+            // After success: fetchUsers() to refresh
           },
         },
       ]
@@ -140,70 +144,106 @@ export default function UserListView({
   );
 
   /* ----------------------------------------------- */
-  /* ✅ Render Item Row                              */
+  /* Render Item Row                                 */
   /* ----------------------------------------------- */
-  const renderItem = ({ item: u }) => {
-    const name = getDisplayName(u);
-    const initials = name
-      .split(' ')
-      .map((p) => p[0])
-      .join('')
-      .substring(0, 2)
-      .toUpperCase();
+  /* ----------------------------------------------- */
+/* Render Item Row                                 */
+/* ----------------------------------------------- */
+const renderItem = ({ item: u }) => {
+  const name = getDisplayName(u);
+  const initials = name
+    .split(' ')
+    .map((p) => p[0])
+    .join('')
+    .substring(0, 2)
+    .toUpperCase();
 
-    return (
-      <Swipeable renderRightActions={() => renderRightActions(u)}>
-        <TouchableOpacity
-          style={[styles.card, { backgroundColor: theme.colors.surface }]}
-          onPress={() =>
-            navigation.navigate('ListItemDetail', {
+  const hasAvatar = u.avatar && typeof u.avatar === 'string' && u.avatar.trim().length > 0;
+  const avatarSize = 48;
+  const cornerRadius = 12; // ← adjust this: 0 = sharp square, 12 = rounded square, 24 = circle
+
+  return (
+    <Swipeable renderRightActions={() => renderRightActions(u)}>
+      <TouchableOpacity
+        style={[styles.card, { backgroundColor: theme.colors.surface }]}
+        onPress={() =>
+          navigation.navigate('ListItemDetail', {
             item: u,
-              name:"users",
-              appConfig,
-              fields: finalFields,
+            name: 'users',
+            recordType: 'user',
+            appConfig,
+            fields: finalFields,
+            mode: 'read',
           })
-          }
+        }
+      >
+        {/* Avatar Wrapper – enforces square shape */}
+        <View
+          style={{
+            width: avatarSize,
+            height: avatarSize,
+            borderRadius: cornerRadius,
+            overflow: 'hidden',
+            backgroundColor: hasAvatar ? 'transparent' : theme.colors.primary,
+            justifyContent: 'center',
+            alignItems: 'center',
+            // Optional: subtle border or shadow
+            // borderWidth: 1,
+            // borderColor: theme.colors.outlineVariant,
+            // elevation: hasAvatar ? 2 : 0,
+          }}
         >
-          <Avatar.Text
-            size={48}
-            label={initials}
-            style={{ backgroundColor: theme.colors.primary }}
-            color={theme.colors.onPrimary}
-          />
+          {hasAvatar ? (
+            <Image
+              source={{ uri: u.avatar }}
+              style={{
+                width: avatarSize,
+                height: avatarSize,
+                borderRadius: cornerRadius, // match wrapper
+              }}
+              resizeMode="cover"
+            />
+          ) : (
+            <Avatar.Text
+              size={avatarSize}
+              label={initials}
+              style={{
+                backgroundColor: 'transparent', // remove paper's default bg
+              }}
+              color={theme.colors.onPrimary}
+              labelStyle={{
+                fontSize: 22,
+                fontWeight: '600',
+              }}
+            />
+          )}
+        </View>
 
-          <View style={styles.textContainer}>
-            <Text
-              style={[styles.name, { color: theme.colors.onSurface }]}
-            >
-              {name}
-            </Text>
+        <View style={styles.textContainer}>
+          <Text style={[styles.name, { color: theme.colors.onSurface }]}>
+            {name}
+          </Text>
 
-            {/* Matching Web Layout */}
-            <Text
-              style={[styles.subText, { color: theme.colors.onSurfaceVariant }]}
-            >
-              {u.email}
-            </Text>
-            {u.phone ? (
-              <Text
-                style={[styles.subText, { color: theme.colors.onSurfaceVariant }]}
-              >
-                {u.phone}
-              </Text>
-            ) : null}
-            <Text
-              style={[styles.subText, { color: theme.colors.onSurfaceVariant }]}
-            >
-              Role: {u.role}
-            </Text>
-          </View>
-        </TouchableOpacity>
-      </Swipeable>
-    );
-  };
+          <Text style={[styles.subText, { color: theme.colors.onSurfaceVariant }]}>
+            {u.email || 'No email'}
+          </Text>
 
+          {u.phone ? (
+            <Text style={[styles.subText, { color: theme.colors.onSurfaceVariant }]}>
+              {u.phone}
+            </Text>
+          ) : null}
+
+          <Text style={[styles.subText, { color: theme.colors.onSurfaceVariant }]}>
+            Role: {u.role || '—'}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    </Swipeable>
+  );
+};
   /* ----------------------------------------------- */
-  /* ✅ Section Header                               */
+  /* Section Header                                  */
   /* ----------------------------------------------- */
   const renderSectionHeader = ({ section: { title } }) => (
     <View style={styles.sectionHeader}>
@@ -237,25 +277,28 @@ export default function UserListView({
 
       <SectionList
         sections={sections}
-        keyExtractor={(item) => item._id}
+        keyExtractor={(item) => item._id || item.email || Math.random().toString()}
         renderItem={renderItem}
         renderSectionHeader={renderSectionHeader}
         stickySectionHeadersEnabled
-        contentContainerStyle={{ paddingBottom: 80 }}
+        contentContainerStyle={{ paddingBottom: 100 }}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
       />
 
-      {/* ✅ Add User FAB */}
+      {/* Add User FAB */}
       <FAB
         icon="plus"
         style={[styles.fab, { backgroundColor: theme.colors.primary }]}
         color={theme.colors.onPrimary}
         onPress={() =>
           navigation.navigate('ListItemDetail', {
-            item: {},
-            name: 'User',
+            item: {},                    // empty for new user
+            name: 'users',
+            recordType: 'user',
             mode: 'add',
             fields: finalFields,
-            appConfig: appConfig,
+            appConfig,
           })
         }
       />
@@ -264,7 +307,7 @@ export default function UserListView({
 }
 
 /* -------------------------------------------------------------- */
-/* ✅ Styles                                                      */
+/* Styles                                                         */
 /* -------------------------------------------------------------- */
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 10 },

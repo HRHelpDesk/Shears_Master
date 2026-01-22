@@ -56,6 +56,7 @@ if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   include("/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/android/app/.cxx/Debug/3e5b3y3m/x86/rnscreens_autolinked_build/cmake_install.cmake")
   include("/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/android/app/.cxx/Debug/3e5b3y3m/x86/rnsvg_autolinked_build/cmake_install.cmake")
   include("/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/android/app/.cxx/Debug/3e5b3y3m/x86/RNVectorIconsSpec_autolinked_build/cmake_install.cmake")
+  include("/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/android/app/.cxx/Debug/3e5b3y3m/x86/RNCWebViewSpec_autolinked_build/cmake_install.cmake")
   include("/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/android/app/.cxx/Debug/3e5b3y3m/x86/rnworklets_autolinked_build/cmake_install.cmake")
 
 endif()

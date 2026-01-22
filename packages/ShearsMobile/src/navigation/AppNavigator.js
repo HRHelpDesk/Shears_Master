@@ -3,6 +3,7 @@ import React, { useContext, useRef, useEffect } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { NavigationContainer } from '@react-navigation/native';
 import LoginScreen from '../screens/auth/LoginScreen';
+import ResetPasswordScreen from '../screens/auth/ResetPassword';
 import SplashScreen from '../screens/SplashScreen';
 import DetailView from '../components/BaseUI/ListItemDetail';
 import RootDrawer from './RootDrawer';
@@ -30,63 +31,64 @@ function AppRoutes() {
   }, [user]);
 
   // App.tsx
-    const { initialize } = useStripeTerminal();
+  const { initialize } = useStripeTerminal();
 
-   useEffect(() => {
+  useEffect(() => {
     initialize();
   }, [initialize])
-
 
   if (loading) return <SplashScreen appConfig={appConfig} logo={logo} />;
 
   return (
-
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {!isLoggedIn ? (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      {!isLoggedIn ? (
+        <>
           <Stack.Screen name="Login">
             {() => <LoginScreen appConfig={appConfig} logo={logo} />}
           </Stack.Screen>
-        ) : (
-          <>
-            <Stack.Screen name="RootDrawer">
-              {() => <RootDrawer appConfig={appConfig} />}
-            </Stack.Screen>
+          
+          <Stack.Screen name="ResetPassword">
+            {() => <ResetPasswordScreen appConfig={appConfig} logo={logo} />}
+          </Stack.Screen>
+        </>
+      ) : (
+        <>
+          <Stack.Screen name="RootDrawer">
+            {() => <RootDrawer appConfig={appConfig} />}
+          </Stack.Screen>
 
-            <Stack.Screen
-              name="ListItemDetail"
-              component={DetailView}
-              options={{
-                title: 'Item Details',
-                presentation: 'modal',
-                headerShown: false,
-                gestureEnabled: false,
-                animation: 'slide_from_bottom',
-              }}
-            />
+          <Stack.Screen
+            name="ListItemDetail"
+            component={DetailView}
+            options={{
+              title: 'Item Details',
+              presentation: 'modal',
+              headerShown: false,
+              gestureEnabled: false,
+              animation: 'slide_from_bottom',
+            }}
+          />
 
-            <Stack.Screen
-              name="CalendarListView"
-              component={CalendarListView}
-              options={{
-                presentation: 'modal',
-                headerShown: false,
-                gestureEnabled: false,
-                animation: 'slide_from_bottom',
-              }}
-            />
-          </>
-        )}
-      </Stack.Navigator>
+          <Stack.Screen
+            name="CalendarListView"
+            component={CalendarListView}
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              gestureEnabled: false,
+              animation: 'slide_from_bottom',
+            }}
+          />
+        </>
+      )}
+    </Stack.Navigator>
   );
 }
 
 export default function AppNavigator() {
-
-
-
   return (
-      <NavigationContainer>
-        <AppRoutes />
-      </NavigationContainer>
+    <NavigationContainer>
+      <AppRoutes />
+    </NavigationContainer>
   );
 }

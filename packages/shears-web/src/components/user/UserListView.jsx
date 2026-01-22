@@ -18,10 +18,8 @@ import {
 } from '@mui/material';
 import { Search as SearchIcon, Add as AddIcon } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
-import axios from 'axios';
-import { BASE_URL } from 'shears-shared/src/config/api';
-import { AuthContext } from '../../context/AuthContext';
 import { getSubUsers } from 'shears-shared/src/Services/Authentication';
+import { AuthContext } from '../../context/AuthContext';
 import ListItemDetail from '../BaseUI/ListItemDetail';
 
 const TableContainerStyled = styled(Paper)(({ theme }) => ({
@@ -40,7 +38,7 @@ const SearchField = styled(TextField)(({ theme }) => ({
   [theme.breakpoints.up('sm')]: { maxWidth: 400 },
 }));
 
-export default function UserListView({fields, appConfig}) {
+export default function UserListView({ fields, appConfig }) {
   const { user, token } = useContext(AuthContext);
 
   const [search, setSearch] = useState('');
@@ -54,30 +52,23 @@ export default function UserListView({fields, appConfig}) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // ---------------------------------------------------------------------
-  // ✅ FETCH SUB-USERS BY subscriberId
-  // backend route you will add: GET /v1/users/subusers/:subscriberId
-  // ---------------------------------------------------------------------
-const fetchUsers = async () => {
-  if (!user?.subscriberId || !token) return;
-  try {
-    setLoading(true);
-    const data = await getSubUsers(user.subscriberId, token, appConfig);
-    setUsers(data);
-  } catch (err) {
-    console.error("Error loading subusers:", err);
-  } finally {
-    setLoading(false);
-  }
-};
+  const fetchUsers = async () => {
+    if (!user?.subscriberId || !token) return;
+    try {
+      setLoading(true);
+      const data = await getSubUsers(user.subscriberId, token, appConfig);
+      setUsers(data);
+    } catch (err) {
+      console.error("Error loading subusers:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchUsers();
   }, [user]);
 
-  // ---------------------------------------------------------------------
-  // ✅ Hardcoded fields for Users
-  // ---------------------------------------------------------------------
   const userFields = [
     { key: 'fullName', label: 'Name' },
     { key: 'email', label: 'Email' },
@@ -85,9 +76,6 @@ const fetchUsers = async () => {
     { key: 'role', label: 'Role' },
   ];
 
-  // ---------------------------------------------------------------------
-  // ✅ Filter + Sort
-  // ---------------------------------------------------------------------
   const filteredUsers = useMemo(() => {
     let filtered = users.filter((u) =>
       [u.fullName, u.email, u.phone]
@@ -114,9 +102,6 @@ const fetchUsers = async () => {
     }
   };
 
-  // ---------------------------------------------------------------------
-  // ✅ Drawer actions
-  // ---------------------------------------------------------------------
   const handleAdd = () => {
     setSelectedUser(null);
     setDrawerMode('add');
@@ -129,7 +114,6 @@ const fetchUsers = async () => {
     setDrawerOpen(true);
   };
 
-  // ---------------------------------------------------------------------
   return (
     <TableContainerStyled
       sx={{
@@ -208,6 +192,10 @@ const fetchUsers = async () => {
                 .substring(0, 2)
                 .toUpperCase();
 
+              const hasAvatar = u.avatar && typeof u.avatar === 'string' && u.avatar.trim().length > 0;
+              const avatarSize = 48;
+              const cornerRadius = 1; // same as mobile (rounded square)
+
               return (
                 <TableRow
                   key={u._id || idx}
@@ -215,50 +203,58 @@ const fetchUsers = async () => {
                   sx={{ cursor: 'pointer' }}
                   onClick={() => handleRowClick(u)}
                 >
-                  {/* Avatar */}
+                  {/* Avatar – aligned with mobile (square/rounded-square) */}
                   <TableCell sx={{ py: 1 }}>
-                    {u.avatar ? (
-                      <Box
-                        sx={{
-                          width: 40,
-                          height: 40,
-                          borderRadius: 1, // square
-                          overflow: "hidden",
-                          bgcolor: "action.hover",
-                        }}
-                      >
+                    <Box
+                      sx={{
+                        width: avatarSize,
+                        height: avatarSize,
+                        borderRadius: cornerRadius,
+                        overflow: 'hidden',
+                        backgroundColor: hasAvatar ? 'transparent' : 'primary.main',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        // Optional: subtle border + shadow like mobile
+                        // border: '1px solid',
+                        // borderColor: 'divider',
+                        // boxShadow: hasAvatar ? 1 : 0,
+                      }}
+                    >
+                      {hasAvatar ? (
                         <img
                           src={u.avatar}
                           alt={initials}
                           style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                            display: "block",
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            borderRadius: cornerRadius, // enforce rounded corners
+                            display: 'block',
                           }}
                         />
-                      </Box>
-                    ) : (
-                      <Avatar
-                        sx={{
-                          width: 40,
-                          height: 40,
-                          borderRadius: 1, // square avatar
-                          bgcolor: "primary.main",
-                          color: "primary.contrastText",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {initials}
-                      </Avatar>
-                    )}
+                      ) : (
+                        <Avatar
+                          sx={{
+                            width: avatarSize,
+                            height: avatarSize,
+                            borderRadius: cornerRadius,
+                            backgroundColor: 'transparent', // let container bg show
+                            color: 'primary.contrastText',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {initials}
+                        </Avatar>
+                      )}
+                    </Box>
                   </TableCell>
 
                   {/* Data columns */}
                   <TableCell>{u.fullName}</TableCell>
                   <TableCell>{u.email}</TableCell>
                   <TableCell>{u.phone}</TableCell>
-                   <TableCell>{u.role}</TableCell>
+                  <TableCell>{u.role}</TableCell>
                 </TableRow>
               );
             })}
@@ -275,7 +271,7 @@ const fetchUsers = async () => {
             fetchUsers();
           }}
           item={selectedUser}
-          appConfig={appConfig}      // Users are not based on appConfig fields
+          appConfig={appConfig}
           fields={fields}
           mode={drawerMode}
           name="users"

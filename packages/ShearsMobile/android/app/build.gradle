@@ -14,6 +14,7 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace "com.shearsmobile"
+
     defaultConfig {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
@@ -36,12 +37,19 @@ android {
             resValue "string", "app_name", "Purpose"
             manifestPlaceholders.appIcon = "@mipmap/ic_purpose"
         }
+        bossCrowns {
+            dimension "app"
+            applicationId "com.bosscrowns.influencer"
+            resValue "string", "app_name", "Boss Crowns Influencer"
+            manifestPlaceholders.appIcon = "@mipmap/ic_bosscrowns"
+        }
     }
 
     // === PER-FLAVOR RESOURCES ===
     sourceSets {
         shear.res.srcDirs = ['src/shear/res']
         purpose.res.srcDirs = ['src/purpose/res']
+        bossCrowns.res.srcDirs = ['src/bossCrowns/res']
     }
 
     signingConfigs {
@@ -54,7 +62,9 @@ android {
     }
 
     buildTypes {
-        debug { signingConfig signingConfigs.debug }
+        debug { 
+            signingConfig signingConfigs.debug 
+        }
         release {
             signingConfig signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds

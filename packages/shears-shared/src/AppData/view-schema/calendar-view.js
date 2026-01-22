@@ -12,7 +12,7 @@ export const CalendarList = {
     parent:'Calendar',
     name: 'CalendarList',
     displayName: 'Upcoming',
-    component: 'calendar/CalendarListView',
+    component: 'calendar/Shear/CalendarListView',
     mobileComponent: 'CalendarListView',
     
 }
@@ -22,7 +22,7 @@ export const CalendarToday = {
     parent:'Calendar',
     name: 'CalendarToday',
     displayName: 'Today',
-    component: 'calendar/CalendarHourlyView',
+    component: 'calendar/Shear/CalendarHourlyView',
     mobileComponent: 'CalendarHourlyView',
 }
 

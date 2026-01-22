@@ -8,6 +8,7 @@ import {
   IconButton,
   Button as MuiButton,
   Stack,
+  Alert,
 } from "@mui/material";
 import { v4 as uuidv4 } from 'uuid';
 
@@ -25,22 +26,25 @@ import { FieldMap } from "../../config/component-mapping/FieldMap";
 import FieldActionsForEntry from "../BaseUI/ActionMenu/FieldActionsForEntry";
 import GlassActionButtonWeb from "../UI/GlassActionButton";
 import SubtitleText from "../UI/SubtitleText";
+import ActionMenu from "./ActionMenu/ActionMenu"; // Correct import
 
 import {
   singularize,
   currencyToNumber,
   formatCurrency,
-  buildTransactionFromAppointment
+  buildTransactionFromAppointment,
+  getDisplayTitle
 } from "shears-shared/src/utils/stringHelpers";
 
-
 import {
+  autofillFromRecordWithFields,
   createRecord,
   deleteRecord,
   updateRecord,
 } from "shears-shared/src/Services/Authentication";
 
 import { AuthContext } from "../../context/AuthContext";
+import SmartCommentWidget from "./SmartWidgets/SmartCommentWidget";
 
 /* ============================================================
    🧩 Utility — Safe deep value getter
@@ -52,7 +56,20 @@ const getValue = (source, path) => {
 };
 
 /* ============================================================
-   🧩 Render Nested Groups (objectConfig or array item)
+   🧩 initFromSchema — Moved UP
+============================================================ */
+const initFromSchema = (schema) => {
+  const o = {};
+  schema.forEach((f) => {
+    if (f.objectConfig) o[f.field] = initFromSchema(f.objectConfig);
+    else if (f.arrayConfig?.object) o[f.field] = [];
+    else o[f.field] = "";
+  });
+  return o;
+};
+
+/* ============================================================
+   🧩 Render Nested Groups
 ============================================================ */
 const RenderNestedFields = ({
   nestedFields = [],
@@ -98,7 +115,6 @@ const RenderNestedFields = ({
                     theme,
                     parentPath,
                     onPaymentComplete,
-
                   })}
                 </Box>
               );
@@ -111,7 +127,7 @@ const RenderNestedFields = ({
 };
 
 /* ============================================================
-   🧩 RenderField — Web parity with mobile
+   🧩 RenderField
 ============================================================ */
 function RenderField({
   fieldDef,
@@ -134,9 +150,6 @@ function RenderField({
 
   const value = getValue(item, fieldPath);
 
-  /* ------------------------------------------------------------
-     ⭐ IMAGE FIELD
-  ------------------------------------------------------------ */
   if (inputType === "image") {
     return (
       <Box sx={{ mb: 2 }}>
@@ -144,7 +157,7 @@ function RenderField({
           label={fieldDef.label}
           value={value}
           mode={mode}
-          item={item}  
+          item={item}
           onChangeText={(nv) => handleChange(fieldPath, nv)}
           inputConfig={fieldDef.inputConfig}
         />
@@ -152,9 +165,6 @@ function RenderField({
     );
   }
 
-  /* ------------------------------------------------------------
-     ⭐ ARRAY FIELD
-  ------------------------------------------------------------ */
   const isArray = Array.isArray(value);
   const shouldAutoInitArray =
     fieldDef.arrayConfig?.object ||
@@ -166,6 +176,17 @@ function RenderField({
   }
 
   if (isArray) {
+
+     if (fieldDef.field === "comments") {
+    return (
+      <SmartCommentWidget
+        comments={value || []}
+        mode={mode}
+        item={item}     
+    
+      />
+    );
+  }
     const addItem = () => {
       const newEntry =
         fieldDef.input === "linkSelect"
@@ -188,6 +209,7 @@ function RenderField({
         <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
           <Typography sx={{ color: theme.palette.primary.main }} variant="subtitle1">
             {fieldDef.label}
+            {fieldDef.required && <span style={{ color: 'red', marginLeft: 4 }}>*</span>}
           </Typography>
 
           {mode !== "read" && (
@@ -206,7 +228,7 @@ function RenderField({
 
         {value.length === 0 ? (
           <Typography
-            sx={{ fontStyle: "italic", color: "text.secondary" }}
+            sx={{ fontStyle: "italic", color: "text.secondary", cursor: mode !== "read" ? "pointer" : "default" }}
             onClick={mode !== "read" ? addItem : undefined}
           >
             {mode !== "read" ? "+ Add first entry" : "No entries"}
@@ -227,7 +249,6 @@ function RenderField({
                     : "rgba(74,144,226,0.04)",
               }}
             >
-              {/* HEADER */}
               <Box
                 sx={{
                   display: "flex",
@@ -254,7 +275,6 @@ function RenderField({
                 )}
               </Box>
 
-              {/* FIELDS */}
               {fieldDef.input === "linkSelect" ? (
                 <FieldMap.linkSelect
                   label={fieldDef.label}
@@ -276,7 +296,6 @@ function RenderField({
                   theme={theme}
                   parentPath={`${fieldPath}[${idx}]`}
                   onPaymentComplete={onPaymentComplete}
-
                 />
               )}
             </Box>
@@ -286,9 +305,6 @@ function RenderField({
     );
   }
 
-  /* ------------------------------------------------------------
-     ⭐ LINK SELECT
-  ------------------------------------------------------------ */
   if (inputType === "linkSelect") {
     return (
       <Box sx={{ mb: 2 }}>
@@ -296,7 +312,7 @@ function RenderField({
           label={fieldDef.label}
           value={value}
           mode={mode}
-          item={item}  
+          item={item}
           recordTypeName={fieldDef.inputConfig?.recordType}
           onChangeText={(nv) => handleChange(fieldPath, nv)}
         />
@@ -304,9 +320,6 @@ function RenderField({
     );
   }
 
-  /* ------------------------------------------------------------
-     ⭐ OBJECT FIELD
-  ------------------------------------------------------------ */
   if (
     value &&
     typeof value === "object" &&
@@ -317,6 +330,7 @@ function RenderField({
       <Box sx={{ mb: 2 }}>
         <Typography sx={{ mb: 1 }} variant="body2" color="text.secondary">
           {fieldDef.label}
+          {fieldDef.required && <span style={{ color: 'red', marginLeft: 4 }}>*</span>}
         </Typography>
 
         <Box
@@ -345,9 +359,6 @@ function RenderField({
     );
   }
 
-  /* ------------------------------------------------------------
-     ⭐ PAYMENT BUTTON (FULL MOBILE PARITY)
-  ------------------------------------------------------------ */
   if (inputType === "paymentButton") {
     const currentAmount = item?.payment?.amount || "0";
     const currentTax = item?.payment?.tax || 0;
@@ -367,7 +378,6 @@ function RenderField({
               ? parentPath
               : "payment";
 
-            // update web local state
             handleChange(`${base}.status`, paymentUpdate.status);
             handleChange(`${base}.method`, paymentUpdate.method);
             handleChange(`${base}.sendReceipt`, paymentUpdate.sendReceipt);
@@ -386,33 +396,32 @@ function RenderField({
     );
   }
 
-  /* ------------------------------------------------------------
-     ⭐ BASIC FIELD
-  ------------------------------------------------------------ */
   const isSelect =
     fieldDef.input === "select" ||
     (fieldDef.inputConfig && Array.isArray(fieldDef.inputConfig.options));
 
   const selectOptions = isSelect ? fieldDef.inputConfig?.options : null;
-const defaultValue = isSelect ? fieldDef.inputConfig?.defaultValue : null;
+  const defaultValue = isSelect ? fieldDef.inputConfig?.defaultValue : null;
+
   return (
     <Box sx={{ mb: 2 }}>
       <FieldComponent
         label={fieldDef.label}
         value={value}
         mode={mode}
-        item={item}  
+        item={item}
         onChangeText={(nv) => handleChange(fieldPath, nv)}
         options={selectOptions}
         defaultValue={defaultValue}
         multiline={fieldDef.input === "textarea"}
+        required={fieldDef.required}
       />
     </Box>
   );
 }
 
 /* ============================================================
-   🧩 MAIN COMPONENT
+   MAIN COMPONENT
 ============================================================ */
 export default function ListItemDetail({
   open,
@@ -421,80 +430,91 @@ export default function ListItemDetail({
   fields = [],
   name,
   mode: initialMode = "read",
-  recordType
+  recordType,
+  modes = ['read', 'add', 'edit', 'delete'],
+  actionsMenu = [],
+  appConfig
 }) {
   const theme = useTheme();
   const { token, user } = useContext(AuthContext);
 
-  /* ------------------- INIT FROM SCHEMA ------------------- */
-  const initFromSchema = (schema) => {
-    const o = {};
-    schema.forEach((f) => {
-      if (f.objectConfig) o[f.field] = initFromSchema(f.objectConfig);
-      else if (f.arrayConfig?.object) o[f.field] = [];
-      else o[f.field] = "";
+  // Debug logs
+  useEffect(() => {
+    console.log('[ListItemDetail] Opened with props:', {
+      name,
+      recordType,
+      initialMode,
+      actionsMenu,
+      fieldsCount: fields?.length || 0,
+      hasAppConfig: !!appConfig,
     });
-    return o;
-  };
+  }, [open]);
 
- const initialData = useMemo(() => {
-  if (!item || typeof item !== "object") {
-    return initFromSchema(fields);
-  }
+  const isModeAllowed = (modeToCheck) => modes.includes(modeToCheck);
 
-  // CASE: DataRecord object → flatten metadata + fieldsData
-  if (item.fieldsData) {
-    return {
-      ...item,                // include metadata (_id, recordType, etc.)
-      ...item.fieldsData,     // flatten editable fields
-      fieldsData: item.fieldsData, // keep original for reference
-    };
-  }
+  const validatedInitialMode = useMemo(() => {
+    if (isModeAllowed(initialMode)) return initialMode;
+    if (isModeAllowed('read')) return 'read';
+    return modes[0] || 'read';
+  }, [initialMode, modes]);
 
-  // CASE: full item already (not wrapped)
-  return item;
-}, [item, fields]);
+  const initialData = useMemo(() => {
+    if (!item || typeof item !== "object") {
+      return initFromSchema(fields);
+    }
 
+    if (item.fieldsData) {
+      return {
+        ...item,
+        ...item.fieldsData,
+        fieldsData: item.fieldsData,
+      };
+    }
+
+    return item;
+  }, [item, fields]);
 
   const [localItem, setLocalItem] = React.useState(initialData);
-  const [mode, setMode] = React.useState(initialMode);
+  const [mode, setMode] = React.useState(validatedInitialMode);
+  const originalItemRef = useRef(JSON.parse(JSON.stringify(initialData)));
+
+  const handleAutofill = (selectedItem) => {
+    console.log("Autofilling from:", selectedItem);
+
+    const autofillData = autofillFromRecordWithFields(
+      selectedItem,
+      localItem,
+      fields,
+      {
+        excludeFields: ["status"],
+        preserveCurrentDates: true,
+      }
+    );
+
+    console.log("Autofilled data:", autofillData);
+    setLocalItem(autofillData);
+  };
 
   const lastAutoAmount = useRef(0);
 
-  /* INIT auto amount */
   useEffect(() => {
     const amt = currencyToNumber(localItem?.payment?.amount || "0");
     lastAutoAmount.current = amt;
   }, []);
 
-  /* ============================================================
-     🧮 AUTO CALC — Full Mobile Parity
-  ============================================================ */
   const buildAutoKey = (obj) => {
     const results = [];
-
     const walk = (node) => {
       if (!node || typeof node !== "object") return;
-
-      // Price × Quantity
       if (node.raw?.price != null) {
-        results.push({
-          price: node.raw.price,
-          qty: Number(node.quantity ?? 1),
-        });
+        results.push({ price: node.raw.price, qty: Number(node.quantity ?? 1) });
       }
-
-      // Duration
       if (node.raw?.duration) {
-        results.push({
-          dur: node.raw.duration,
-        });
+        results.push({ dur: node.raw.duration });
       }
-
       if (Array.isArray(node)) node.forEach(walk);
       else Object.values(node).forEach(walk);
     };
-
     walk(obj);
     return JSON.stringify(results);
   };
@@ -509,19 +529,16 @@ export default function ListItemDetail({
 
     const walk = (node) => {
       if (!node || typeof node !== "object") return;
-
       if (node.raw?.price != null) {
         const p = currencyToNumber(node.raw.price);
         const q = Number(node.quantity ?? 1);
         totalAmount += p * q;
       }
-
       if (node.raw?.duration) {
         const h = Number(node.raw.duration.hours || 0);
         const m = Number(node.raw.duration.minutes || 0);
         totalMinutes += h * 60 + m;
       }
-
       if (Array.isArray(node)) node.forEach(walk);
       else Object.values(node).forEach(walk);
     };
@@ -531,30 +548,20 @@ export default function ListItemDetail({
     setLocalItem((prev) => {
       const updated = { ...prev };
 
-      /* Duration + endTime */
       if (totalMinutes > 0) {
         const h = Math.floor(totalMinutes / 60);
         const m = totalMinutes % 60;
-
-        updated.duration = {
-          hours: h.toString(),
-          minutes: m.toString().padStart(2, "0"),
-        };
+        updated.duration = { hours: h.toString(), minutes: m.toString().padStart(2, "0") };
 
         if (updated.time?.startTime) {
           const [sh, sm] = updated.time.startTime.split(":").map(Number);
           const start = new Date(0, 0, 0, sh, sm);
           const end = new Date(start.getTime() + totalMinutes * 60000);
-
-          updated.time.endTime =
-            `${String(end.getHours()).padStart(2, "0")}:` +
-            `${String(end.getMinutes()).padStart(2, "0")}`;
+          updated.time.endTime = `${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`;
         }
       }
 
-      /* Payment Amount Auto */
       if (!updated.payment) updated.payment = {};
-
       const current = currencyToNumber(updated.payment.amount);
 
       if (!updated.payment.amount || current === lastAutoAmount.current) {
@@ -566,14 +573,10 @@ export default function ListItemDetail({
     });
   }, [autoKey]);
 
-  /* ============================================================
-     🔧 handleChange
-  ============================================================ */
   const handleChange = (path, value) => {
     setLocalItem((prev) => {
       const updated = { ...prev };
       const keys = path.replace(/\[(\d+)\]/g, ".$1").split(".");
-
       let t = updated;
       while (keys.length > 1) {
         const k = keys.shift();
@@ -585,19 +588,15 @@ export default function ListItemDetail({
     });
   };
 
-  /* ============================================================
-     💳 handlePaymentComplete (transaction creation)
-  ============================================================ */
   const handlePaymentComplete = async (paymentUpdate) => {
     console.log("Payment completed:", paymentUpdate);
     try {
-       const newID = paymentUpdate?.paymentIntent
-      ? paymentUpdate.paymentIntent.id
+      const newID = paymentUpdate?.paymentIntent
+        ? paymentUpdate.paymentIntent.id
         : uuidv4();
-        console.log("Using transaction ID:", newID);  
+
       const tx = buildTransactionFromAppointment(localItem, paymentUpdate, newID);
-    console.log("Built transaction:", tx);
-      // Create transaction
+
       await createRecord(
         tx,
         "transactions",
@@ -607,7 +606,6 @@ export default function ListItemDetail({
         user
       );
 
-      // Update appointment if exists
       if (item?._id) {
         await updateRecord(item._id, localItem, token);
       }
@@ -617,10 +615,69 @@ export default function ListItemDetail({
     }
   };
 
-  /* ============================================================
-     💾 handleSave
-  ============================================================ */
+  const validateRequiredFields = (fields, item, parentPath = "", parentLabel = "") => {
+    const missingFields = [];
+
+    fields.forEach((field) => {
+      const fieldPath = parentPath ? `${parentPath}.${field.field}` : field.field;
+      const value = getValue(item, fieldPath);
+      const fieldLabel = parentLabel ? `${parentLabel} > ${field.label}` : field.label;
+
+      if (field.required === true) {
+        if (value === undefined || value === null || value === "" ||
+            (Array.isArray(value) && value.length === 0)) {
+          missingFields.push(fieldLabel);
+        }
+      }
+
+      if (field.objectConfig && Array.isArray(field.objectConfig)) {
+        const nestedMissing = validateRequiredFields(
+          field.objectConfig,
+          item,
+          fieldPath,
+          fieldLabel
+        );
+        missingFields.push(...nestedMissing);
+      }
+
+      if (field.arrayConfig?.object && Array.isArray(value)) {
+        value.forEach((arrayItem, idx) => {
+          const arrayLabel = `${fieldLabel} #${idx + 1}`;
+          const nestedMissing = validateRequiredFields(
+            field.arrayConfig.object,
+            item,
+            `${fieldPath}[${idx}]`,
+            arrayLabel
+          );
+          missingFields.push(...nestedMissing);
+        });
+      }
+    });
+
+    return missingFields;
+  };
+
   const handleSave = async () => {
+    if (mode === 'add' && !isModeAllowed('add')) {
+      console.warn('Add mode not allowed');
+      alert('Creating new records is not permitted in this view.');
+      return;
+    }
+
+    if (mode === 'edit' && !isModeAllowed('edit')) {
+      console.warn('Edit mode not allowed');
+      alert('Editing records is not permitted in this view.');
+      return;
+    }
+
+    const missingFields = validateRequiredFields(fields, localItem);
+
+    if (missingFields.length > 0) {
+      const fieldList = missingFields.map(f => `• ${f}`).join('\n');
+      alert(`Please fill out the following required fields:\n\n${fieldList}`);
+      return;
+    }
+
     try {
       const isUser = name?.toLowerCase() === "users";
 
@@ -645,6 +702,8 @@ export default function ListItemDetail({
 
       if (mode === "edit" && item._id) {
         await updateRecord(item._id, localItem, token);
+        originalItemRef.current = JSON.parse(JSON.stringify(localItem));
+        setMode("read");
       } else {
         await createRecord(
           localItem,
@@ -654,18 +713,21 @@ export default function ListItemDetail({
           user.subscriberId,
           user
         );
+        onClose();
       }
-      onClose();
     } catch (err) {
       console.error("Save failed:", err);
       alert("Save failed: " + err.message);
     }
   };
 
-  /* ============================================================
-     🗑️ DELETE
-  ============================================================ */
   const handleDelete = async () => {
+    if (!isModeAllowed('delete')) {
+      console.warn('Delete mode not allowed');
+      alert('Deleting records is not permitted in this view.');
+      return;
+    }
+
     const isUser = name?.toLowerCase() === "users";
     const id = isUser ? item?.userId || item?._id : item?._id;
 
@@ -685,19 +747,22 @@ export default function ListItemDetail({
     }
   };
 
-  /* ============================================================
-     RESET on prop change
-  ============================================================ */
   useEffect(() => {
     setLocalItem(initialData);
-    setMode(initialMode);
-  }, [item, initialMode]);
+    setMode(validatedInitialMode);
+    originalItemRef.current = JSON.parse(JSON.stringify(initialData));
+  }, [initialData, validatedInitialMode]);
 
-  /* ============================================================
-     RENDER
-  ============================================================ */
   return (
-    <Modal open={open} onClose={onClose}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      disableEnforceFocus
+      keepMounted
+      sx={{
+        zIndex: 1300,  // ← LOWER than autofill's 10000+ so autofill appears IN FRONT
+      }}
+    >
       <Box
         sx={{
           position: "absolute",
@@ -713,24 +778,19 @@ export default function ListItemDetail({
           flexDirection: "column",
         }}
       >
-        {/* ------------------------------------------------------ */}
         {/* HEADER */}
-        {/* ------------------------------------------------------ */}
         <Box sx={{ p: 3, borderBottom: "1px solid", borderColor: "divider" }}>
           <Box sx={{ display: "flex", justifyContent: "space-between" }}>
             <Box>
-              <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                {name === "users"
-                  ? `${localItem.firstName || ""} ${localItem.lastName || ""}`
-                  : localItem?.name || "Detail"}
-              </Typography>
+             <Typography variant="h5" sx={{ fontWeight: 600 }}>
+  {getDisplayTitle(localItem, name) || "Detail"}
+</Typography>
 
               <SubtitleText name={name} item={localItem} />
 
               {mode === "read" && localItem?.createdAt && (
                 <Typography variant="caption" color="text.secondary">
-                  Created{" "}
-                  {new Date(localItem.createdAt).toLocaleDateString()}
+                  Created {new Date(localItem.createdAt).toLocaleDateString()}
                 </Typography>
               )}
             </Box>
@@ -738,7 +798,7 @@ export default function ListItemDetail({
             <Stack direction="row" spacing={1.5}>
               {mode === "read" ? (
                 <>
-                  {item?._id && (
+                  {isModeAllowed('delete') && item?._id && (
                     <GlassActionButtonWeb
                       icon={<DeleteOutlineIcon />}
                       onClick={handleDelete}
@@ -747,12 +807,14 @@ export default function ListItemDetail({
                     />
                   )}
 
-                  <GlassActionButtonWeb
-                    icon={<EditIcon />}
-                    onClick={() => setMode("edit")}
-                    color={theme.palette.primary.main}
-                    theme={theme}
-                  />
+                  {isModeAllowed('edit') && (
+                    <GlassActionButtonWeb
+                      icon={<EditIcon />}
+                      onClick={() => setMode("edit")}
+                      color={theme.palette.primary.main}
+                      theme={theme}
+                    />
+                  )}
 
                   <GlassActionButtonWeb
                     icon={<CloseIcon />}
@@ -771,9 +833,14 @@ export default function ListItemDetail({
 
                   <GlassActionButtonWeb
                     icon={<CloseIcon />}
-                    onClick={() =>
-                      mode === "add" ? onClose() : setMode("read")
-                    }
+                    onClick={() => {
+                      if (mode === "add") {
+                        onClose();
+                      } else {
+                        setLocalItem(JSON.parse(JSON.stringify(originalItemRef.current)));
+                        setMode("read");
+                      }
+                    }}
                     theme={theme}
                   />
                 </>
@@ -782,10 +849,22 @@ export default function ListItemDetail({
           </Box>
         </Box>
 
-        {/* ------------------------------------------------------ */}
         {/* CONTENT */}
-        {/* ------------------------------------------------------ */}
         <Box sx={{ flex: 1, overflowY: "auto", p: 3 }}>
+          {mode === "add" && actionsMenu.length > 0 && (
+            <Box sx={{ mb: 3 }}>
+              <ActionMenu
+                item={localItem}
+                recordType={recordType}
+                recordTypeName={name}
+                onAutofill={handleAutofill}
+                fields={fields}
+                appConfig={appConfig}
+                actionsMenu={actionsMenu}
+              />
+            </Box>
+          )}
+
           {fields.map((field, idx) => (
             <React.Fragment key={field.field}>
               {RenderField({
@@ -796,10 +875,7 @@ export default function ListItemDetail({
                 theme,
                 onPaymentComplete: handlePaymentComplete,
               })}
-
-              {idx < fields.length - 1 && (
-                <Divider sx={{ my: 2, opacity: 0.3 }} />
-              )}
+              {idx < fields.length - 1 && <Divider sx={{ my: 2, opacity: 0.3 }} />}
             </React.Fragment>
           ))}
         </Box>

@@ -10,18 +10,21 @@ import {
   Typography,
   IconButton,
   Divider,
+  Fab,
 } from "@mui/material";
 
 import ArrowBackIosIcon from "@mui/icons-material/ArrowBackIos";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
+import AddIcon from "@mui/icons-material/Add";
 
 import { DateTime } from "luxon";
-import { getRecords } from "shears-shared/src/Services/Authentication";
+import { canSeeCalendarEvent, getRecords } from "shears-shared/src/Services/Authentication";
 import { mapFields } from "shears-shared/src/config/fieldMapper";
 import formatTime12 from "shears-shared/src/utils/stringHelpers";
 import { AuthContext } from "../../../context/AuthContext";
+import ListItemDetail from "../../BaseUI/ListItemDetail";
 
 /* ======================================================
    CONSTANTS
@@ -97,7 +100,12 @@ const layoutOverlaps = (events) => {
 /* ======================================================
    COMPONENT
 ====================================================== */
-export default function CalendarHourlyViewWeb({ data = [], appConfig }) {
+export default function IACalendarHourlyViewWeb({ 
+  data = [], 
+  appConfig,
+  name = "Calendar",
+  modes = ['read', 'add', 'edit', 'delete']
+}) {
   const { token, user } = useContext(AuthContext);
 
   const scrollRef = useRef(null);
@@ -106,6 +114,9 @@ export default function CalendarHourlyViewWeb({ data = [], appConfig }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDateSelector, setShowDateSelector] = useState(false);
   const [localData, setLocalData] = useState(data);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [detailMode, setDetailMode] = useState("read");
 
   /* --------------------------------------------------
      Fetch records
@@ -118,7 +129,6 @@ export default function CalendarHourlyViewWeb({ data = [], appConfig }) {
         recordType: "calendar",
         token,
         subscriberId: user.subscriberId,
-        userId: user.userId,
       });
       console.log("calendar records:", res);
       if (active) setLocalData(res || []);
@@ -126,7 +136,31 @@ export default function CalendarHourlyViewWeb({ data = [], appConfig }) {
 
     load();
     return () => (active = false);
-  }, [token, user.subscriberId, user.userId]);
+  }, [token, user.subscriberId]);
+
+  /* --------------------------------------------------
+     Filter events by visibility (admins see everything)
+  -------------------------------------------------- */
+  const visibleData = useMemo(() => {
+    if (!user) return [];
+    return localData.filter(item => canSeeCalendarEvent(item, user));
+  }, [localData, user]);
+
+  /* --------------------------------------------------
+     Refresh data when modal closes
+  -------------------------------------------------- */
+  const handleCloseDetail = async () => {
+    setDetailModalOpen(false);
+    setSelectedAppointment(null);
+    setDetailMode("read");
+
+    const res = await getRecords({
+      recordType: "calendar",
+      token,
+      subscriberId: user.subscriberId,
+    });
+    setLocalData(res || []);
+  };
 
   /* --------------------------------------------------
      Date range
@@ -167,21 +201,21 @@ export default function CalendarHourlyViewWeb({ data = [], appConfig }) {
   const dayAppointments = useMemo(() => {
     const target = DateTime.fromJSDate(selectedDate).toISODate();
 
-    const normalized = localData
+    const normalized = visibleData
       .map((item) => {
         const fd = item.fieldsData || {};
-        if (!fd.date || !fd.time?.start) return null;
+        if (!fd.date || !fd.timeZoneTime?.start) return null;
 
         const startLocal = DateTime.fromISO(
-          `${fd.date}T${fd.time.start}`,
-          { zone: fd.time.timezone || "UTC" }
+          `${fd.date}T${fd.timeZoneTime.start}`,
+          { zone: fd.timeZoneTime.timezone || "UTC" }
         ).setZone(DateTime.local().zoneName);
 
         if (startLocal.toISODate() !== target) return null;
 
-        const endLocal = fd.time.end
-          ? DateTime.fromISO(`${fd.date}T${fd.time.end}`, {
-              zone: fd.time.timezone || "UTC",
+        const endLocal = fd.timeZoneTime.end
+          ? DateTime.fromISO(`${fd.date}T${fd.timeZoneTime.end}`, {
+              zone: fd.timeZoneTime.timezone || "UTC",
             }).setZone(DateTime.local().zoneName)
           : startLocal.plus({ minutes: 30 });
 
@@ -206,7 +240,7 @@ export default function CalendarHourlyViewWeb({ data = [], appConfig }) {
       .filter(Boolean);
 
     return layoutOverlaps(normalized);
-  }, [localData, selectedDate]);
+  }, [visibleData, selectedDate]);
 
   /* --------------------------------------------------
      Scroll to now
@@ -220,6 +254,74 @@ export default function CalendarHourlyViewWeb({ data = [], appConfig }) {
       });
     }, 300);
   }, [selectedDate]);
+
+  /* --------------------------------------------------
+     Calendar fields configuration
+  -------------------------------------------------- */
+  const calendarFields = useMemo(() => {
+    const calendarNav = appConfig?.mainNavigation?.find(
+      (r) => r.name?.toLowerCase() === 'calendar'
+    );
+
+    console.log("Calendar Navigation Config:", calendarNav);
+
+    let rawFields;
+
+    if (calendarNav?.fields) {
+      rawFields = calendarNav.fields;
+    } else {
+      rawFields = [
+        { field: "date", label: "Date", input: "date" },
+        { 
+          field: "time", 
+          label: "Time", 
+          input: "timeTimezone",
+          objectConfig: [
+            { field: "start", label: "Start Time", input: "time" },
+            { field: "end", label: "End Time", input: "time" },
+            { field: "timezone", label: "Timezone", input: "text" }
+          ]
+        },
+        { field: "assignedInfluencer", label: "Contact", input: "linkSelect", inputConfig: { recordType: "influencers" } },
+        { 
+          field: "platforms", 
+          label: "Platforms", 
+          input: "array",
+          arrayConfig: {
+            object: [
+              { field: "platform", label: "Platform", input: "text" }
+            ]
+          }
+        },
+      ];
+    }
+
+    return mapFields(rawFields);
+  }, [appConfig]);
+
+  /* --------------------------------------------------
+     Handlers
+  -------------------------------------------------- */
+  const handleAppointmentClick = (appt) => {
+    setSelectedAppointment(appt.flatItem);
+    setDetailMode("read");
+    setDetailModalOpen(true);
+  };
+
+  const handleAddNew = () => {
+    const newItem = {
+      date: DateTime.fromJSDate(selectedDate).toISODate(),
+      time: {
+        start: "",
+        end: "",
+        timezone: DateTime.local().zoneName,
+      },
+    };
+
+    setSelectedAppointment(newItem);
+    setDetailMode("add");
+    setDetailModalOpen(true);
+  };
 
   /* --------------------------------------------------
      Now line
@@ -266,7 +368,11 @@ export default function CalendarHourlyViewWeb({ data = [], appConfig }) {
       <Box sx={{ display: "flex", alignItems: "center", p: 2, gap: 1 }}>
         <IconButton
           onClick={() =>
-            setSelectedDate((d) => new Date(d.setDate(d.getDate() - 1)))
+            setSelectedDate((d) => {
+              const newDate = new Date(d);
+              newDate.setDate(newDate.getDate() - 1);
+              return newDate;
+            })
           }
         >
           <ArrowBackIosIcon />
@@ -283,7 +389,11 @@ export default function CalendarHourlyViewWeb({ data = [], appConfig }) {
 
         <IconButton
           onClick={() =>
-            setSelectedDate((d) => new Date(d.setDate(d.getDate() + 1)))
+            setSelectedDate((d) => {
+              const newDate = new Date(d);
+              newDate.setDate(newDate.getDate() + 1);
+              return newDate;
+            })
           }
         >
           <ArrowForwardIosIcon />
@@ -297,84 +407,190 @@ export default function CalendarHourlyViewWeb({ data = [], appConfig }) {
       {/* DATE DROPDOWN */}
       {showDateSelector && (
         <Box
-          ref={dateScrollRef}
           sx={{
-            display: "flex",
-            overflowX: "auto",
-            py: 1,
-            borderBottom: "1px solid rgba(0,0,0,0.1)",
+            maxHeight: 140,
+            overflowY: "visible",
+            py: 2,
+            px: 2,
+            bgcolor: "background.paper",
+            borderBottom: "1px solid",
+            borderColor: "divider",
+            boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)",
           }}
         >
-          {dateRange.map((d, i) => {
-            const selected = d.toDateString() === selectedDate.toDateString();
-            return (
-              <Box
-                key={i}
-                onClick={() => {
-                  setSelectedDate(new Date(d));
-                  setShowDateSelector(false);
-                }}
-                sx={{
-                  width: DATE_BUTTON_WIDTH,
-                  height: 70,
-                  borderRadius: "50%",
-                  mx: 1,
-                  textAlign: "center",
-                  cursor: "pointer",
-                  bgcolor: selected ? "primary.main" : "transparent",
-                  color: selected ? "primary.contrastText" : "text.primary",
-                  flexShrink: 0,
-                }}
-              >
-                <Typography variant="caption">
-                  {d.toLocaleDateString(undefined, { weekday: "short" })}
-                </Typography>
-                <Typography fontSize={20} fontWeight={600}>
-                  {d.getDate()}
-                </Typography>
-              </Box>
-            );
-          })}
+          <Box
+            ref={dateScrollRef}
+            sx={{
+              display: "flex",
+              overflowX: "auto",
+              gap: 1.5,
+              pb: 1,
+              "&::-webkit-scrollbar": {
+                height: 8,
+              },
+              "&::-webkit-scrollbar-track": {
+                bgcolor: "rgba(0,0,0,0.05)",
+                borderRadius: 4,
+              },
+              "&::-webkit-scrollbar-thumb": {
+                bgcolor: "rgba(0,0,0,0.2)",
+                borderRadius: 4,
+                "&:hover": {
+                  bgcolor: "rgba(0,0,0,0.3)",
+                },
+              },
+            }}
+          >
+            {dateRange.map((d, i) => {
+              const selected = d.toDateString() === selectedDate.toDateString();
+              const isToday = d.toDateString() === new Date().toDateString();
+              
+              return (
+                <Box
+                  key={i}
+                  onClick={() => {
+                    setSelectedDate(new Date(d));
+                    setShowDateSelector(false);
+                  }}
+                  sx={{
+                    minWidth: 64,
+                    width: 64,
+                    height: 64,
+                    borderRadius: "50%",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    flexShrink: 0,
+                    bgcolor: selected 
+                      ? "primary.main" 
+                      : isToday 
+                      ? "rgba(59, 130, 246, 0.1)" 
+                      : "transparent",
+                    color: selected 
+                      ? "primary.contrastText" 
+                      : isToday 
+                      ? "primary.main" 
+                      : "text.primary",
+                    border: isToday && !selected 
+                      ? "2px solid" 
+                      : "2px solid transparent",
+                    borderColor: isToday && !selected 
+                      ? "primary.main" 
+                      : "transparent",
+                    transition: "all 0.2s ease",
+                    "&:hover": {
+                      bgcolor: selected 
+                        ? "primary.dark" 
+                        : "rgba(59, 130, 246, 0.15)",
+                      transform: "scale(1.05)",
+                    },
+                  }}
+                >
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      fontSize: 10,
+                      fontWeight: 500,
+                      textTransform: "uppercase",
+                      letterSpacing: 0.5,
+                      mb: 0.25,
+                    }}
+                  >
+                    {d.toLocaleDateString(undefined, { weekday: "short" })}
+                  </Typography>
+                  <Typography 
+                    sx={{ 
+                      fontSize: 22, 
+                      fontWeight: 700,
+                      lineHeight: 1,
+                    }}
+                  >
+                    {d.getDate()}
+                  </Typography>
+                </Box>
+              );
+            })}
+          </Box>
         </Box>
       )}
 
       {/* GRID */}
-      <Box ref={scrollRef} sx={{ flexGrow: 1, overflowY: "auto", position: "relative" }}>
-        <Box sx={{ height: DAY_HEIGHT, position: "relative" }}>
-          {QUARTER_HOURS.map(({ hour, minutes, index }) => (
-            <Box key={index} sx={{ height: HOUR_HEIGHT / 4, pl: `${TIME_COLUMN_WIDTH}px` }}>
-              {minutes === 0 && (
-                <Typography
+      <Box
+        ref={scrollRef}
+        sx={{
+          flexGrow: 1,
+          overflowY: "auto",
+          position: "relative",
+        }}
+      >
+        <Box
+          sx={{
+            height: DAY_HEIGHT,
+            minHeight: DAY_HEIGHT,
+            position: "relative",
+          }}
+        >
+          {QUARTER_HOURS.map(({ hour, minutes, index }) => {
+            const isHour = minutes === 0;
+
+            return (
+              <Box
+                key={index}
+                sx={{
+                  height: HOUR_HEIGHT / 4,
+                  position: "relative",
+                }}
+              >
+                {isHour && (
+                  <Typography
+                    sx={{
+                      position: "absolute",
+                      left: 0,
+                      top: 2,
+                      width: TIME_COLUMN_WIDTH,
+                      textAlign: "right",
+                      pr: 1,
+                      opacity: 0.6,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      pointerEvents: "none",
+                    }}
+                  >
+                    {formatTime12(`${hour.toString().padStart(2, "0")}:00`)}
+                  </Typography>
+                )}
+
+                <Divider
                   sx={{
                     position: "absolute",
-                    left: 0,
-                    width: TIME_COLUMN_WIDTH,
-                    textAlign: "right",
-                    pr: 1,
-                    opacity: 0.6,
-                    fontSize: 12,
+                    top: 0,
+                    left: TIME_COLUMN_WIDTH,
+                    right: 0,
+                    opacity: isHour ? 0.9 : 0.4,
                   }}
-                >
-                  {formatTime12(`${hour}:00`)}
-                </Typography>
-              )}
-              <Divider sx={{ ml: TIME_COLUMN_WIDTH }} />
-            </Box>
-          ))}
+                />
+              </Box>
+            );
+          })}
 
           {renderNowLine()}
 
+          {/* APPOINTMENTS - now filtered through visibleData */}
           {dayAppointments.map((appt) => {
             const { top, height } = calculatePosition(
               appt.startTime,
               appt.endTime
             );
+
             const colWidth =
               (window.innerWidth - TIME_COLUMN_WIDTH - 40) / appt._cols;
 
             return (
               <Box
                 key={appt._id}
+                onClick={() => handleAppointmentClick(appt)}
                 sx={{
                   position: "absolute",
                   top,
@@ -386,19 +602,61 @@ export default function CalendarHourlyViewWeb({ data = [], appConfig }) {
                   borderRadius: 1,
                   p: 1,
                   zIndex: 10,
+                  overflow: "hidden",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  "&:hover": {
+                    bgcolor: "#BFDBFE",
+                    transform: "scale(1.02)",
+                    boxShadow: 2,
+                  },
                 }}
               >
                 <Typography fontSize={12} fontWeight={700}>
                   {formatTime12(appt.startTime)} –{" "}
                   {formatTime12(appt.endTime)}
                 </Typography>
-                <Typography fontWeight={600}>{appt.contactName}</Typography>
-                <Typography variant="caption">{appt.serviceName}</Typography>
+
+                <Typography fontWeight={600} noWrap>
+                  {appt.contactName}
+                </Typography>
+
+                <Typography variant="caption" noWrap>
+                  {appt.serviceName}
+                </Typography>
               </Box>
             );
           })}
         </Box>
       </Box>
+
+      {/* FAB */}
+      {modes.includes('add') && (
+        <Fab
+          color="primary"
+          aria-label="add"
+          sx={{
+            position: "absolute",
+            bottom: 24,
+            right: 24,
+          }}
+          onClick={handleAddNew}
+        >
+          <AddIcon />
+        </Fab>
+      )}
+
+      {/* DETAIL MODAL */}
+      <ListItemDetail
+        open={detailModalOpen}
+        onClose={handleCloseDetail}
+        item={selectedAppointment}
+        fields={calendarFields}
+        name={name}
+        mode={detailMode}
+        modes={modes}
+        recordType="calendar"
+      />
     </Box>
   );
 }

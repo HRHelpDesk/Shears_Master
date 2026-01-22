@@ -3,6 +3,7 @@ import shearLogo from 'shears-shared/assets/images/shear_logo.png';
 import purposeLogo from 'shears-shared/assets/images/purpose_logo.png';
 
 import bosscrownsLogo from 'shears-shared/assets/images/bosscrowns_logo.png';
+import firstlineLogo from 'shears-shared/assets/images/firstline_logo.png';
 
 export const AppLogos = {
   shear: {
@@ -14,5 +15,8 @@ export const AppLogos = {
   },
   influencerapp:{
     influencerapp: bosscrownsLogo,
+  },
+  firstline:{
+    firstline: firstlineLogo,
   }
 };

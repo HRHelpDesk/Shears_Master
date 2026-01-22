@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { BASE_URL } from '../config/api';
 import { getAppHeaders } from '../config/appHeaders';
-
+import { formatDateValue } from '../utils/stringHelpers';
 const API_URL = `${BASE_URL}/v1/data-records`;
 
 /* -------------------------------------------------------------
@@ -329,6 +329,7 @@ export async function deleteUser(userId, token) {
    PASSWORD RESET FUNCTIONS
 ------------------------------------------------------------- */
 export async function requestPasswordReset(email) {
+  console.log(getAppHeaders());
   try {
     const res = await axios.post(
       `${BASE_URL}/v1/auth/reset-password-request`,
@@ -580,7 +581,7 @@ export function buildCalendarAndNotification(request, user, notify = true) {
   const calendarRecord = {
     date: request.date || null,
     influencerName: request.influencerName,
-    time: {
+    timeZoneTime: {
       start: startTime,
       end: endTime,
       timezone,
@@ -599,6 +600,7 @@ export function buildCalendarAndNotification(request, user, notify = true) {
 
     discountCode: discountCode,
     notes: request.notes || "",
+    isPrivate: request.isPrivate || false,
     requestId: request._id,
 
     createdBy: user?.userId || null,
@@ -618,8 +620,8 @@ export function buildCalendarAndNotification(request, user, notify = true) {
 
   const notificationRecord = {
     forUserId: influencer?.userId || null,
-    title: "New Scheduled Live Assignment",
-    message: `You have been assigned a new live slot on ${request.date}.`,
+    notificationName: "New Scheduled Live Assignment",
+    message: `You have been assigned a new live slot on ${formatDateValue(request.date)}.`,
     relatedRecordId: request._id,
     relatedRecordType: "requests",
     createdAt: new Date().toISOString(),
@@ -732,3 +734,325 @@ export function normalizeCalendarRecord(record) {
     raw: record,
   };
 }
+
+export function canSeeCalendarEvent(event, currentUser) {
+  if (!event?.fieldsData || !currentUser?.userId) {
+    return false;
+  }
+
+  console.log("User Role:", currentUser.role);
+
+  // Admin check first - short circuit for performance & clarity
+  if (currentUser.role === 'admin') {
+    return true;
+  }
+
+  const isPrivate = !!event.fieldsData.isPrivate; // force boolean
+
+  if (!isPrivate) {
+    return true;
+  }
+
+  // Try to find creator ID from multiple possible locations
+  const ownerId = 
+    event.fieldsData?.influencerName?.raw?.userId ||
+    event.fieldsData?.assignedInfluencer?.userId ||
+    event.fieldsData?.createdBy ||
+    event.createdById ||
+    event.fieldsData?.createdBy; // sometimes it's here too
+
+  // If we can't find an owner, safest is to hide it (private + no owner = suspicious)
+  if (!ownerId) {
+    console.warn('Private event with no owner ID:', event._id);
+    return false;
+  }
+
+  return ownerId === currentUser.userId;
+}
+
+// shears-shared/src/utils/autofillHelpers.js
+
+// shears-shared/src/utils/autofillHelpers.js
+
+/**
+ * Autofills data from a source record based on field definitions
+ * @param {Object} sourceItem - The item to copy data from
+ * @param {Object} currentItem - The current form data (optional, for preserving dates)
+ * @param {Array} fields - Field definitions from schema
+ * @param {Object} options - Configuration options
+ * @returns {Object} Autofilled data object
+ */
+export const autofillFromRecordWithFields = (
+  sourceItem,
+  currentItem = {},
+  fields = [],
+  options = {}
+) => {
+  const {
+    excludeFields = ["status"],           // ⭐ Explicitly exclude status
+    dateFieldPatterns = [
+      "date",
+      "createdat",
+      "updatedat",
+      "scheduledat",
+      "completedat",
+      "startat",
+      "endat",
+    ],
+    systemFieldPatterns = ["_id", "__v", "recordType"], // ⭐ System fields
+    preserveCurrentDates = true,
+  } = options;
+
+  // Get source data
+  const sourceData = sourceItem?.fieldsData || sourceItem;
+  const result = { ...currentItem }; // Start with current form state (preserves defaults & existing values)
+
+  /**
+   * Check if a field should be excluded
+   */
+  const shouldExclude = (fieldName, fieldDef) => {
+    const lowerKey = fieldName.toLowerCase();
+
+    // System fields (exact match)
+    if (systemFieldPatterns.includes(fieldName)) {
+      return true;
+    }
+
+    // Explicit exclusions (exact match)
+    if (excludeFields.includes(fieldName)) {
+      return true;
+    }
+
+    // Date/time fields (pattern match)
+    const isDateField = dateFieldPatterns.some((pattern) =>
+      lowerKey.includes(pattern.toLowerCase())
+    );
+    if (isDateField) return true;
+
+    // Check field definition input type
+    if (fieldDef?.input === "date" || fieldDef?.input === "datetime") {
+      return true;
+    }
+
+    return false;
+  };
+
+  /**
+   * Process a single field
+   */
+  const processField = (fieldDef, parentPath = "") => {
+    const { field, objectConfig, arrayConfig, input } = fieldDef;
+
+    // ⭐ KEY CHANGE: If excluded → do NOTHING (preserve existing/current/default value)
+    if (shouldExclude(field, fieldDef)) {
+      console.log(`Preserving existing value for excluded field: ${field}`);
+      return;
+    }
+
+    const sourceValue = sourceData[field];
+
+    // If source doesn't have this field → also do nothing (don't clear/overwrite)
+    if (sourceValue === undefined || sourceValue === null) {
+      console.log(`Skipping field with no source value: ${field}`);
+      return;
+    }
+
+    // Handle OBJECT fields with nested structure
+    if (objectConfig && Array.isArray(objectConfig)) {
+      const nestedResult = {};
+
+      objectConfig.forEach((nestedField) => {
+        const nestedValue = sourceValue[nestedField.field];
+
+        if (nestedValue !== undefined && nestedValue !== null) {
+          if (shouldExclude(nestedField.field, nestedField)) {
+            return;
+          }
+
+          nestedResult[nestedField.field] = nestedValue;
+        }
+      });
+
+      // Only set if we actually have some nested data
+      if (Object.keys(nestedResult).length > 0) {
+        result[field] = nestedResult;
+      }
+      return;
+    }
+
+    // Handle ARRAY fields
+    if (arrayConfig?.object && Array.isArray(sourceValue)) {
+      const arrayResult = [];
+
+      sourceValue.forEach((arrayItem) => {
+        const processedItem = {};
+
+        arrayConfig.object.forEach((nestedField) => {
+          const nestedValue = arrayItem[nestedField.field];
+
+          if (nestedValue !== undefined && nestedValue !== null) {
+            if (shouldExclude(nestedField.field, nestedField)) {
+              return;
+            }
+
+            processedItem[nestedField.field] = nestedValue;
+          }
+        });
+
+        // Only add if item has data
+        if (Object.keys(processedItem).length > 0) {
+          arrayResult.push(processedItem);
+        }
+      });
+
+      if (arrayResult.length > 0) {
+        result[field] = arrayResult;
+      }
+      return;
+    }
+
+    // Handle LINK SELECT fields (preserve raw data)
+    if (input === "linkSelect") {
+      result[field] = JSON.parse(JSON.stringify(sourceValue));
+      return;
+    }
+
+    // Handle simple fields
+    result[field] = sourceValue;
+  };
+
+  // Process all fields from the schema
+  fields.forEach((fieldDef) => {
+    processField(fieldDef);
+  });
+
+  // Preserve current date/time fields if requested (runs after main autofill)
+  if (preserveCurrentDates) {
+    const preservedFields = {};
+
+    fields.forEach((fieldDef) => {
+      const { field, input } = fieldDef;
+      const lowerKey = field.toLowerCase();
+
+      const isDateField =
+        input === "date" ||
+        input === "datetime" ||
+        dateFieldPatterns.some((pattern) => lowerKey.includes(pattern.toLowerCase()));
+
+      if (isDateField && currentItem[field]) {
+        preservedFields[field] = currentItem[field];
+      }
+    });
+
+    // Apply preserved dates on top
+    Object.assign(result, preservedFields);
+  }
+
+  return result;
+};
+
+/**
+ * Legacy autofill function (for backward compatibility)
+ */
+export const autofillFromRecord = (
+  sourceItem,
+  currentItem = {},
+  options = {}
+) => {
+  const {
+    excludeFields = ["status"], // ⭐ Explicitly exclude status
+    dateFieldPatterns = [
+      "date",
+      "createdat",
+      "updatedat",
+      "scheduledat",
+      "completedat",
+      "startat",
+      "endat",
+    ],
+  } = options;
+
+  const sourceData = sourceItem?.fieldsData || sourceItem;
+  const autofillData = JSON.parse(JSON.stringify(sourceData));
+
+  const removeDateFields = (obj) => {
+    if (!obj || typeof obj !== "object") return;
+
+    Object.keys(obj).forEach((key) => {
+      const value = obj[key];
+      const lowerKey = key.toLowerCase();
+
+      const isDateField = dateFieldPatterns.some((pattern) =>
+        lowerKey.includes(pattern.toLowerCase())
+      );
+      const isSystemField = key === "_id" || key === "__v";
+      const isExcluded = excludeFields.includes(key);
+
+      if (isDateField || isSystemField || isExcluded) {
+        delete obj[key];
+      } else if (Array.isArray(value)) {
+        value.forEach((item) => removeDateFields(item));
+      } else if (typeof value === "object" && value !== null) {
+        removeDateFields(value);
+      }
+    });
+  };
+
+  removeDateFields(autofillData);
+
+  const preservedFields = {};
+  Object.keys(currentItem).forEach((key) => {
+    const lowerKey = key.toLowerCase();
+    const isDateField = dateFieldPatterns.some((pattern) =>
+      lowerKey.includes(pattern.toLowerCase())
+    );
+
+    if (isDateField && currentItem[key]) {
+      preservedFields[key] = currentItem[key];
+    }
+  });
+
+  return {
+    ...autofillData,
+    ...preservedFields,
+  };
+};
+
+/**
+ * Check if a field should be excluded from autofill
+ */
+export const isExcludedField = (fieldName, patterns = []) => {
+  const lowerKey = fieldName.toLowerCase();
+  return patterns.some((pattern) => lowerKey.includes(pattern.toLowerCase()));
+};
+
+/**
+ * Extract date fields from an object
+ */
+export const extractDateFields = (obj, datePatterns = ["date"]) => {
+  const dateFields = {};
+
+  const extract = (source, target, prefix = "") => {
+    if (!source || typeof source !== "object") return;
+
+    Object.keys(source).forEach((key) => {
+      const value = source[key];
+      const fullKey = prefix ? `${prefix}.${key}` : key;
+      const lowerKey = key.toLowerCase();
+
+      const isDateField = datePatterns.some((pattern) =>
+        lowerKey.includes(pattern.toLowerCase())
+      );
+
+      if (isDateField) {
+        target[key] = value;
+      } else if (typeof value === "object" && !Array.isArray(value)) {
+        if (!target[key]) target[key] = {};
+        extract(value, target[key], fullKey);
+      }
+    });
+  };
+
+  extract(obj, dateFields);
+  return dateFields;
+};

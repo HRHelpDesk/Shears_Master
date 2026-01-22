@@ -1,5 +1,5 @@
 // src/components/CalendarView.js
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,8 @@ import {
   PanResponder,
   ScrollView,
   Platform,
+  Modal,
+  RefreshControl,
 } from 'react-native';
 import { IconButton, useTheme, Surface, FAB } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
@@ -27,76 +29,106 @@ import {
   isSameMonth,
 } from 'date-fns';
 import { mapFields } from 'shears-shared/src/config/fieldMapper';
+import HourlyView from './InfluencerApp/HourlyView';
+import AppointmentsHourlyView from './Shear/AppointmentsHourlyView';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { canSeeCalendarEvent, getRecords } from 'shears-shared/src/Services/Authentication';
+import { AuthContext } from '../../context/AuthContext';
 
 const WINDOW_WIDTH = Dimensions.get('window').width;
 
-/* --------------------------------------------------------------
- ✅ FIX: SAFE LOCAL DATE PARSER (no timezone shift)
--------------------------------------------------------------- */
 const parseYMD = (value) => {
   if (!value) return null;
-
-  // "YYYY-MM-DD" → local date
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) return new Date(value); // fallback for full ISO strings
-
+  if (!match) return new Date(value);
   const [_, y, m, d] = match;
-  return new Date(Number(y), Number(m) - 1, Number(d), 0, 0, 0, 0); // ✅ LOCAL midnight
+  return new Date(Number(y), Number(m) - 1, Number(d), 0, 0, 0, 0);
 };
 
-export default function CalendarView({ data = [], appConfig, onRefresh }) {
+export default function CalendarView({
+  data = [],
+  appConfig,
+  onRefresh,
+  recordType = null,
+  modes,
+}) {
   const theme = useTheme();
   const navigation = useNavigation();
   const [containerWidth, setContainerWidth] = useState(WINDOW_WIDTH - 20);
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedDay, setSelectedDay] = useState(null);
   const translateX = useMemo(() => new Animated.Value(0), []);
+  const [localData, setLocalData] = useState(data);
+  const [refreshing, setRefreshing] = useState(false);
 
   const daySize = Math.floor(containerWidth / 7);
   const leftover = containerWidth - daySize * 7;
   const gridPaddingLeft = Math.round(leftover / 2);
 
-  /* --------------------------------------------------------------
-     ✅ 1) Month Day Grid (LOCAL)
-  -------------------------------------------------------------- */
+  const { token, user } = useContext(AuthContext);
+
+  const loadCalendarData = useCallback(async () => {
+    if (!token || !user?.subscriberId) return;
+
+    try {
+      const res = await getRecords({
+        recordType: recordType || 'calendar',
+        token,
+        subscriberId: user.subscriberId,
+      });
+      if (res) setLocalData(res);
+    } catch (err) {
+      console.error("Failed to load calendar:", err);
+    }
+  }, [token, user?.subscriberId]);
+
+  useEffect(() => {
+    loadCalendarData();
+  }, [loadCalendarData]);
+
+  const onPullRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadCalendarData();
+      if (onRefresh) onRefresh();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadCalendarData, onRefresh]);
+
+  const getEventsForDay = useCallback(
+    (day) =>
+      localData.filter((event) => {
+          if (!canSeeCalendarEvent(event, user)) {
+          return false;
+        }
+        const raw = event.fieldsData?.date;
+        if (!raw) return false;
+        const eventDate = parseYMD(raw);
+        return isSameDay(eventDate, day);
+      }),
+    [localData]
+  );
+
   const generateMonthDays = (date) => {
     const start = startOfWeek(startOfMonth(date), { weekStartsOn: 0 });
     const end = endOfWeek(endOfMonth(date), { weekStartsOn: 0 });
     const days = [];
     let cur = start;
-
     while (cur <= end) {
       days.push(cur);
       cur = addDays(cur, 1);
     }
-
     while (days.length < 42) {
       days.push(addDays(days[days.length - 1], 1));
     }
-
     return days;
   };
 
   const days = useMemo(() => generateMonthDays(currentDate), [currentDate]);
   const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-  /* --------------------------------------------------------------
-     ✅ 2) SAFE EVENT MATCHING (local date comparison)
-  -------------------------------------------------------------- */
-  const getEventsForDay = useCallback(
-    (day) =>
-      data.filter((event) => {
-        const raw = event.fieldsData?.date;
-        if (!raw) return false;
-
-        const eventDate = parseYMD(raw);
-        return isSameDay(eventDate, day); // ✅ FIXED: NO SHIFT
-      }),
-    [data]
-  );
-
-  /* --------------------------------------------------------------
-     ✅ Navigation between months
-  -------------------------------------------------------------- */
   const handlePrevMonth = () => animateMonthChange(subMonths(currentDate, 1), 1);
   const handleNextMonth = () => animateMonthChange(addMonths(currentDate, 1), -1);
 
@@ -129,27 +161,18 @@ export default function CalendarView({ data = [], appConfig, onRefresh }) {
     [currentDate, containerWidth]
   );
 
-  /* --------------------------------------------------------------
-     ✅ 3) Open day list (NO timezone bugs)
-  -------------------------------------------------------------- */
-  const openDayList = (day) => {
+  const openDayModal = (day) => {
     const dayEvents = getEventsForDay(day);
     if (dayEvents.length === 0) return;
-
-    navigation.navigate('CalendarListView', {
-      mode: 'day',
-      selectedDate: day,
-      data: dayEvents,
-      appConfig,
-      header: true,
-      onRefresh: onRefresh,   // Must forward this EXACT function
-      refreshing: false
-    });
+    setSelectedDay(day);
+    setModalVisible(true);
   };
 
-  /* --------------------------------------------------------------
-     ✅ 4) Pass calendar fields (same as ListView)
-  -------------------------------------------------------------- */
+  const closeModal = () => {
+    setModalVisible(false);
+    setSelectedDay(null);
+  };
+
   const viewData = useMemo(() => {
     if (!appConfig?.mainNavigation) return null;
     return (
@@ -161,23 +184,31 @@ export default function CalendarView({ data = [], appConfig, onRefresh }) {
     );
   }, [appConfig]);
 
-  /* --------------------------------------------------------------
-     ✅ 5) RENDER
-  -------------------------------------------------------------- */
   return (
     <Surface
       style={[styles.surface, { backgroundColor: theme.colors.surface }]}
       onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
       {...panResponder.panHandlers}
     >
-      <ScrollView>
+      <ScrollView
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onPullRefresh}
+            colors={[theme.colors.primary]}
+            tintColor={theme.colors.primary}
+            title="Refreshing calendar..."
+            titleColor={theme.colors.onSurfaceVariant}
+          />
+        }
+      >
         {/* Header */}
         <View style={styles.header}>
           <IconButton
             icon="chevron-left"
             onPress={handlePrevMonth}
             size={24}
-            color={theme.colors.primary}
+            iconColor={theme.colors.primary}
           />
           <Text style={[styles.headerTitle, { color: theme.colors.onSurface }]}>
             {format(currentDate, 'MMMM yyyy')}
@@ -186,7 +217,7 @@ export default function CalendarView({ data = [], appConfig, onRefresh }) {
             icon="chevron-right"
             onPress={handleNextMonth}
             size={24}
-            color={theme.colors.primary}
+            iconColor={theme.colors.primary}
           />
         </View>
 
@@ -225,7 +256,7 @@ export default function CalendarView({ data = [], appConfig, onRefresh }) {
               <TouchableOpacity
                 key={day.toISOString()}
                 style={[styles.dayCell, { width: daySize, height: daySize }]}
-                onPress={() => openDayList(day)}
+                onPress={() => openDayModal(day)}
                 activeOpacity={eventCount > 0 ? 0.7 : 1}
               >
                 <View
@@ -244,7 +275,7 @@ export default function CalendarView({ data = [], appConfig, onRefresh }) {
                       styles.dayText,
                       {
                         color: today
-                          ? theme.colors.onPrimary
+                          ? theme.colors.onPrimaryContainer
                           : inMonth
                           ? theme.colors.onSurface
                           : theme.colors.onSurfaceVariant,
@@ -256,7 +287,6 @@ export default function CalendarView({ data = [], appConfig, onRefresh }) {
                   </Text>
                 </View>
 
-                {/* Event Dots */}
                 {eventCount > 0 && (
                   <View style={styles.eventContainer}>
                     {[...Array(Math.min(eventCount, 3))].map((_, i) => (
@@ -295,13 +325,83 @@ export default function CalendarView({ data = [], appConfig, onRefresh }) {
         onPress={() =>
           navigation.navigate('ListItemDetail', {
             item: {},
-            name: 'Calendar',
+            name: recordType ? recordType.charAt(0).toUpperCase() + recordType.slice(1) : 'Calendar',
             appConfig,
             mode: 'add',
             fields: mapFields(viewData?.fields || []),
+            recordType
           })
         }
       />
+
+      {/* Modal - now fully theme-aware */}
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        onRequestClose={closeModal}
+        presentationStyle="pageSheet"
+      >
+        <View style={[
+          styles.modalContainer, 
+          { backgroundColor: theme.colors.background }
+        ]}>
+          {/* Modal Header */}
+          <View style={[
+            styles.modalHeader,
+            { 
+              backgroundColor: theme.colors.surface,
+              borderBottomColor: theme.colors.border 
+            }
+          ]}>
+            <TouchableOpacity 
+              onPress={closeModal}
+              style={styles.closeButton}
+            >
+              <Icon 
+                name="close" 
+                size={28} 
+                color={theme.colors.primary} 
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Hourly View */}
+          {selectedDay && (
+      <>
+        {(() => {
+          const effectiveRecordType = recordType || 'calendar'; // fallback
+
+          if (effectiveRecordType === 'appointments') {
+            return (
+              <AppointmentsHourlyView
+                data={localData}
+                selectedDate={selectedDay}
+                appConfig={appConfig}
+                name="Appointments"
+                modes={modes}
+                user={user}
+              />
+            );
+          } 
+          
+          // default / fallback → calendar / influencer / scheduling events
+          return (
+            <HourlyView
+              data={localData}
+              selectedDate={selectedDay}
+              appConfig={appConfig}
+              name="Calendar"
+              modes={modes}
+              user={user}
+            />
+          );
+        })()}
+      </>
+    )}
+
+          
+        </View>
+      </Modal>
     </Surface>
   );
 }
@@ -372,5 +472,17 @@ const styles = StyleSheet.create({
     bottom: Platform.OS === 'ios' ? 100 : 20,
     borderRadius: 30,
     elevation: 5,
+  },
+  modalContainer: {
+    flex: 1,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    padding: 12,
+    borderBottomWidth: 1,
+  },
+  closeButton: {
+    padding: 8,
   },
 });

@@ -1,7 +1,7 @@
 // src/components/UI/PageHeader.js
 import React, { useContext } from 'react';
 import { Appbar } from 'react-native-paper';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { useTheme } from 'react-native-paper';
 import { AuthContext } from '../../context/AuthContext';
 import { useNavigation, DrawerActions } from '@react-navigation/native';
@@ -13,7 +13,7 @@ export default function PageHeader({ title }) {
 
   return (
     <Appbar.Header
-      statusBarHeight={30}
+      statusBarHeight={Platform.OS === "ios" ? 30 : 0}
       elevated
       style={[styles.header, { backgroundColor: theme.colors.primary }]}
     >

@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react';
-import { View, StyleSheet, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import { View, StyleSheet, KeyboardAvoidingView, Platform, Image, TouchableOpacity } from 'react-native';
 import { TextInput, Button, Text, Card, useTheme } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -40,23 +40,20 @@ export default function LoginScreen({ appConfig, logo }) {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
-        {/* Logo */}
-        <View style={styles.logoContainer}>
-          <Image source={logo} style={styles.logo} resizeMode="contain" />
-        </View>
-
-        {/* ⭐ Max-width wrapper JUST for the card */}
+        {/* Card wrapper with max width */}
         <View style={styles.cardWrapper}>
-          <Card
-            style={[styles.card, { backgroundColor: theme.colors.surface }]}
-            elevation={6}
-          >
+          <Card style={styles.card} elevation={8}>
             <Card.Content style={styles.cardContent}>
-              <Text
-                variant="headlineSmall"
-                style={[styles.title, { color: theme.colors.onSurface }]}
-              >
-                Sign in
+              {/* Logo inside card */}
+              <View style={styles.logoContainer}>
+                <Image source={logo} style={styles.logo} resizeMode="contain" />
+              </View>
+
+              <Text variant="headlineMedium" style={styles.title}>
+                Welcome Back
+              </Text>
+              <Text variant="bodyMedium" style={styles.subtitle}>
+                Sign in to continue
               </Text>
 
               <TextInput
@@ -64,15 +61,11 @@ export default function LoginScreen({ appConfig, logo }) {
                 value={email}
                 onChangeText={setEmail}
                 mode="outlined"
-                style={[styles.input, { backgroundColor: theme.colors.background }]}
+                style={styles.input}
                 keyboardType="email-address"
                 autoCapitalize="none"
-                theme={{
-                  colors: {
-                    primary: theme.colors.primary,
-                    text: theme.colors.text,
-                  },
-                }}
+                left={<TextInput.Icon icon="email-outline" />}
+                outlineStyle={styles.inputOutline}
               />
 
               <TextInput
@@ -81,14 +74,19 @@ export default function LoginScreen({ appConfig, logo }) {
                 onChangeText={setPassword}
                 mode="outlined"
                 secureTextEntry
-                style={[styles.input, { backgroundColor: theme.colors.background }]}
-                theme={{
-                  colors: {
-                    primary: theme.colors.primary,
-                    text: theme.colors.text,
-                  },
-                }}
+                style={styles.input}
+                left={<TextInput.Icon icon="lock-outline" />}
+                outlineStyle={styles.inputOutline}
               />
+
+              <TouchableOpacity 
+                onPress={() => navigation.navigate('ResetPassword')}
+                style={styles.forgotPassword}
+              >
+                <Text style={styles.forgotPasswordText}>
+                  Forgot Password?
+                </Text>
+              </TouchableOpacity>
 
               <Button
                 mode="contained"
@@ -96,14 +94,20 @@ export default function LoginScreen({ appConfig, logo }) {
                 style={styles.button}
                 loading={loading}
                 disabled={loading}
-                buttonColor={theme.colors.primary}
-                textColor={theme.colors.onPrimary}
-                contentStyle={{ paddingVertical: 8 }}
+                contentStyle={styles.buttonContent}
+                labelStyle={styles.buttonLabel}
               >
-                Login
+                Sign In
               </Button>
             </Card.Content>
           </Card>
+        </View>
+
+        {/* Footer text */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            Secure login • Protected by encryption
+          </Text>
         </View>
       </KeyboardAvoidingView>
     </LinearGradient>
@@ -111,7 +115,9 @@ export default function LoginScreen({ appConfig, logo }) {
 }
 
 const styles = StyleSheet.create({
-  gradient: { flex: 1 },
+  gradient: { 
+    flex: 1 
+  },
 
   container: {
     flex: 1,
@@ -121,43 +127,94 @@ const styles = StyleSheet.create({
 
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 24,
   },
 
   logo: {
-    width: 180,
-    height: 180,
+    width: 300,
+    height: 120,
   },
 
-  /* ⭐ Max-width just for the Card */
   cardWrapper: {
     width: '100%',
-    maxWidth: 420,     // adjust to desired width
+    maxWidth: 420,
     alignSelf: 'center',
   },
 
   card: {
-    borderRadius: 16,
-    paddingVertical: 20,
-    paddingHorizontal: 15,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
   },
 
   cardContent: {
-    width: '100%',
+    paddingVertical: 32,
+    paddingHorizontal: 24,
   },
 
   title: {
     textAlign: 'center',
-    marginBottom: 16,
-    fontWeight: 'bold',
+    marginBottom: 8,
+    fontWeight: '700',
+    color: '#1a1a1a',
+  },
+
+  subtitle: {
+    textAlign: 'center',
+    marginBottom: 32,
+    color: '#666',
+    fontSize: 15,
   },
 
   input: {
-    marginBottom: 15,
+    marginBottom: 16,
+    backgroundColor: '#fff',
+  },
+
+  inputOutline: {
+    borderRadius: 12,
+    borderWidth: 1.5,
+  },
+
+  forgotPassword: {
+    alignSelf: 'flex-end',
+    marginBottom: 24,
+    marginTop: -8,
+  },
+
+  forgotPasswordText: {
+    color: '#666',
+    fontSize: 14,
+    fontWeight: '600',
   },
 
   button: {
-    marginTop: 10,
-    borderRadius: 8,
+    marginTop: 8,
+    borderRadius: 12,
+    elevation: 2,
+  },
+
+  buttonContent: {
+    paddingVertical: 10,
+  },
+
+  buttonLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+
+  footer: {
+    marginTop: 32,
+    alignItems: 'center',
+  },
+
+  footerText: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 12,
+    fontWeight: '500',
   },
 });

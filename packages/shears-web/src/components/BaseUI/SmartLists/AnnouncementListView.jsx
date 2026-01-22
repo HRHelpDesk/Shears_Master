@@ -67,6 +67,7 @@ export default function AnnouncementListView({
       data={data}
       fields={fields}
       appConfig={appConfig}
+      onRefresh={loadData}
     />
   );
 }

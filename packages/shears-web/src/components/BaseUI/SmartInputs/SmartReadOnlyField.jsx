@@ -1,11 +1,18 @@
 // src/components/SmartInputs/SmartReadOnlyField.jsx
-import React from "react";
+import React, { useEffect } from "react";
 import { Box, Typography } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
-export default function SmartReadOnlyField({ label, value }) {
+export default function SmartReadOnlyField({
+  label,
+  value,
+  defaultValue = "Not set",
+  onChangeText,
+}) {
   const theme = useTheme();
-
+useEffect(() => {
+    onChangeText(defaultValue);
+  }, [defaultValue]);
   return (
     <Box sx={{ mb: 1 }}>
       {/* Label */}

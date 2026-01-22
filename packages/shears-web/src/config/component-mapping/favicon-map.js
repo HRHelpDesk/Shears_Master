@@ -8,5 +8,8 @@ export const faviconMap = {
     shear:{
         shear: shearFav,
         purpose: shearFav
+    },
+    firstline:{
+        firstline: bcFav
     }
 }

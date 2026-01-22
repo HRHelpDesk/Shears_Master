@@ -21,6 +21,23 @@ import { deleteRecord } from "shears-shared/src/Services/Authentication";
 import { AuthContext } from "../../context/AuthContext";
 
 /* -------------------------------------------------------------------------- */
+/* 🎨 Status Color Configuration                                               */
+/* -------------------------------------------------------------------------- */
+const STATUS_COLORS = {
+  pending: "#FF9800",    // Orange
+  approved: "#4CAF50",   // Green
+  rejected: "#F44336",   // Red
+  completed: "#2196F3",  // Blue
+  cancelled: "#9E9E9E",  // Gray
+  // Add more status-color mappings here as needed
+};
+
+function getStatusColor(status) {
+  if (!status || typeof status !== "string") return null;
+  return STATUS_COLORS[status.toLowerCase()] || null;
+}
+
+/* -------------------------------------------------------------------------- */
 /* 🔠 Primary Text Resolver                                                    */
 /* -------------------------------------------------------------------------- */
 function getPrimaryText(item) {
@@ -49,23 +66,73 @@ function getPrimaryText(item) {
 /* 📅 Date Resolver                                                            */
 /* -------------------------------------------------------------------------- */
 function resolveDate(item) {
-  const raw =
-    item.date ||
-    item.startDate ||
-    item.requestDate ||
-    item.createdAt ||
-    item.updatedAt;
+  const dt = resolveDateObject(item);
+  if (!dt) return null;
+  return dt.toLocaleString(DateTime.DATE_MED); // "Jan 17, 2026"
+}
+
+/* -------------------------------------------------------------------------- */
+/* 📅 Date Resolver (returns Luxon DateTime for reliable local comparison)   */
+/* -------------------------------------------------------------------------- */
+function resolveDateObject(item, useRawDate = false) {
+  let raw;
+
+  if (useRawDate) {
+    raw = item.date; // ← only use the explicit .date field
+  } else {
+    raw =
+      item.date ||
+      item.startDate ||
+      item.requestDate ||
+      item.createdAt ||
+      item.updatedAt;
+  }
 
   if (!raw) return null;
 
-  const d = new Date(raw);
-  if (isNaN(d)) return null;
+  // ── Luxon: treat YYYY-MM-DD as local date (no UTC shift) ───────────────
+  if (typeof raw === "string") {
+    // Case 1: "2025-01-17" → local midnight
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      return DateTime.fromFormat(raw, "yyyy-MM-dd", { zone: "local" });
+    }
 
-  return d.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+    // Case 2: Full ISO (may be UTC) → force to local date only
+    try {
+      const dt = DateTime.fromISO(raw, { zone: "utc" }).toLocal();
+      return dt.startOf("day"); // ← strip time, keep only local date
+    } catch {}
+  }
+
+  // Fallback: native Date → convert to Luxon local
+  const native = new Date(raw);
+  if (!isNaN(native.getTime())) {
+    return DateTime.fromJSDate(native).startOf("day");
+  }
+
+  return null;
+}
+
+/* -------------------------------------------------------------------------- */
+/* 📅 Date Group Label (for date-based grouping)                              */
+/* -------------------------------------------------------------------------- */
+function getDateGroupLabel(date) {
+  if (!date) return "No Date";
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const itemDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  
+  const diffTime = today - itemDate;
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays > 1 && diffDays <= 7) return "This Week";
+  if (diffDays > 7 && diffDays <= 30) return "This Month";
+  if (diffDays > 30 && diffDays <= 365) return "This Year";
+  
+  return date.getFullYear().toString();
 }
 
 /* -------------------------------------------------------------------------- */
@@ -171,6 +238,9 @@ export default function ListView({
   recordType = null,
   onRefresh,
   refreshing = false,
+  modes,
+  actionsMenu = [],
+  sortBy = "name", // 👈 NEW: defaults to "name", can be "date"
 }) {
   const theme = useTheme();
   const navigation = useNavigation();
@@ -179,15 +249,28 @@ export default function ListView({
   const [localData, setLocalData] = useState(data);
   const { token } = useContext(AuthContext);
 
-  useEffect(() => setLocalData(data), [data]);
+  useEffect(() => 
+    {
+      console.log("actionsMenu in ListView:", actionsMenu);
+      console.log("Modes in ListView:", modes);
+      setLocalData(data), [data]
+    },[data]);
+    
 
   const normalizedData = useMemo(
     () =>
-      localData.map((item) =>
-        item.fieldsData
+      localData.map((item) => {
+        const normalized = item.fieldsData
           ? { ...item.fieldsData, _id: item._id, recordType: item.recordType }
-          : item
-      ),
+          : item;
+        
+        // Preserve the date field from fieldsData (item.fieldsData.date)
+        if (item.fieldsData?.date) {
+          normalized.date = item.fieldsData.date;
+        }
+        
+        return normalized;
+      }),
     [localData]
   );
 
@@ -236,23 +319,64 @@ export default function ListView({
   }, [normalizedData, search, keys]);
 
   /* ------------------------------------------------------------------------ */
-  /* Grouping                                                                  */
+  /* Grouping (supports both name and date sorting)                           */
   /* ------------------------------------------------------------------------ */
   const sections = useMemo(() => {
-    if (!filteredData.length) return [{ title: "", data: [] }];
+  if (!filteredData.length) return [{ title: "", data: [] }];
+
+  if (sortBy === "date") {
+    const sorted = [...filteredData].sort((a, b) => {
+      const dtA = resolveDateObject(a, true); // true = only item.date
+      const dtB = resolveDateObject(b, true);
+
+      if (!dtA && !dtB) return 0;
+      if (!dtA) return 1;
+      if (!dtB) return -1;
+
+      // Newest first
+      return dtB - dtA; // Luxon DateTime supports direct subtraction
+    });
 
     const grouped = {};
-    filteredData.forEach((item) => {
-      const primary = getPrimaryText(item);
-      const key = primary?.[0]?.toUpperCase() || "#";
+    sorted.forEach((item) => {
+      const dt = resolveDateObject(item, true);
+      const key = dt
+        ? dt.toLocaleString(DateTime.DATE_HUGE) // "January 17, 2026"
+        : "No Date";
+
       if (!grouped[key]) grouped[key] = [];
       grouped[key].push(item);
     });
 
-    return Object.keys(grouped)
-      .sort()
-      .map((k) => ({ title: k, data: grouped[k] }));
-  }, [filteredData]);
+    // Preserve sort order
+    const sections = [];
+    const seen = new Set();
+    sorted.forEach((item) => {
+      const dt = resolveDateObject(item, true);
+      const key = dt ? dt.toLocaleString(DateTime.DATE_HUGE) : "No Date";
+      if (!seen.has(key)) {
+        seen.add(key);
+        sections.push({ title: key, data: grouped[key] });
+      }
+    });
+
+    return sections;
+  
+    } else {
+      // Default: Sort by name (alphabetically)
+      const grouped = {};
+      filteredData.forEach((item) => {
+        const primary = getPrimaryText(item);
+        const key = primary?.[0]?.toUpperCase() || "#";
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(item);
+      });
+
+      return Object.keys(grouped)
+        .sort()
+        .map((k) => ({ title: k, data: grouped[k] }));
+    }
+  }, [filteredData, sortBy]);
 
   /* ------------------------------------------------------------------------ */
   /* SubText Builder (EXCLUDES *name* fields)                                  */
@@ -262,7 +386,8 @@ export default function ListView({
       .filter(
         (f) =>
           !["firstName", "lastName"].includes(f.field) &&
-          !f.field.toLowerCase().includes("name") // 🔥 KEY CHANGE
+          !f.field.toLowerCase().includes("name") &&
+          f.field.toLowerCase() !== "date" // Skip date field since it's in the overline
       )
       .sort((a, b) => (a.display?.order || 0) - (b.display?.order || 0));
 
@@ -274,11 +399,20 @@ export default function ListView({
 
       const formatted = formatValueForList(raw);
       if (formatted) {
-        lines.push(`${field.label || field.field}: ${formatted}`);
+        const label = field.label || field.field;
+        const statusColor = field.field.toLowerCase() === "status" 
+          ? getStatusColor(formatted) 
+          : null;
+        
+        lines.push({
+          text: `${label}: ${formatted}`,
+          color: statusColor,
+          isBold: !!statusColor,
+        });
       }
     }
 
-    return lines.join("\n");
+    return lines;
   };
 
   /* ------------------------------------------------------------------------ */
@@ -286,7 +420,7 @@ export default function ListView({
   /* ------------------------------------------------------------------------ */
   const renderItem = ({ item }) => {
     const primary = getPrimaryText(item);
-    const subText = buildSubText(item);
+    const subTextLines = buildSubText(item);
     const dateLabel = resolveDate(item);
     const avatarUrl = getAvatarUrl(item);
 
@@ -317,6 +451,8 @@ export default function ListView({
               appConfig,
               recordType,
               fields: finalFields,
+              modes: modes,
+              actionsMenu,
             })
           }
         >
@@ -357,10 +493,23 @@ export default function ListView({
               {primary}
             </Text>
 
-            {!!subText && (
-              <Text style={[styles.subText, { color: theme.colors.onSurfaceVariant }]}>
-                {subText}
-              </Text>
+            {subTextLines.length > 0 && (
+              <View>
+                {subTextLines.map((line, index) => (
+                  <Text
+                    key={index}
+                    style={[
+                      styles.subText,
+                      {
+                        color: line.color || theme.colors.onSurfaceVariant,
+                        fontWeight: line.isBold ? "700" : "400",
+                      },
+                    ]}
+                  >
+                    {line.text}
+                  </Text>
+                ))}
+              </View>
             )}
           </View>
         </TouchableOpacity>
@@ -384,10 +533,13 @@ export default function ListView({
         renderSectionHeader={({ section }) => (
           <Text style={styles.sectionHeaderText}>{section.title}</Text>
         )}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
       />
 
       <FAB
         icon="plus"
+        color={theme.colors.onPrimary}
         style={[styles.fab, { backgroundColor: theme.colors.primary }]}
         onPress={() =>
           navigation.navigate("ListItemDetail", {
@@ -397,6 +549,8 @@ export default function ListView({
             appConfig,
             recordType,
             fields: finalFields,
+            modes: modes,
+            actionsMenu,
           })
         }
       />
@@ -408,7 +562,7 @@ export default function ListView({
 /* Styles                                                                      */
 /* -------------------------------------------------------------------------- */
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 10 },
+  container: { flex: 1, padding: 10, paddingBottom:120 },
   searchInput: { borderWidth: 1, borderRadius: 10, padding: 10, marginBottom: 10 },
   card: { flexDirection: "row", padding: 14, borderRadius: 14, marginBottom: 8 },
   textContainer: { flex: 1 },

@@ -174,15 +174,16 @@ export default function SmartDialogLinkSelectInput({
     }
   };
 
-  const handleSelect = (record) => {
-    onChangeText({
-      ...record,
-      quantity: quantity || 1,
-    });
+const handleSelect = (record) => {
+  // record now has the proper structure with name, _id, raw, fieldsData
+  onChangeText({
+    ...record,
+    quantity: quantity || 1,
+  });
 
-    setVisible(false);
-    setRecords([]);
-  };
+  setVisible(false);
+  setRecords([]);
+};
 
   /* ============================================================
      READ MODE

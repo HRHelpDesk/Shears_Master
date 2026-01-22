@@ -128,6 +128,7 @@ export default function CalendarListView(props) {
     refreshing = false,
     name = 'Calendar',
     header: headerProp,
+    recordType,
     selectedDate, // ⭐ FIX — day passed in
     mode,         // "day" mode
   } = merged;
@@ -146,7 +147,7 @@ export default function CalendarListView(props) {
   const fetchLocalRecords = async () => {
     try {
       const resp = await getRecords({
-        recordType: 'calendar',
+        recordType: recordType,
         token,
         subscriberId: user.subscriberId,
         userId: user.userId,

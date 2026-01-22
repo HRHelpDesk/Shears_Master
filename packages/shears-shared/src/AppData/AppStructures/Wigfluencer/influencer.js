@@ -2,14 +2,13 @@ import { influencerUser } from "./influencer-user";
 import { InfluencerSettings } from "./settings";
 
 // Views
-import { CalendarMonthView, CalendarToday } from "../../view-schema/calendar-view";
 import { ProfileView } from "../../view-schema/profile-view";
 import { influencerWhitelabels } from "./influencer-whitelabels";
 import { AdminDashboardView, InfluencerDashboardView } from "../../view-schema/dashboard-view";
 import { AnnouncementsInfluencer } from "./view-schema/Announcements";
 import { RequestsAdminView, RequestsInfluencerView } from "./view-schema/Requests";
 import { NotificationsView } from "./view-schema/Notifications";
-import { CalendarScreen } from "./view-schema/Calendar";
+import { CalendarScreenAdmin, CalendarMonthView, CalendarMonthAdminView, CalendarScreen } from "./view-schema/Calendar";
 
 /* -------------------------------------------------------------------
    📋 SHARED FIELD DEFINITIONS
@@ -28,7 +27,7 @@ const requestFields = {
     type: "string",
     required: true,
     display: { order: 2 },
-    displayInList:true
+    
   },
   time: {
     field: "startTimeWithZone",
@@ -75,18 +74,15 @@ const requestFields = {
     multiline: true,
     display: { order: 6 }
   },
-  salesCoupon: {
-    field: "salesCoupon",
-    label: "Sales and Coupons",
-    type: "object",
-    required: true,
-    input: "linkSelect",
-    inputConfig: {
-      recordType: "SalesCoupons",
-      searchField: "title"
-    },
+  isPrivate: {
+    field: "isPrivate",
+    label: "Make this calendar Booking Private (Only visible to your account and Admins)",
+    type: "string",
+    input: "boolean",
+   displayInList: false,
     display: { order: 7 }
-  }
+  },
+ 
 };
 
 /* -------------------------------------------------------------------
@@ -107,39 +103,39 @@ export const InfluencerApp = [
       /* ----------------------------------------------------------
          🟦 ADMIN DASHBOARD
       ---------------------------------------------------------- */
-      {
-        name: "AdminDashboard",
-        permissions: ["admin"],
-        displayName: "Dashboard",
-        recordType: "dashboard",
-        icon: { ios: "rectangle.grid.2x2", android: "view-dashboard", web: "fa fa-th-large" },
-        views: [AdminDashboardView],
-        fields: []
-      },
+      // {
+      //   name: "AdminDashboard",
+      //   permissions: ["admin"],
+      //   displayName: "Dashboard",
+      //   recordType: "dashboard",
+      //   icon: { ios: "rectangle.grid.2x2", android: "view-dashboard", web: "fa fa-th-large" },
+      //   views: [AdminDashboardView],
+      //   fields: []
+      // },
 
       /* ----------------------------------------------------------
          🟪 INFLUENCER DASHBOARD
       ---------------------------------------------------------- */
-      {
-        name: "InfluencerDashboard",
-        permissions: ["influencer"],
-        displayName: "Dashboard",
-        recordType: "dashboard",
-        icon: { ios: "house.fill", android: "home", web: "fa fa-home" },
-        views: [InfluencerDashboardView],
-        fields: []
-      },
+      // {
+      //   name: "InfluencerDashboard",
+      //   permissions: ["influencer"],
+      //   displayName: "Dashboard",
+      //   recordType: "dashboard",
+      //   icon: { ios: "house.fill", android: "home", web: "fa fa-home" },
+      //   views: [InfluencerDashboardView],
+      //   fields: []
+      // },
 
       /* ----------------------------------------------------------
-         🗓️ CALENDAR
+         🗓️ ADMIN CALENDAR
       ---------------------------------------------------------- */
       {
-        name: "Calendar",
-        permissions: ["admin", "influencer"],
+        name: "AdminCalendar",
+        permissions: ["admin"],
         displayName: "Calendar",
         recordType: "calendar",
         icon: { ios: "calendar", android: "calendar-month", web: "fa fa-calendar" },
-        views: [CalendarScreen, CalendarToday],
+        views: [CalendarMonthAdminView, CalendarScreenAdmin ],
         fields: [
             {
           field: "influencerName",
@@ -158,10 +154,9 @@ export const InfluencerApp = [
             display: { order: 1 }
           },
           {
-            field: "time",
-            label: "Time Slot",
-            type: "object",
-            input: "time",
+            field: "timeZoneTime",
+            label: "Time",
+            type: "string",         
             required: true,
             arrayConfig: { minItems: 1 },
             display: { order: 2 }
@@ -188,15 +183,76 @@ export const InfluencerApp = [
             ]
           }
         },
-        
+       
           {
-            field: "discountCode",
-            label: "Discount Code",
+            field: "notes",
+            label: "Internal Notes",
             type: "string",
-            input: "text",
-            required: false,
-            display: { order: 4 }
+            input: "textarea",
+            multiline: true,
+            display: { order: 5 }
+          }
+        ]
+      },
+
+      /* ----------------------------------------------------------
+         🗓️  CALENDAR
+      ---------------------------------------------------------- */
+      {
+        name: "Calendar",
+        permissions: ["influencer"],
+        displayName: "Calendar",
+        recordType: "calendar",
+        icon: { ios: "calendar", android: "calendar-month", web: "fa fa-calendar" },
+        views: [CalendarMonthView, CalendarScreen ],
+        fields: [
+            {
+          field: "influencerName",
+          label: "Influencer",
+          input: "autoUser",
+          required: true,
+          display: { order: 1 }
+        },
+          {
+            field: "date",
+            label: "Date",
+            type: "string",
+            input: "date",
+            required: true,
+            arrayConfig: { minItems: 1 },
+            display: { order: 1 }
           },
+         {
+            field: "timeZoneTime",
+            label: "Time",
+            type: "string",         
+            required: true,
+            arrayConfig: { minItems: 1 },
+            display: { order: 2 }
+          },
+          {
+          field: "platforms",
+          label: "Social Media Platform(s)",
+          type: "array",
+          input: "array",
+          required: true,
+          display: { order: 4 },
+          arrayConfig: {
+            minItems: 1,
+            object: [
+              {
+                field: "platform",
+                type: "string",
+                label: "Platform",
+                input: "select",
+                inputConfig: {
+                  options: ["Instagram", "TikTok", "Facebook", "YouTube"]
+                }
+              }
+            ]
+          }
+        },
+      
           {
             field: "notes",
             label: "Internal Notes",
@@ -219,14 +275,47 @@ export const InfluencerApp = [
         icon: { ios: "megaphone.fill", android: "bullhorn", web: "fa fa-bullhorn" },
         views: [AnnouncementsInfluencer],
         fields: [
+            {
+      field: "comments",
+      label: "Comments",
+      input: "array",
+      arrayConfig: {
+        object: [
           {
-          field: "title",
+            field: "user",
+            user: "User",
+            input: "autoUser"
+          },
+          {
+            field: "text",
+            field: "Comment",
+            field: "textarea"
+          },
+          {
+            field: "date",
+            field: "Date",
+            field: "datetime"
+          }
+        ]
+      },
+      "displayInList": false
+    },
+          {
+          field: "name",
           override: {
             field: "announcementName",
             label: "Title",
           },
           input: "text",
         },
+             {
+            field: "image",
+            override: {
+              field: "announcementImage",
+              label: "Announcement Images",
+            },
+            input: "image",
+          },
             {
             field: "date",
             label: "Date",
@@ -245,14 +334,7 @@ export const InfluencerApp = [
           },
           input: "textarea",
         },
-          {
-            field: "image",
-            override: {
-              field: "announcementImage",
-              label: "Announcement Images",
-            },
-            input: "image",
-          },
+       
           {
           field: "video",
           override: {
@@ -260,7 +342,9 @@ export const InfluencerApp = [
             label: "Video URL",
           },
           input: "video",
-        }
+        },
+     
+       
         ]
       },
 
@@ -278,24 +362,30 @@ export const InfluencerApp = [
           requestFields.influencer,
           requestFields.date,
           requestFields.time,
-          requestFields.platforms,
           requestFields.duration,
+          requestFields.platforms,
+          requestFields.isPrivate,
           requestFields.notes,
+         
           {
             field: "status",
             override:{
               field:'status',
                  input: "readOnly",
-            },
-            label: "Status",
-            type: "string",
-         
+                 displayInList:true,
+
             inputConfig: {
               defaultValue: "Pending"
             },
+            required: false,
+            },
+            label: "Status",
+            type: "string",
+           
+            displayInList: true,
             display: { order: 7 }
           },
-          requestFields.salesCoupon
+         
         ]
       },
 
@@ -313,25 +403,30 @@ export const InfluencerApp = [
           requestFields.influencer,
           requestFields.date,
           requestFields.time,
-          requestFields.platforms,
           requestFields.duration,
+          requestFields.platforms,
+           requestFields.isPrivate,
           requestFields.notes,
-          requestFields.salesCoupon,
+         
           {
-            field: "requestStatusWidget",
+            field: "status",
             override:{
               field:"status",
-              input:"requestStatusWidget"
+              input:"requestStatusWidget",
+              displayInList: true,
+              label: "Status",
+               required: false,
+
             },
-            label: "Status",
             type: "string",
-       
-            display: { order: 8 },
+            displayInList: true,
+            display: { order: 3 },
             inputConfig: {
               options: ["Pending", "Approved", "Rejected", "Completed"],
               defaultValue: "Pending"
             }
-          }
+          },
+          
         ]
       },
 
@@ -348,6 +443,10 @@ export const InfluencerApp = [
         fields: [
           {
             field: "title",
+            override:{
+              field: "notificationName",
+              label: "Title",
+            },
             label: "Title",
             type: "string",
             input: "text",
@@ -408,7 +507,7 @@ export const InfluencerApp = [
        🏠 DEFAULT ROUTE
     ---------------------------------------------------------- */
     defaultRoute: (user) => {
-      return user.role === "admin" ? "AdminDashboard" : "InfluencerDashboard";
+      return user.role === "admin" ? "AdminCalendar" : "Calendar";
     }
   }
 ];

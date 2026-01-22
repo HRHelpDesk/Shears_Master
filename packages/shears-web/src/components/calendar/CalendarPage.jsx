@@ -1,11 +1,30 @@
 // src/pages/CalendarPage.jsx
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useContext } from 'react';
 import CalendarView from './CalendarView';
-import CalendarListView from './CalendarListView';
+import CalendarListView from '../calendar/Shear/CalendarListView';
+import { getRecords } from 'shears-shared/src/Services/Authentication';
+import { AuthContext } from '../../context/AuthContext';
 
-export default function CalendarPage({ data = [], appConfig, fields }) {
+export default function CalendarPage({ data = [], appConfig, fields, modes, recordType }) {
   const [selectedDate, setSelectedDate] = useState(null);
+  const [localData, setLocalData] = useState(data);
+  const { token, user } = useContext(AuthContext);
+  useEffect(() => {
+    let active = true;
 
+    const load = async () => {
+      const res = await getRecords({
+        recordType: recordType,
+        token,
+        subscriberId: user.subscriberId,
+      });
+      console.log("calendar records:", res);
+      if (active) setLocalData(res || []);
+    };
+
+    load();
+    return () => (active = false);
+  }, [token, user.subscriberId]);
   // Convert date to YMD once
   const toYMD = (d) => d.toISOString().slice(0, 10);
 
@@ -58,8 +77,11 @@ export default function CalendarPage({ data = [], appConfig, fields }) {
   -------------------------------------------------------------- */
   return (
     <CalendarView
-      events={data}
+      events={localData}
       onDayClick={(date) => setSelectedDate(date)}
+      appConfig={appConfig}
+      modes={modes}
+      recordType={recordType}
     />
   );
 }
