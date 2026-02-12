@@ -2,6 +2,7 @@ import PaymentButton from "../../components/BaseUI/SmartInputs/PaymentButton";
 import PhoneTextInput from "../../components/BaseUI/SmartInputs/PhoneTextInput";
 import PlainTextInput from "../../components/BaseUI/SmartInputs/PlainTextInput";
 import { SmartDateInput, SmartTimeInput } from "../../components/BaseUI/SmartInputs/SmartDateTimeInputs";
+import SmartDateRangeInput from "../../components/BaseUI/SmartInputs/SmartDateRangeInput";
 import SmartDialogLinkSelectInput from "../../components/BaseUI/SmartInputs/SmartDialogLinkSelectInput";
 import SmartDialogSelect from "../../components/BaseUI/SmartInputs/SmartDialogSelect";
 import SmartTextAreaInput from "../../components/BaseUI/SmartInputs/SmartTextAreaInput";
@@ -36,6 +37,7 @@ export const FieldMap = {
   autoUser: SmartAutoUserInput,
   readOnly: SmartReadOnlyField,
   timeTimeZone: SmartTimeTimeZone,
+  dateRange:SmartDateRangeInput,
   ...WidgetMap
 
 };

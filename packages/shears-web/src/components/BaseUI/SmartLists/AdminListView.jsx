@@ -13,7 +13,7 @@ import ListView from "../ListView";
  * - fields (array)
  * - appConfig (object)
  */
-export default function AdminListView({ name, recordType, fields, appConfig, displayName , modes, sortBy}) {
+export default function AdminListView({ name, recordType, fields, appConfig, displayName , modes, sortBy, actionsMenu}) {
   const { token, user } = useContext(AuthContext);
 
   const [data, setData] = useState([]);
@@ -100,6 +100,7 @@ export default function AdminListView({ name, recordType, fields, appConfig, dis
       onRefresh={loadData}
       modes={modes}
       sortBy={sortBy}
+      actionsMenu={actionsMenu}
     />
   );
 }

@@ -22,7 +22,10 @@ const requestFields = {
     display: { order: 1 }
   },
   date: {
-    field: "date",
+    field: "dateRange",
+    override:{
+      field: "date",
+    },
     label: "Date",
     type: "string",
     required: true,
@@ -66,6 +69,22 @@ const requestFields = {
     display: { order: 5 },
     arrayConfig: { minItems: 1 }
   },
+  products:{
+    field: 'linkField',
+    override: {
+      field: 'products',
+      label: 'List products you need flash sales for:',
+      type: 'array',
+      displayInList: false,
+      inputConfig: {
+        recordType: 'products',
+        searchField: 'productName',
+        showQuantity: false,
+        useUserId: false,
+      },
+      display: { order: 1 },
+    },
+  },
   notes: {
     field: "notes",
     label: "Notes",
@@ -80,7 +99,11 @@ const requestFields = {
     type: "string",
     input: "boolean",
    displayInList: false,
-    display: { order: 7 }
+    display: { order: 7 },
+    inputConfig: {
+      onLabel: 'Private',   // ✅ optional config for UI
+      offLabel: 'Not Private',
+    },
   },
  
 };
@@ -183,6 +206,22 @@ export const InfluencerApp = [
             ]
           }
         },
+        {
+    field: 'linkField',
+    override: {
+      field: 'products',
+      label: 'Products you will be promoting:',
+      type: 'array',
+      displayInList: false,
+      inputConfig: {
+        recordType: 'products',
+        searchField: 'productName',
+        showQuantity: false,
+        useUserId: false,
+      },
+      display: { order: 1 },
+    },
+  },
        
           {
             field: "notes",
@@ -252,6 +291,23 @@ export const InfluencerApp = [
             ]
           }
         },
+            {
+    field: 'linkField',
+    override: {
+      field: 'products',
+      label: 'Products you will be promoting:',
+      type: 'array',
+      displayInList: false,
+      inputConfig: {
+        recordType: 'products',
+        searchField: 'productName',
+        showQuantity: false,
+        useUserId: false,
+      },
+      display: { order: 1 },
+    },
+  },
+       
       
           {
             field: "notes",
@@ -364,6 +420,7 @@ export const InfluencerApp = [
           requestFields.time,
           requestFields.duration,
           requestFields.platforms,
+          requestFields.products,
           requestFields.isPrivate,
           requestFields.notes,
          
@@ -405,6 +462,7 @@ export const InfluencerApp = [
           requestFields.time,
           requestFields.duration,
           requestFields.platforms,
+          requestFields.products,
            requestFields.isPrivate,
           requestFields.notes,
          
@@ -484,9 +542,9 @@ export const InfluencerApp = [
             display: { order: 1 }
           },
           {
-            field: "preferences",
-            label: "Notification Preferences",
-            type: "object",
+            field: "todaysLives",
+            label: "Today's Lives",
+            type: "string",
             display: { order: 2 }
           }
         ]

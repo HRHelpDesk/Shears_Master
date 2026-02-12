@@ -46,6 +46,7 @@ if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
   include("/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/android/app/.cxx/Debug/3e5b3y3m/arm64-v8a/rnasyncstorage_autolinked_build/cmake_install.cmake")
   include("/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/android/app/.cxx/Debug/3e5b3y3m/arm64-v8a/RNDateTimePickerCGen_autolinked_build/cmake_install.cmake")
+  include("/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/android/app/.cxx/Debug/3e5b3y3m/arm64-v8a/rndocumentpickerCGen_autolinked_build/cmake_install.cmake")
   include("/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/android/app/.cxx/Debug/3e5b3y3m/arm64-v8a/rnstripe_autolinked_build/cmake_install.cmake")
   include("/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/android/app/.cxx/Debug/3e5b3y3m/arm64-v8a/RNCTabView_autolinked_build/cmake_install.cmake")
   include("/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/android/app/.cxx/Debug/3e5b3y3m/arm64-v8a/rngesturehandler_codegen_autolinked_build/cmake_install.cmake")

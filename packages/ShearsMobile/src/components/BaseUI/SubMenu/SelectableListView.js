@@ -105,21 +105,24 @@ function resolveDate(item) {
 const getAvatarUrl = (item) => {
   if (!item) return null;
 
-  const list = [
-    item.avatar,
-    item.avatar?.url,
-    item.avatar?.[0]?.url,
-    item.raw?.avatar,
-    item.raw?.avatar?.url,
-    item.raw?.avatar?.[0]?.url,
-    item.fieldsData?.avatar,
-    item.fieldsData?.avatar?.url,
-    item.fieldsData?.avatar?.[0]?.url,
-  ];
+  // Check for avatar field
+  if (item.avatar) {
+    if (Array.isArray(item.avatar) && item.avatar[0]?.url) return item.avatar[0].url;
+    if (typeof item.avatar === "string") return item.avatar;
+  }
 
-  for (const entry of list) {
-    if (typeof entry === "string") return entry;
-    if (entry?.url) return entry.url;
+  // ⭐ Check for any field with "image" in the name (like productImage)
+  for (const [key, value] of Object.entries(item)) {
+    if (key.toLowerCase().includes('image')) {
+      if (Array.isArray(value) && value[0]?.url) return value[0].url;
+      if (typeof value === "string") return value;
+    }
+  }
+
+  // Check nested raw objects
+  for (const v of Object.values(item)) {
+    if (v?.raw?.avatar) return v.raw.avatar;
+    if (Array.isArray(v?.avatar) && v.avatar[0]?.url) return v.avatar[0].url;
   }
 
   return null;

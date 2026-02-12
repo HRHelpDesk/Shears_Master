@@ -15,7 +15,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "3AA255652F1AC5D100DA08B6"
+               BlueprintIdentifier = "3A8987232F33D03D00EDBE91"
                BuildableName = "Boss Crowns Influencer App.app"
                BlueprintName = "Boss Crowns Influencer App"
                ReferencedContainer = "container:ShearsMobile.xcodeproj">
@@ -32,8 +32,8 @@
    </TestAction>
    <LaunchAction
       buildConfiguration = "Release"
-      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
-      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      selectedDebuggerIdentifier = ""
+      selectedLauncherIdentifier = "Xcode.IDEFoundation.Launcher.PosixSpawn"
       launchStyle = "0"
       useCustomWorkingDirectory = "NO"
       ignoresPersistentStateOnLaunch = "NO"
@@ -44,7 +44,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "3AA255652F1AC5D100DA08B6"
+            BlueprintIdentifier = "3A8987232F33D03D00EDBE91"
             BuildableName = "Boss Crowns Influencer App.app"
             BlueprintName = "Boss Crowns Influencer App"
             ReferencedContainer = "container:ShearsMobile.xcodeproj">
@@ -57,16 +57,15 @@
       savedToolIdentifier = ""
       useCustomWorkingDirectory = "NO"
       debugDocumentVersioning = "YES">
-      <BuildableProductRunnable
-         runnableDebuggingMode = "0">
+      <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "3AA255652F1AC5D100DA08B6"
+            BlueprintIdentifier = "3A8987232F33D03D00EDBE91"
             BuildableName = "Boss Crowns Influencer App.app"
             BlueprintName = "Boss Crowns Influencer App"
             ReferencedContainer = "container:ShearsMobile.xcodeproj">
          </BuildableReference>
-      </BuildableProductRunnable>
+      </MacroExpansion>
    </ProfileAction>
    <AnalyzeAction
       buildConfiguration = "Debug">

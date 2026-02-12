@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { BASE_URL } from '../config/api';
 import { getAppHeaders } from '../config/appHeaders';
-import { formatDateValue } from '../utils/stringHelpers';
+import { formatDateValue, formatPhoneNumber } from '../utils/stringHelpers';
 const API_URL = `${BASE_URL}/v1/data-records`;
 
 /* -------------------------------------------------------------
@@ -100,23 +100,24 @@ export async function createRecord(
     if (recordType === "user") {
       if (!ownerUser) throw new Error("Owner user context is required");
 
+      // Start with all fields from the record
       let newUser = {
-        firstName: record.firstName,
-        lastName: record.lastName,
-        fullName: `${record.firstName} ${record.lastName}`.trim(),
+        ...record,
+        // Ensure required fields are present
+        fullName: `${record.firstName || ''} ${record.lastName || ''}`.trim(),
         email: record.email,
         role: record.role || "barber",
         password: record.password || "Temp123!",
-        phone: record.phone || null,
       };
-
+console.log('Creating new user:', newUser);
+      // Inherit business fields if not owner
       if (newUser.role !== "owner") {
         newUser = inheritBusinessFields(ownerUser, newUser);
       }
 
       const response = await axios.post(
         `${BASE_URL}/v1/auth/register`,
-        newUser, // 🔥 no appConfig here
+        newUser,
         { headers: getAppHeaders(token) }
       );
 
@@ -526,7 +527,7 @@ export async function getStripeTerminalToken(stripeAccountId, token) {
 }
 
 
-export function buildCalendarAndNotification(request, user, notify = true) {
+export function buildCalendarAndNotification(request, user, notify = true, message) {
   if (!request) {
     console.warn("❌ No request passed into buildCalendarAndNotification");
     return null;
@@ -542,16 +543,18 @@ export function buildCalendarAndNotification(request, user, notify = true) {
   // ------------------------------
   // Extract start time + timezone
   // ------------------------------
-  const startTime = request.startTimeWithZone?.time || null; // "16:00"
+  const startTime = request.startTimeWithZone?.time || null;
   const timezone = request.startTimeWithZone?.timezone || null;
 
   // ------------------------------
   // Compute end time based on duration
   // ------------------------------
   let endTime = null;
+
   try {
     if (startTime && request.duration) {
       const [sh, sm] = startTime.split(":").map(Number);
+
       const addMinutes =
         Number(request.duration.hours || 0) * 60 +
         Number(request.duration.minutes || 0);
@@ -568,25 +571,31 @@ export function buildCalendarAndNotification(request, user, notify = true) {
   }
 
   // ------------------------------
-  // Extract discount code (if any)
+  // Normalize Dates (single or multi)
   // ------------------------------
-  const discountCode =
-    request.salesCoupon?.raw?.code ||
-    request.salesCoupon?.fieldsData?.code ||
-    null;
+  const dates = Array.isArray(request.date)
+    ? request.date
+    : request.date
+    ? [request.date]
+    : [];
+
+  if (!dates.length) {
+    console.warn("⚠️ No dates provided in request.");
+    return null;
+  }
 
   // ------------------------------
-  // CALENDAR RECORD
+  // CALENDAR RECORDS (one per date)
   // ------------------------------
-  const calendarRecord = {
-    date: request.date || null,
+  const calendarRecords = dates.map((date) => ({
+    date,
     influencerName: request.influencerName,
     timeZoneTime: {
       start: startTime,
       end: endTime,
       timezone,
     },
-   platforms: request.socialMediaPlatforms || [],
+    platforms: request.socialMediaPlatforms || [],
     assignedInfluencer: influencer
       ? {
           userId: influencer.userId,
@@ -597,31 +606,28 @@ export function buildCalendarAndNotification(request, user, notify = true) {
           avatar: influencer.avatar,
         }
       : null,
-
-    discountCode: discountCode,
+    products: request.products || [],
     notes: request.notes || "",
     isPrivate: request.isPrivate || false,
     requestId: request._id,
-
     createdBy: user?.userId || null,
-
     createdAt: new Date().toISOString(),
-  };
+  }));
 
-  console.log("📅 Built Calendar Record:", calendarRecord);
+  console.log("📅 Built Calendar Records:", calendarRecords);
 
   // ------------------------------
   // NOTIFICATION RECORD (Optional)
   // ------------------------------
   if (!notify) {
     console.log("⏭️ Notification skipped (notify = false)");
-    return { calendarRecord, notificationRecord: null };
+    return { calendarRecords, notificationRecord: null };
   }
 
   const notificationRecord = {
     forUserId: influencer?.userId || null,
     notificationName: "New Scheduled Live Assignment",
-    message: `You have been assigned a new live slot on ${formatDateValue(request.date)}.`,
+    message,
     relatedRecordId: request._id,
     relatedRecordType: "requests",
     createdAt: new Date().toISOString(),
@@ -630,39 +636,55 @@ export function buildCalendarAndNotification(request, user, notify = true) {
 
   console.log("🔔 Built Notification Record:", notificationRecord);
 
-  return { calendarRecord, notificationRecord };
+  return { calendarRecords, notificationRecord };
 }
 
 
-export async function saveCalendarAndNotification(request, user, token, notify = true) {
-  try {
-    // Build objects
-    const { calendarRecord, notificationRecord } =
-      buildCalendarAndNotification(request, user, notify);
 
-    if (!calendarRecord) {
-      console.warn("⚠️ No calendar record created.");
+export async function saveCalendarAndNotification(
+  request,
+  user,
+  token,
+  notify = true,
+  message
+) {
+  try {
+    const result = buildCalendarAndNotification(
+      request,
+      user,
+      notify,
+      message
+    );
+
+    if (!result || !result.calendarRecords?.length) {
+      console.warn("⚠️ No calendar records created.");
       return null;
     }
 
-    console.log("📌 Saving Calendar Record:", calendarRecord);
+    const { calendarRecords, notificationRecord } = result;
+
+    console.log("📌 Saving Calendar Records...");
 
     // --------------------------------------------
-    // 1️⃣ SAVE CALENDAR RECORD
+    // 1️⃣ SAVE CALENDAR RECORDS (Parallel)
     // --------------------------------------------
-    const savedCalendar = await createRecord(
-      calendarRecord,
-      "calendar",
-      token,
-      notificationRecord.userId,
-      user.subscriberId,
-      user // ownerUser (needed for user logic)
+    const savedCalendars = await Promise.all(
+      calendarRecords.map((record) =>
+        createRecord(
+          record,
+          "calendar",
+          token,
+          notificationRecord?.forUserId,
+          user.subscriberId,
+          user
+        )
+      )
     );
 
-    console.log("✅ Calendar saved:", savedCalendar);
+    console.log("✅ All calendar records saved:", savedCalendars);
 
     // --------------------------------------------
-    // 2️⃣ SAVE NOTIFICATION RECORD (if notify = true)
+    // 2️⃣ SAVE NOTIFICATION RECORD (Optional)
     // --------------------------------------------
     let savedNotification = null;
 
@@ -679,17 +701,40 @@ export async function saveCalendarAndNotification(request, user, token, notify =
       );
 
       console.log("📨 Notification saved:", savedNotification);
+
+      // --------------------------------------------
+      // 3️⃣ SEND EMAIL TRIGGER
+      // --------------------------------------------
+      try {
+        console.log(`📧 Triggering notification email...`);
+
+        const response = await axios.post(
+          `${BASE_URL}/v1/notification/send`,
+          {
+            notification: notificationRecord,
+            subscriberId: user.subscriberId,
+            forUserId: notificationRecord.forUserId,
+          },
+          { headers: getAppHeaders(token) }
+        );
+
+        console.log("📬 Email trigger response:", response.data);
+      } catch (emailErr) {
+        console.error("⚠️ Email trigger failed:", emailErr);
+        // Do not throw — calendar + notification already saved
+      }
     } else {
       console.log("⏭️ Notification skipped");
     }
 
-    return { savedCalendar, savedNotification };
+    return { savedCalendars, savedNotification };
 
   } catch (err) {
     console.error("❌ Error saving calendar + notification:", err);
     throw err;
   }
 }
+
 
 
 // src/utils/normalizeCalendarRecord.js
@@ -770,6 +815,71 @@ export function canSeeCalendarEvent(event, currentUser) {
   return ownerId === currentUser.userId;
 }
 
+export async function sendRejectionNotification(
+  request,
+  user,
+  token,
+  message = "Your request was rejected."
+) {
+  try {
+    if (!message || message.trim() === "") {
+      console.warn("⚠️ Rejection message is empty. Skipping notification.");
+      return null;
+    }
+console.log("request", request);  
+    // Build notification record
+    const notificationRecord = {
+      title: `Request Rejected: ${
+  Array.isArray(request.date) && request.date.length > 0
+    ? request.date.map(d => formatDateValue(d)).join(", ")
+    : "Your Request"
+}`,
+      message,
+      forUserId: request?.influencerName?.raw?.userId || request?.createdBy,
+     relatedRecordType: "requests",
+      createdAt: new Date().toISOString(),
+      read: false,
+    };
+
+    console.log("🔔 Saving Rejection Notification:", notificationRecord);
+
+    // Save notification in DB
+    const savedNotification = await createRecord(
+      notificationRecord,
+      "notifications",
+      token,
+      notificationRecord.forUserId,
+      user.subscriberId,
+      user
+    );
+
+    console.log("📨 Rejection Notification saved:", savedNotification);
+
+    // Trigger email
+    try {
+      const response = await axios.post(
+        `${BASE_URL}/v1/notification/send`,
+        {
+          notification: notificationRecord,
+          subscriberId: user.subscriberId,
+          forUserId: notificationRecord.forUserId,
+        },
+        { headers: getAppHeaders(token) }
+      );
+
+      console.log("📧 Rejection email triggered:", response.data);
+    } catch (emailErr) {
+      console.error("⚠️ Email trigger failed:", emailErr);
+      // Do not throw — record already saved
+    }
+
+    return savedNotification;
+  } catch (err) {
+    console.error("❌ Error sending rejection notification:", err);
+    throw err;
+  }
+}
+
 // shears-shared/src/utils/autofillHelpers.js
 
 // shears-shared/src/utils/autofillHelpers.js
@@ -841,85 +951,101 @@ export const autofillFromRecordWithFields = (
    * Process a single field
    */
   const processField = (fieldDef, parentPath = "") => {
-    const { field, objectConfig, arrayConfig, input } = fieldDef;
+  const { field, override, objectConfig, arrayConfig, input } = fieldDef;
 
-    // ⭐ KEY CHANGE: If excluded → do NOTHING (preserve existing/current/default value)
-    if (shouldExclude(field, fieldDef)) {
-      console.log(`Preserving existing value for excluded field: ${field}`);
-      return;
+  // ⭐ Check if field has an override
+  const actualFieldName = override?.field || field;
+
+  // ⭐ KEY CHANGE: If excluded → do NOTHING (preserve existing/current/default value)
+  if (shouldExclude(actualFieldName, fieldDef)) {
+    console.log(`Preserving existing value for excluded field: ${actualFieldName}`);
+    return;
+  }
+
+  // ⭐ Look for the value using the override field name if it exists
+  const sourceValue = sourceData[actualFieldName];
+
+  // If source doesn't have this field → also do nothing (don't clear/overwrite)
+  if (sourceValue === undefined || sourceValue === null) {
+    console.log(`Skipping field with no source value: ${actualFieldName}`);
+    return;
+  }
+
+  if (input === "linkSelect" && Array.isArray(sourceValue)) {
+  // For linkSelect arrays, copy the full objects (deep clone)
+  result[field] = JSON.parse(JSON.stringify(sourceValue));
+  return;
+}
+
+  // ⭐ Handle IMAGE fields (array of {url, public_id} objects)
+  if (input === "image" && Array.isArray(sourceValue)) {
+    result[field] = JSON.parse(JSON.stringify(sourceValue));
+    return;
+  }
+
+  // Handle OBJECT fields with nested structure
+  if (objectConfig && Array.isArray(objectConfig)) {
+    const nestedResult = {};
+
+    objectConfig.forEach((nestedField) => {
+      const nestedValue = sourceValue[nestedField.field];
+
+      if (nestedValue !== undefined && nestedValue !== null) {
+        if (shouldExclude(nestedField.field, nestedField)) {
+          return;
+        }
+
+        nestedResult[nestedField.field] = nestedValue;
+      }
+    });
+
+    // Only set if we actually have some nested data
+    if (Object.keys(nestedResult).length > 0) {
+      result[field] = nestedResult;
     }
+    return;
+  }
 
-    const sourceValue = sourceData[field];
+  // Handle ARRAY fields
+  if (arrayConfig?.object && Array.isArray(sourceValue)) {
+    const arrayResult = [];
 
-    // If source doesn't have this field → also do nothing (don't clear/overwrite)
-    if (sourceValue === undefined || sourceValue === null) {
-      console.log(`Skipping field with no source value: ${field}`);
-      return;
-    }
+    sourceValue.forEach((arrayItem) => {
+      const processedItem = {};
 
-    // Handle OBJECT fields with nested structure
-    if (objectConfig && Array.isArray(objectConfig)) {
-      const nestedResult = {};
-
-      objectConfig.forEach((nestedField) => {
-        const nestedValue = sourceValue[nestedField.field];
+      arrayConfig.object.forEach((nestedField) => {
+        const nestedValue = arrayItem[nestedField.field];
 
         if (nestedValue !== undefined && nestedValue !== null) {
           if (shouldExclude(nestedField.field, nestedField)) {
             return;
           }
 
-          nestedResult[nestedField.field] = nestedValue;
+          processedItem[nestedField.field] = nestedValue;
         }
       });
 
-      // Only set if we actually have some nested data
-      if (Object.keys(nestedResult).length > 0) {
-        result[field] = nestedResult;
+      // Only add if item has data
+      if (Object.keys(processedItem).length > 0) {
+        arrayResult.push(processedItem);
       }
-      return;
+    });
+
+    if (arrayResult.length > 0) {
+      result[field] = arrayResult;
     }
+    return;
+  }
 
-    // Handle ARRAY fields
-    if (arrayConfig?.object && Array.isArray(sourceValue)) {
-      const arrayResult = [];
+  // Handle LINK SELECT fields (preserve raw data)
+  if (input === "linkSelect") {
+    result[field] = JSON.parse(JSON.stringify(sourceValue));
+    return;
+  }
 
-      sourceValue.forEach((arrayItem) => {
-        const processedItem = {};
-
-        arrayConfig.object.forEach((nestedField) => {
-          const nestedValue = arrayItem[nestedField.field];
-
-          if (nestedValue !== undefined && nestedValue !== null) {
-            if (shouldExclude(nestedField.field, nestedField)) {
-              return;
-            }
-
-            processedItem[nestedField.field] = nestedValue;
-          }
-        });
-
-        // Only add if item has data
-        if (Object.keys(processedItem).length > 0) {
-          arrayResult.push(processedItem);
-        }
-      });
-
-      if (arrayResult.length > 0) {
-        result[field] = arrayResult;
-      }
-      return;
-    }
-
-    // Handle LINK SELECT fields (preserve raw data)
-    if (input === "linkSelect") {
-      result[field] = JSON.parse(JSON.stringify(sourceValue));
-      return;
-    }
-
-    // Handle simple fields
-    result[field] = sourceValue;
-  };
+  // Handle simple fields
+  result[field] = sourceValue;
+};
 
   // Process all fields from the schema
   fields.forEach((fieldDef) => {
@@ -1056,3 +1182,491 @@ export const extractDateFields = (obj, datePatterns = ["date"]) => {
   extract(obj, dateFields);
   return dateFields;
 };
+
+
+export const searchProducts = async (query, first = 25, token = null) => {
+  try {
+    const response = await axios.post(
+      `${BASE_URL}/v1/shopify/search-products`,
+      { query, first },
+      { headers: getAppHeaders(token) }
+    );
+
+    if (!Array.isArray(response.data)) {
+      console.warn("Unexpected searchProducts response:", response.data);
+      return [];
+    }
+
+    return response.data;
+  } catch (error) {
+    console.error("searchProducts failed:", error);
+    throw new Error(
+      error.response?.data?.message || "Failed to search products"
+    );
+  }
+};
+
+/* =========================================================
+   GET PRODUCT BY BARCODE
+   → POST /v1/shopify/product-by-barcode
+========================================================= */
+export const getProductByBarcode = async (barcode, token = null) => {
+  if (!barcode) {
+    throw new Error("Barcode is required");
+  }
+
+  try {
+    const response = await axios.post(
+      `${BASE_URL}/v1/shopify/product-by-barcode`,
+      { barcode },
+      { headers: getAppHeaders(token) }
+    );
+
+    if (!response.data) {
+      throw new Error("No data returned from product-by-barcode");
+    }
+
+    return response.data;
+  } catch (error) {
+    console.error("getProductByBarcode failed:", error);
+    throw new Error(
+      error.response?.data?.message || "Failed to fetch product by barcode"
+    );
+  }
+};
+
+
+/* ============================================================
+   contactImporter.js
+   
+   Utility for parsing CSV data and creating contact records
+   in the proper fieldsData format.
+============================================================ */
+
+
+/**
+ * Split a full name into firstName and lastName
+ * Handles various formats and edge cases
+ */
+
+/**
+ * Score a contact by how complete it is
+ * Higher score = better record
+ */
+function scoreContact(contact) {
+  let score = 0;
+
+  if (contact.firstName) score += 1;
+  if (contact.lastName) score += 1;
+
+  if (contact.phone?.length) {
+    score += contact.phone.length * 3;
+  }
+
+  if (contact.email?.length) {
+    score += contact.email.length * 2;
+  }
+
+  if (contact.notes) score += 1;
+
+  return score;
+}
+
+/**
+ * Generate a unique key used to detect duplicates
+ * Priority: phone > email > name
+ */
+function getDedupeKey(contact) {
+  if (contact.phone?.length) {
+    return `phone:${contact.phone[0].value}`;
+  }
+
+  if (contact.email?.length) {
+    return `email:${contact.email[0].value}`;
+  }
+
+  if (contact.firstName && contact.lastName) {
+    return `name:${contact.firstName.toLowerCase()}-${contact.lastName.toLowerCase()}`;
+  }
+
+  return null;
+}
+
+/**
+ * Remove duplicates and keep the most complete contact
+ */
+function deduplicateContacts(contacts) {
+  const map = new Map();
+  const duplicates = [];
+
+  contacts.forEach((contact) => {
+    const key = getDedupeKey(contact);
+
+    if (!key) {
+      duplicates.push({
+        contact,
+        reason: 'No dedupe key',
+      });
+      return;
+    }
+
+    if (!map.has(key)) {
+      map.set(key, contact);
+      return;
+    }
+
+    const existing = map.get(key);
+
+    if (scoreContact(contact) > scoreContact(existing)) {
+      duplicates.push({ contact: existing, replacedBy: contact });
+      map.set(key, contact);
+    } else {
+      duplicates.push({ contact });
+    }
+  });
+
+  return {
+    uniqueContacts: Array.from(map.values()),
+    duplicates,
+  };
+}
+
+
+function splitFullName(fullName) {
+  if (!fullName || typeof fullName !== 'string') {
+    return { firstName: '', lastName: '' };
+  }
+
+  const trimmed = fullName.trim();
+  const parts = trimmed.split(/\s+/);
+
+  if (parts.length === 0) {
+    return { firstName: '', lastName: '' };
+  }
+
+  if (parts.length === 1) {
+    return { firstName: parts[0], lastName: '' };
+  }
+
+  // First part is first name, everything else is last name
+  const firstName = parts[0];
+  const lastName = parts.slice(1).join(' ');
+
+  return { firstName, lastName };
+}
+
+/**
+ * Clean and format phone number
+ * Removes common formatting and ensures it's a valid string
+ */
+/**
+ * Normalize phone number using shared formatter
+ */
+function formatPhone(phone) {
+  if (!phone) return null;
+
+  try {
+    return formatPhoneNumber(String(phone));
+  } catch {
+    return null;
+  }
+}
+
+
+/**
+ * Clean and format email
+ */
+function formatEmail(email) {
+  if (!email) return null;
+  
+  const cleaned = String(email).trim().toLowerCase();
+  if (!cleaned || !cleaned.includes('@')) return null;
+
+  return cleaned;
+}
+
+/**
+ * Create a fieldsData object from a CSV row based on column mappings
+ */
+function createContactFromRow(row, columnMappings) {
+  const contact = {
+    firstName: '',
+    lastName: '',
+    phone: [],
+    email: [],
+    notes: '',
+  };
+
+  // Process each column mapping
+  Object.keys(columnMappings).forEach((csvColumn) => {
+    const fieldName = columnMappings[csvColumn];
+    const value = row[csvColumn];
+
+    if (!value || fieldName === 'skip') return;
+
+    switch (fieldName) {
+      case 'fullName': {
+        const { firstName, lastName } = splitFullName(value);
+        contact.firstName = firstName;
+        contact.lastName = lastName;
+        break;
+      }
+
+      case 'firstName':
+        contact.firstName = String(value).trim();
+        break;
+
+      case 'lastName':
+        contact.lastName = String(value).trim();
+        break;
+
+      case 'phone': {
+        const formatted = formatPhone(value);
+        if (formatted) {
+          contact.phone.push({
+            label: 'Mobile',
+            value: formatted,
+          });
+        }
+        break;
+      }
+
+      case 'email': {
+        const formatted = formatEmail(value);
+        if (formatted) {
+          contact.email.push({
+            label: 'Personal',
+            value: formatted,
+          });
+        }
+        break;
+      }
+
+      case 'notes':
+        contact.notes = String(value).trim();
+        break;
+
+      default:
+        // Unknown field, skip
+        break;
+    }
+  });
+
+  return contact;
+}
+
+/**
+ * Validate that a contact has required fields
+ */
+function validateContact(contact) {
+  const errors = [];
+
+  if (!contact.firstName || !contact.firstName.trim()) {
+    errors.push('First name is required');
+  }
+
+  if (!contact.lastName || !contact.lastName.trim()) {
+    errors.push('Last name is required');
+  }
+
+  if (!contact.phone || contact.phone.length === 0) {
+    errors.push('Phone number is required');
+  }
+
+  return errors;
+}
+
+/**
+ * Main function to parse CSV data and create contact records
+ * 
+ * @param {Array} csvData - Parsed CSV data (array of objects)
+ * @param {Object} columnMappings - Mapping of CSV columns to contact fields
+ * @param {String} token - Authentication token
+ * @param {String} userId - User ID
+ * @param {String} subscriberId - Subscriber ID
+ * @returns {Object} Results object with successful and failed imports
+ */
+export async function parseAndCreateContacts(
+  csvData,
+  columnMappings,
+  token,
+  userId,
+  subscriberId
+) {
+  const results = {
+    total: csvData.length,
+    successful: [],
+    failed: [],
+    deduplicated: 0,
+  };
+
+  // ---------------------------------------------
+  // 1. Convert CSV rows into contact objects
+  // ---------------------------------------------
+  const allContacts = csvData.map((row, index) => {
+    const contact = createContactFromRow(row, columnMappings);
+    contact.__row = index + 1; // track original row number
+    return contact;
+  });
+
+  // ---------------------------------------------
+  // 2. Deduplicate contacts (keep most complete)
+  // ---------------------------------------------
+  const { uniqueContacts, duplicates } = deduplicateContacts(allContacts);
+  results.deduplicated = duplicates.length;
+
+  // Track skipped duplicates
+  duplicates.forEach((d) => {
+    const c = d.contact;
+    results.failed.push({
+      name: `${c.firstName} ${c.lastName}`.trim() || `Row ${c.__row}`,
+      error: 'Duplicate contact skipped (less complete)',
+      row: c.__row || null,
+    });
+  });
+
+  // ---------------------------------------------
+  // 3. Import only unique contacts
+  // ---------------------------------------------
+  for (let i = 0; i < uniqueContacts.length; i++) {
+    const contact = uniqueContacts[i];
+
+    try {
+      // Validate the contact
+      const validationErrors = validateContact(contact);
+
+      if (validationErrors.length > 0) {
+        results.failed.push({
+          name:
+            `${contact.firstName} ${contact.lastName}`.trim() ||
+            `Row ${contact.__row}`,
+          error: validationErrors.join(', '),
+          row: contact.__row || null,
+        });
+        continue;
+      }
+
+      // Build fieldsData object
+      const fieldsData = {
+        firstName: contact.firstName,
+        lastName: contact.lastName,
+        phone: contact.phone,
+        email: contact.email,
+        address: [],
+        recordType: 'contacts',
+      };
+
+      // Add notes if present
+      if (contact.notes) {
+        fieldsData.notes = contact.notes;
+      }
+
+      // Save contact
+      const result = await createRecord(
+        fieldsData,
+        'contacts',
+        token,
+        userId,
+        subscriberId
+      );
+
+      results.successful.push({
+        name: `${contact.firstName} ${contact.lastName}`,
+        id: result?._id || result?.id,
+      });
+    } catch (error) {
+      console.error(
+        `Error creating contact for row ${contact.__row}:`,
+        error
+      );
+
+      results.failed.push({
+        name:
+          `${contact.firstName} ${contact.lastName}`.trim() ||
+          `Row ${contact.__row}`,
+        error: error.message || 'Unknown error',
+        row: contact.__row || null,
+      });
+    }
+  }
+
+  return results;
+}
+
+
+/**
+ * Helper function to generate a sample CSV template
+ * Useful for providing users with a template to fill out
+ */
+export function generateSampleCSV() {
+  return `First Name,Last Name,Phone,Email,Notes
+John,Doe,555-123-4567,john.doe@example.com,Regular customer
+Jane,Smith,555-987-6543,jane.smith@example.com,Prefers morning appointments
+Bob,Johnson,555-555-5555,bob.j@example.com,New client`;
+}
+
+/**
+ * Validate CSV structure before processing
+ * Returns an array of issues found
+ */
+export function validateCSVStructure(csvData, csvHeaders) {
+  const issues = [];
+
+  if (!csvData || csvData.length === 0) {
+    issues.push('CSV file is empty');
+    return issues;
+  }
+
+  if (!csvHeaders || csvHeaders.length === 0) {
+    issues.push('No column headers found');
+    return issues;
+  }
+
+  // Check for common required fields
+  const headerLower = csvHeaders.map(h => h.toLowerCase());
+  const hasName = headerLower.some(h => 
+    h.includes('name') || h.includes('first') || h.includes('last')
+  );
+  const hasPhone = headerLower.some(h => h.includes('phone'));
+
+  if (!hasName) {
+    issues.push('No name column detected. Please include First Name, Last Name, or Customer Name');
+  }
+
+  if (!hasPhone) {
+    issues.push('No phone column detected. Phone number is required for contacts');
+  }
+
+  // Check for duplicate headers
+  const duplicates = csvHeaders.filter((header, index) => 
+    csvHeaders.indexOf(header) !== index
+  );
+
+  if (duplicates.length > 0) {
+    issues.push(`Duplicate column headers found: ${duplicates.join(', ')}`);
+  }
+
+  return issues;
+}
+
+// shears-shared/src/Services/Authentication.js
+
+export const markNotificationAsRead = async (notificationId, item, token) => {
+  try {
+    if (!token) throw new Error("No authentication token found");
+
+    // Merge read into the existing fieldsData
+    const updates = {
+      ...item.fieldsData,  // existing fields
+      read: true           // mark as read
+    };
+
+    return await updateRecord(notificationId, updates, token);
+
+  } catch (err) {
+    console.error("Failed to mark notification as read:", err);
+    throw err.response?.data || err;
+  }
+};
+
+

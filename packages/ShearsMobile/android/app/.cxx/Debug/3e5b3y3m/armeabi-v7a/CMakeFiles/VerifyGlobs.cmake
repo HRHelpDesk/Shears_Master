@@ -62,6 +62,31 @@ if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
   file(TOUCH_NOCREATE "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/android/app/.cxx/Debug/3e5b3y3m/armeabi-v7a/CMakeFiles/cmake.verify_globs")
 endif()
 
+# react_codegen_SRCS at /Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/@react-native-documents/picker/android/build/generated/source/codegen/jni/CMakeLists.txt:9 (file)
+file(GLOB NEW_GLOB LIST_DIRECTORIES true "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/@react-native-documents/picker/android/build/generated/source/codegen/jni/*.cpp")
+set(OLD_GLOB
+  "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/@react-native-documents/picker/android/build/generated/source/codegen/jni/rndocumentpickerCGen-generated.cpp"
+  )
+if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
+  message("-- GLOB mismatch!")
+  file(TOUCH_NOCREATE "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/android/app/.cxx/Debug/3e5b3y3m/armeabi-v7a/CMakeFiles/cmake.verify_globs")
+endif()
+
+# react_codegen_SRCS at /Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/@react-native-documents/picker/android/build/generated/source/codegen/jni/CMakeLists.txt:9 (file)
+file(GLOB NEW_GLOB LIST_DIRECTORIES true "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/@react-native-documents/picker/android/build/generated/source/codegen/jni/react/renderer/components/rndocumentpickerCGen/*.cpp")
+set(OLD_GLOB
+  "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/@react-native-documents/picker/android/build/generated/source/codegen/jni/react/renderer/components/rndocumentpickerCGen/ComponentDescriptors.cpp"
+  "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/@react-native-documents/picker/android/build/generated/source/codegen/jni/react/renderer/components/rndocumentpickerCGen/EventEmitters.cpp"
+  "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/@react-native-documents/picker/android/build/generated/source/codegen/jni/react/renderer/components/rndocumentpickerCGen/Props.cpp"
+  "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/@react-native-documents/picker/android/build/generated/source/codegen/jni/react/renderer/components/rndocumentpickerCGen/ShadowNodes.cpp"
+  "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/@react-native-documents/picker/android/build/generated/source/codegen/jni/react/renderer/components/rndocumentpickerCGen/States.cpp"
+  "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/@react-native-documents/picker/android/build/generated/source/codegen/jni/react/renderer/components/rndocumentpickerCGen/rndocumentpickerCGenJSI-generated.cpp"
+  )
+if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
+  message("-- GLOB mismatch!")
+  file(TOUCH_NOCREATE "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/android/app/.cxx/Debug/3e5b3y3m/armeabi-v7a/CMakeFiles/cmake.verify_globs")
+endif()
+
 # react_codegen_SRCS at /Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/@stripe/stripe-react-native/android/build/generated/source/codegen/jni/CMakeLists.txt:9 (file)
 file(GLOB NEW_GLOB LIST_DIRECTORIES true "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/@stripe/stripe-react-native/android/build/generated/source/codegen/jni/*.cpp")
 set(OLD_GLOB

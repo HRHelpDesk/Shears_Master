@@ -2,6 +2,7 @@ import { ProductsList } from "../../view-schema/products-view";
 import { ServicesList } from "../../view-schema/services-view";
 import { PaymentSetup } from "../../view-schema/stripe-setup-view";
 import { Users } from "../../view-schema/user-view";
+import { ImportContacts } from "./view-schemas/import-contacts";
 
 export const shearSettings = [
   /* ----------------------------------------------------------
@@ -237,4 +238,16 @@ export const shearSettings = [
       },
     ],
   },
+
+  {
+    name: 'ImportContacts',
+    recordType: 'contacts',       
+    displayName: 'Import Contacts',
+    permissions: ['owner', 'admin', 'barber', 'stylist'],
+    icon: { ios: 'person.crop.circle.badge.plus', android: 'account-multiple-plus', web: 'fa fa-user-plus'},
+    views: [ImportContacts],
+
+    fields: [],
+  },
+
 ];

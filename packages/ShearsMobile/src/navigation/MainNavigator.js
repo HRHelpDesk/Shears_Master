@@ -164,11 +164,17 @@ const MainNavigator = ({ appConfig }) => {
             }
           : {
               tabBarStyle: {
-                backgroundColor: colors.surfaceVariant || '#fff',
-                borderTopWidth: 1,
-                borderTopColor: colors.outlineVariant || '#e0e0e0',
-                elevation: 10,
-              },
+              backgroundColor: colors.surfaceVariant || '#fff',
+              borderTopWidth: 1,
+              borderTopColor: colors.outlineVariant || '#e0e0e0',
+              elevation: 10,
+              height: 68, // 👈 slightly taller (default is ~56)
+              paddingBottom: 8,
+              paddingTop: 6,
+            },
+            tabBarItemStyle: {
+              paddingVertical: 4,
+            },
             }),
       }}
     >

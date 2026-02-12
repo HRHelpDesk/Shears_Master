@@ -9,5 +9,16 @@ export const Widgets = [
  
   },
   display: { order: 3 },
+},
+   {
+  field: "todaysLives",
+  type: "string",
+  label: "Today Live's",
+  displayInList: true,
+  input: "todaysLives",
+  inputConfig: {
+ 
+  },
+  display: { order: 3 },
 }
 ]

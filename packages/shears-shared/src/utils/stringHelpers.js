@@ -194,15 +194,29 @@ export const getDisplayTitle = (item, recordTypeName, mode = 'read') => {
 };
 
 
-  export const formatPhoneNumber = (input = '') => {
-    const digits = input.replace(/\D/g, '').slice(0, 10);
-    const len = digits.length;
+export const formatPhoneNumber = (input = '') => {
+  if (!input) return '';
 
-    if (len === 0) return '';
-    if (len < 4) return `(${digits}`;
-    if (len < 7) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-  };
+  // Keep digits only
+  let digits = input.replace(/\D/g, '');
+
+  // Handle leading country code (1)
+  if (digits.length > 10 && digits.startsWith('1')) {
+    digits = digits.slice(1);
+  }
+
+  // Limit to 10 digits max
+  digits = digits.slice(0, 10);
+
+  const len = digits.length;
+
+  if (len === 0) return '';
+  if (len < 4) return `(${digits}`;
+  if (len < 7) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+};
+
 
 
   /** Strip non-digits except decimal */

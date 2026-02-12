@@ -12,6 +12,7 @@ import {
   Dimensions,
 } from "react-native";
 import uuid from 'react-native-uuid';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet'; // ADD THIS IMPORT
 
 import { useTheme, Text, Divider, Button, Portal } from "react-native-paper";
 import {
@@ -157,7 +158,7 @@ const RenderField = ({
   }
 
   /* ARRAY FIELD */
-  if (Array.isArray(value)) {
+  if (Array.isArray(value) && inputType !== 'dateRange') {
 
      if (fieldDef.field === "comments") {
     return (
@@ -244,12 +245,13 @@ const RenderField = ({
                 <View
                   style={{ flexDirection: "row", alignItems: "center", flex: 1 }}
                 >
-                  <Text
-                    variant="labelLarge"
-                    style={{ color: theme.colors.text, marginRight: 8 }}
-                  >
-                    {singularize(fieldDef.label || fieldDef.field)} #{idx + 1}
-                  </Text>
+                 <Text
+                variant="labelLarge"
+                style={{ color: theme.colors.text, marginRight: 8 }}
+              >
+                {(singularize(fieldDef.name || fieldDef.field)).charAt(0).toUpperCase() + 
+                (singularize(fieldDef.name || fieldDef.field)).slice(1)} #{idx + 1}
+              </Text>
 
                   {mode === "read" && <FieldActionsForEntry entry={entry} />}
                 </View>
@@ -272,6 +274,7 @@ const RenderField = ({
                   <FieldMap.linkSelect
                     label={fieldDef.label || fieldDef.field}
                     value={entry}
+                    useUserId={fieldDef.inputConfig?.useUserId ?? true}
                     mode={mode}
                     recordTypeName={
                       fieldDef.inputConfig?.recordType ||
@@ -398,6 +401,7 @@ const RenderField = ({
               onPaymentComplete?.(paymentUpdate);
             }
           }}
+          inputConfig={fieldDef.inputConfig || {}}
         />
       </View>
     );
@@ -423,6 +427,7 @@ const RenderField = ({
             : []
         }
         required={fieldDef.required}
+        inputConfig={fieldDef.inputConfig || {}}
       />
     </View>
   );
@@ -450,7 +455,7 @@ export default function ListItemDetailScreen({ route, navigation }) {
 
   const handleAutofill = (selectedItem) => {
   console.log("Autofilling from:", selectedItem);
-  
+  console.log(fields)
   const autofillData = autofillFromRecordWithFields(
     selectedItem,
     localItem,
@@ -845,6 +850,7 @@ export default function ListItemDetailScreen({ route, navigation }) {
      RENDER
   ============================================================ */
   return (
+    <BottomSheetModalProvider>
     <Portal.Host>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -1003,6 +1009,7 @@ export default function ListItemDetailScreen({ route, navigation }) {
         </LinearGradient>
       </KeyboardAvoidingView>
     </Portal.Host>
+    </BottomSheetModalProvider>
   );
 }
 

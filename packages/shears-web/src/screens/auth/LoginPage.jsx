@@ -1,8 +1,11 @@
 import React, { useState, useContext } from 'react';
-import { Box, TextField, Button, Typography, Paper } from '@mui/material';
+import { Box, TextField, Button, Typography, Paper, Link } from '@mui/material';
 import { useNavigate } from 'react-router';
 import { useTheme } from '@mui/material/styles';
 import { AuthContext } from '../../context/AuthContext';
+import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import InputAdornment from '@mui/material/InputAdornment';
 
 export default function LoginPage({ appConfig, logo }) {
   const theme = useTheme();
@@ -31,130 +34,202 @@ export default function LoginPage({ appConfig, logo }) {
     }
   };
 
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleLogin();
+    }
+  };
+
   return (
     <Box
       sx={{
         minHeight: '100vh',
         display: 'flex',
+        flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
-
-        /* ✅ Theme-based gradient */
         background: `linear-gradient(
           to bottom right,
           ${theme.palette.primary.main},
           ${theme.palette.secondary.main}
         )`,
-
-        p: 2,
+        p: 2.5,
       }}
     >
+      {/* Card wrapper with max width */}
       <Paper
-        elevation={theme.palette.mode === 'light' ? 6 : 3}
+        elevation={8}
         sx={{
           p: 4,
           width: '100%',
           maxWidth: 420,
           borderRadius: 3,
-
-          /* ✅ Theme-based surface */
-          backgroundColor: theme.palette.background.paper,
-
-          /* ✅ Subtle blur if in light mode */
-          backdropFilter: theme.palette.mode === 'light' ? 'blur(12px)' : 'none',
-
-          textAlign: 'center',
+          backgroundColor: 'rgba(255, 255, 255, 0.98)',
+          boxShadow: '0px 8px 32px rgba(0, 0, 0, 0.15)',
         }}
       >
-        {/* Logo */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+        {/* Logo inside card */}
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center',
+            mb: 3,
+          }}
+        >
           <img
             src={logo}
             alt="App Logo"
-            style={{ width: 140, height: 'auto', objectFit: 'contain' }}
+            style={{ 
+              width: 300, 
+              height: 120, 
+              objectFit: 'contain' 
+            }}
           />
         </Box>
 
+        {/* Title and subtitle matching mobile */}
         <Typography
-          variant="h5"
-          fontWeight={600}
-          mb={3}
-          sx={{ color: theme.palette.text.primary }}
+          variant="h4"
+          fontWeight={700}
+          textAlign="center"
+          sx={{ 
+            color: '#1a1a1a',
+            mb: 1,
+          }}
         >
-          Sign In
+          Welcome Back
+        </Typography>
+        
+        <Typography
+          variant="body1"
+          textAlign="center"
+          sx={{ 
+            color: '#666',
+            mb: 4,
+            fontSize: 15,
+          }}
+        >
+          Sign in to continue
         </Typography>
 
+        {/* Email input with icon */}
         <TextField
           fullWidth
           label="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          onKeyPress={handleKeyPress}
           variant="outlined"
           margin="normal"
-          required
-
-          /* ✅ Theme input styling */
-          InputLabelProps={{ style: { color: theme.palette.text.secondary } }}
-          inputProps={{ style: { color: theme.palette.text.primary } }}
+          type="email"
+          autoComplete="email"
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <EmailOutlinedIcon sx={{ color: '#666' }} />
+              </InputAdornment>
+            ),
+          }}
+          sx={{
+            mb: 2,
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 1.5,
+              backgroundColor: '#fff',
+              '& fieldset': {
+                borderWidth: 1.5,
+              },
+            },
+          }}
         />
 
+        {/* Password input with icon */}
         <TextField
           fullWidth
           label="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          onKeyPress={handleKeyPress}
           type="password"
           variant="outlined"
           margin="normal"
-          required
-          InputLabelProps={{ style: { color: theme.palette.text.secondary } }}
-          inputProps={{ style: { color: theme.palette.text.primary } }}
+          autoComplete="current-password"
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <LockOutlinedIcon sx={{ color: '#666' }} />
+              </InputAdornment>
+            ),
+          }}
+          sx={{
+            mb: 1,
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 1.5,
+              backgroundColor: '#fff',
+              '& fieldset': {
+                borderWidth: 1.5,
+              },
+            },
+          }}
         />
 
+        {/* Forgot password link */}
+        <Box sx={{ textAlign: 'right', mb: 3, mt: -1 }}>
+          <Link
+            href="/reset-password"
+            underline="none"
+            sx={{
+              color: '#666',
+              fontSize: 14,
+              fontWeight: 600,
+              '&:hover': {
+                color: theme.palette.primary.main,
+              },
+            }}
+          >
+            Forgot Password?
+          </Link>
+        </Box>
+
+        {/* Sign in button */}
         <Button
           fullWidth
           variant="contained"
           onClick={handleLogin}
           disabled={loading}
           sx={{
-            mt: 3,
-            py: 1.5,
+            mt: 1,
+            py: 1.75,
             fontWeight: 600,
-            borderRadius: 2,
+            fontSize: 16,
+            borderRadius: 1.5,
             textTransform: 'none',
-
-            /* ✅ Theme-based gradient button */
-            background: `linear-gradient(
-              to right,
-              ${theme.palette.primary.main},
-              ${theme.palette.secondary.main}
-            )`,
+            letterSpacing: 0.5,
+            boxShadow: 2,
+            backgroundColor: theme.palette.primary.main,
             '&:hover': {
-              background: `linear-gradient(
-                to right,
-                ${theme.palette.secondary.main},
-                ${theme.palette.primary.main}
-              )`,
+              backgroundColor: theme.palette.primary.dark,
+              boxShadow: 4,
             },
           }}
         >
-          {loading ? 'Signing In...' : 'Login'}
+          {loading ? 'Signing In...' : 'Sign In'}
         </Button>
-
-        <Typography variant="body2" mt={3} sx={{ color: theme.palette.text.secondary }}>
-          Don't have an account?{' '}
-          <a href="/register" style={{ color: theme.palette.primary.main }}>
-            Register
-          </a>
-        </Typography>
-        <Typography variant="body2" mt={3} sx={{ color: theme.palette.text.secondary }}>
-   
-          <a href="/reset-password" style={{ color: theme.palette.primary.main }}>
-            Reset Password
-          </a>
-        </Typography>
-
       </Paper>
+
+      {/* Footer text */}
+      <Box sx={{ mt: 4, textAlign: 'center' }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: 'rgba(255, 255, 255, 0.8)',
+            fontSize: 12,
+            fontWeight: 500,
+          }}
+        >
+          Secure login • Protected by encryption
+        </Typography>
+      </Box>
     </Box>
   );
 }

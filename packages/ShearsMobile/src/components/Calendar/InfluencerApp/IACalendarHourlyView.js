@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  StyleSheet as RNStyleSheet, // for hairlineWidth
 } from 'react-native';
 import { useTheme, FAB } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -188,9 +189,9 @@ export default function IACalendarHourlyView(props) {
         const fd = item.fieldsData || {};
         if (!fd.date || !fd.timeZoneTime?.start) return null;
 
-         if (!canSeeCalendarEvent(item, user)) {
-        return null;
-      }
+        if (!canSeeCalendarEvent(item, user)) {
+          return null;
+        }
 
         const startLocal = DateTime.fromISO(
           `${fd.date}T${fd.timeZoneTime.start}`,
@@ -227,7 +228,7 @@ export default function IACalendarHourlyView(props) {
       .filter(Boolean);
 
     return layoutOverlaps(normalized);
-  }, [localData, selectedDate]);
+  }, [localData, selectedDate, user]);
 
   /* ------------------------------------------------------------
      Scroll to now
@@ -451,6 +452,64 @@ export default function IACalendarHourlyView(props) {
                   ]}>
                     {appt.serviceName}
                   </Text>
+
+                  {/* ────────────────────────────────────────────────
+                      PRODUCTS – text list with truncation
+                  ──────────────────────────────────────────────── */}
+                  {appt.flatItem?.products?.length > 0 && (
+                    <View
+                      style={{
+                        marginTop: 6,
+                        paddingTop: 4,
+                        borderTopWidth: RNStyleSheet.hairlineWidth,
+                        borderTopColor: theme.colors.outline + '60',
+                      }}
+                    >
+                      {(() => {
+                        // Estimate remaining space after time + name + platform + padding
+                        const availablePx = height - 75;
+                        const pixelsPerLine = 15; // fontSize 11 + lineHeight 14 + margin
+                        const maxFit = Math.max(0, Math.floor(availablePx / pixelsPerLine));
+
+                        const shown = appt.flatItem.products.slice(0, maxFit);
+                        const remaining = appt.flatItem.products.length - shown.length;
+
+                        return (
+                          <>
+                            {shown.map((prod, idx) => (
+                              <Text
+                                key={prod._id || idx}
+                                style={{
+                                  fontSize: 11,
+                                  lineHeight: 14,
+                                  color: theme.colors.onPrimaryContainer,
+                                  opacity: 0.85,
+                                  marginBottom: 1,
+                                }}
+                                numberOfLines={1}
+                                ellipsizeMode="tail"
+                              >
+                                • {prod.productName || prod.name || 'Product'}
+                              </Text>
+                            ))}
+
+                            {remaining > 0 && (
+                              <Text
+                                style={{
+                                  fontSize: 11,
+                                  color: theme.colors.primary,
+                                  fontWeight: '500',
+                                  marginTop: 2,
+                                }}
+                              >
+                                +{remaining} more
+                              </Text>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </View>
+                  )}
                 </TouchableOpacity>
               );
             })}
@@ -587,7 +646,7 @@ const styles = StyleSheet.create({
     top: -4.5,
     zIndex: 1001,
     borderWidth: 2,
-    borderColor: '#fff',  // keeps contrast in both modes
+    borderColor: '#fff',
   },
 
   fab: {

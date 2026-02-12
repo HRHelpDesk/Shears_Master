@@ -1,31 +1,33 @@
-// SmartStatusWidget.native.js
-import React, { useContext, useState, useEffect } from "react";
+// SmartStatusWidget.js
+import React, { useState, useEffect, useContext, useRef, useMemo } from "react";
 import {
   View,
-  ScrollView,
   TouchableOpacity,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
+  TextInput as RNTextInput,
 } from "react-native";
 import {
   Text,
-  Dialog,
-  Portal,
   Button,
-  List,
-  Modal,
-  Card,
   Switch,
   useTheme,
+  List,
+  Divider,
+  ActivityIndicator,
 } from "react-native-paper";
-import { useNavigationState } from "@react-navigation/native";
+import {
+  BottomSheetModal,
+  BottomSheetScrollView,
+} from "@gorhom/bottom-sheet";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AuthContext } from "../../context/AuthContext";
 import {
   saveCalendarAndNotification,
+  sendRejectionNotification,
   updateRecord,
 } from "shears-shared/src/Services/Authentication";
+import { formatDateValue } from "shears-shared/src/utils/stringHelpers";
 
 const STATUS_OPTIONS = ["Pending", "Approved", "Rejected", "Completed"];
 
@@ -38,235 +40,251 @@ export default function SmartStatusWidget({
 }) {
   const theme = useTheme();
   const { user, token } = useContext(AuthContext);
+  const insets = useSafeAreaInsets();
 
-  const [visible, setVisible] = useState(false);
+  const bottomSheetRef = useRef(null);
+  const snapPoints = useMemo(() => ["100%"], []);
+
   const [selectedStatus, setSelectedStatus] = useState(value || "Pending");
   const [notify, setNotify] = useState(true);
+  const [rejectionMessage, setRejectionMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // Modal vs Dialog detection — same as DialogSelectInput
-  const navigationState = useNavigationState((state) => state);
-  const insideModalScreen = navigationState?.routes?.some(
-    (r) => r?.params?.presentation === "modal" || r?.name?.toLowerCase().includes("modal")
-  );
-  const shouldUseModal = insideModalScreen;
-
-  // Keep internal selection in sync with prop value
   useEffect(() => {
-    if (value !== undefined && value !== selectedStatus) {
+    if (value && value !== selectedStatus) {
       setSelectedStatus(value);
     }
   }, [value]);
 
   const handleConfirm = async () => {
+    if (loading) return;
+
     try {
-      await updateRecord(
-        item._id,
-        { ...item, status: selectedStatus },
-        token
-      );
+      setLoading(true);
+
+      const updatedItem = { ...item, status: selectedStatus };
+
+      if (selectedStatus === "Rejected" && rejectionMessage.trim() !== "") {
+        updatedItem.rejectionMessage = rejectionMessage.trim();
+        await sendRejectionNotification(
+          item,
+          user,
+          token,
+          rejectionMessage.trim()
+        );
+      }
+
+      await updateRecord(item._id, updatedItem, token);
 
       if (onStatusUpdated) onStatusUpdated(selectedStatus);
       if (onChangeText) onChangeText(selectedStatus);
 
       if (selectedStatus === "Approved") {
-        await saveCalendarAndNotification(item, user, token, notify);
+        const message = `Your request for ${item.date
+          .map((d) => formatDateValue(d))
+          .join(", ")} has been approved. Please check your calendar for the details.`;
+
+        await saveCalendarAndNotification(
+          item,
+          user,
+          token,
+          notify,
+          message
+        );
       }
 
-      setVisible(false);
+      bottomSheetRef.current?.dismiss();
     } catch (err) {
       console.error("Status update failed:", err);
-      // ← you might want to add error feedback here (snackbar, alert…)
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Status color helper
   const getStatusColor = (status) => {
     switch (status) {
-      case "Approved":  return theme.colors.success   || "#4CAF50";
-      case "Rejected":  return theme.colors.error     || "#F44336";
-      case "Completed": return theme.colors.tertiary  || "#9C27B0";
-      default:          return theme.colors.warning   || "#FF9800"; // Pending
+      case "Approved":
+        return theme.colors.success || "#4CAF50";
+      case "Rejected":
+        return theme.colors.error || "#F44336";
+      case "Completed":
+        return theme.colors.tertiary || "#9C27B0";
+      default:
+        return theme.colors.warning || "#FF9800";
     }
   };
 
-  // ── Selector Field (same style as DialogSelectInput) ───────────────
-  const borderColor = visible
-    ? theme.colors.primary
-    : theme.colors.outlineVariant || theme.colors.border;
+  return (
+    <View style={styles.container}>
+      <Text
+        variant="labelMedium"
+        style={{
+          marginBottom: 6,
+          fontWeight: "500",
+          color: theme.colors.text,
+        }}
+      >
+        {label}
+      </Text>
 
-  const SelectorField = (
-    <TouchableOpacity onPress={() => setVisible(true)} activeOpacity={0.8}>
-      <View
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={() => bottomSheetRef.current?.present()}
         style={[
           styles.selectorContainer,
-          {
-            backgroundColor: theme.colors.surface,
-            borderColor,
-          },
+          { borderColor: theme.colors.outlineVariant || theme.colors.border },
         ]}
       >
         <Text
           style={[
             styles.selectorText,
             {
-              color: value
-                ? getStatusColor(value)
+              color: selectedStatus
+                ? getStatusColor(selectedStatus)
                 : theme.colors.onSurfaceVariant,
-              fontWeight: value ? "600" : "normal",
             },
           ]}
         >
-          {value || "Select status..."}
+          {selectedStatus || "Select status..."}
         </Text>
         <Text style={styles.dropdownIcon}>⌄</Text>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
 
-  // ── Selection Content (very similar structure) ──────────────────────
-  const SelectionContent = (
-    <ScrollView
-      keyboardShouldPersistTaps="handled"
-      contentContainerStyle={{ paddingBottom: 12 }}
-      style={{ maxHeight: 320 }}
-    >
-      {STATUS_OPTIONS.map((status) => (
-        <List.Item
-          key={status}
-          title={status}
-          onPress={() => setSelectedStatus(status)}
-          titleStyle={{
-            color:
-              status === selectedStatus
-                ? theme.colors.primary
-                : theme.colors.onSurface,
-          }}
-          style={{
-            borderBottomWidth: 0.4,
-            borderBottomColor: theme.colors.outlineVariant,
-          }}
-        />
-      ))}
-    </ScrollView>
-  );
-
-  return (
-    <View style={styles.container}>
-      {/* Label - same as DialogSelectInput */}
-      <Text
-        variant="labelMedium"
-        style={{
-          color: theme.colors.text,
-          marginBottom: 6,
-          fontWeight: "500",
-        }}
+      <BottomSheetModal
+        ref={bottomSheetRef}
+        index={0}
+        snapPoints={snapPoints}
+        enablePanDownToClose={!loading}
+        enableDynamicSizing={false}
+        stackBehavior="push"
+        topInset={insets.top}
+        backgroundStyle={{ backgroundColor: theme.colors.surface }}
+        handleIndicatorStyle={{ backgroundColor: theme.colors.outline }}
       >
-        {label}
-      </Text>
+        <View style={styles.sheetContainer}>
+          <Text style={styles.sheetTitle}>Update Status</Text>
+          <Divider style={{ marginVertical: 12 }} />
 
-      {SelectorField}
-
-      <Portal>
-        {shouldUseModal ? (
-          <Modal
-            visible={visible}
-            onDismiss={() => setVisible(false)}
-            contentContainerStyle={[
-              styles.modalContainer,
-              { backgroundColor: theme.colors.background },
-            ]}
+          <BottomSheetScrollView
+            contentContainerStyle={{ paddingBottom: 140 }}
           >
-            <Card>
-              <Card.Title title="Update Status" />
-              <Card.Content>
-                {SelectionContent}
+            {STATUS_OPTIONS.map((status) => (
+              <List.Item
+                key={status}
+                title={status}
+                onPress={() => setSelectedStatus(status)}
+                titleStyle={{
+                  color:
+                    status === selectedStatus
+                      ? theme.colors.primary
+                      : theme.colors.onSurface,
+                  fontWeight: status === selectedStatus ? "600" : "400",
+                }}
+                style={{
+                  borderBottomWidth: 0.5,
+                  borderBottomColor: theme.colors.outline,
+                }}
+              />
+            ))}
 
-                {/* Notification switch */}
-                <View style={styles.switchRow}>
-                  <Text variant="bodyMedium">Send notification?</Text>
-                  <Switch
-                    value={notify}
-                    onValueChange={setNotify}
-                    color={theme.colors.primary}
-                  />
-                </View>
-              </Card.Content>
-
-              <Card.Actions style={{ justifyContent: "flex-end" }}>
-                <Button onPress={() => setVisible(false)}>Cancel</Button>
-                <Button mode="contained" onPress={handleConfirm}>
-                  Save
-                </Button>
-              </Card.Actions>
-            </Card>
-          </Modal>
-        ) : (
-          <KeyboardAvoidingView
-            style={{ flex: 1 }}
-            behavior={Platform.OS === "ios" ? "padding" : undefined}
-            keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
-          >
-            <Dialog
-              visible={visible}
-              onDismiss={() => setVisible(false)}
-              style={[
-                styles.dialogContainer,
-                { backgroundColor: theme.colors.background },
-              ]}
-            >
-              <Dialog.Title>Update Status</Dialog.Title>
-              <Dialog.Content>{SelectionContent}</Dialog.Content>
-
-              {/* Switch placed in content area like many designs */}
-              <View style={styles.switchRow}>
-                <Text variant="bodyMedium" style={{ flex: 1}}>
-                  Send notification?
+            {selectedStatus === "Rejected" && (
+              <View style={{ marginTop: 16 }}>
+                <Text style={{ marginBottom: 6, fontWeight: "500" }}>
+                  Rejection Message
                 </Text>
-                <Switch
-                  value={notify}
-                  onValueChange={setNotify}
-                  color={theme.colors.primary}
+                <RNTextInput
+                  placeholder="Enter message..."
+                  value={rejectionMessage}
+                  onChangeText={setRejectionMessage}
+                  editable={!loading}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: theme.colors.outlineVariant,
+                    borderRadius: 8,
+                    padding: 10,
+                    minHeight: 80,
+                    textAlignVertical: "top",
+                    backgroundColor: theme.colors.background,
+                  }}
+                  multiline
                 />
               </View>
+            )}
 
-              <Dialog.Actions>
-                <Button style={{borderRadius:5, width:'50%'}}  onPress={() => setVisible(false)}>Cancel</Button>
-                <Button style={{borderRadius:5, width:'50%'}} mode="contained" onPress={handleConfirm}>
-                  Save
-                </Button>
-              </Dialog.Actions>
-            </Dialog>
-          </KeyboardAvoidingView>
-        )}
-      </Portal>
+            <View style={styles.switchRow}>
+              <Text style={{ flex: 1 }}>Send notification?</Text>
+              <Switch
+                value={notify}
+                onValueChange={setNotify}
+                disabled={loading}
+                color={theme.colors.primary}
+              />
+            </View>
+          </BottomSheetScrollView>
+
+          <View
+            style={[
+              styles.sheetActions,
+              { paddingBottom: insets.bottom + 20 },
+            ]}
+          >
+            <Button
+              mode="outlined"
+              style={styles.actionButton}
+              onPress={() => bottomSheetRef.current?.dismiss()}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+
+            <Button
+              mode="contained"
+              style={styles.actionButton}
+              onPress={handleConfirm}
+              disabled={loading}
+            >
+              Save
+            </Button>
+          </View>
+
+          {/* SPLASH LOADER OVERLAY */}
+          {loading && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+              <Text style={{ marginTop: 12, fontWeight: "500" }}>
+                Updating Status...
+              </Text>
+            </View>
+          )}
+        </View>
+      </BottomSheetModal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: 12, // same bottom spacing as DialogSelectInput
-  },
+  container: { marginBottom: 12 },
 
   selectorContainer: {
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 14,
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
+    alignItems: "center",
   },
 
-  selectorText: {
-    fontSize: 16,
-    fontFamily: "System",
-  },
+  selectorText: { fontSize: 16 },
 
-  dropdownIcon: {
+  dropdownIcon: { fontSize: 18, color: "#999" },
+
+  sheetContainer: { flex: 1, paddingHorizontal: 20 },
+
+  sheetTitle: {
     fontSize: 18,
-    color: "#999",
-    marginLeft: 6,
+    fontWeight: "600",
+    textAlign: "center",
   },
 
   switchRow: {
@@ -275,18 +293,29 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 16,
     paddingVertical: 15,
-    paddingHorizontal: 15,
+    paddingHorizontal: 5,
   },
 
-  // ── Exact same container styles as DialogSelectInput ───────
-  modalContainer: {
-    margin: 24,
-    borderRadius: 8,
-    elevation: 6,
-    padding: 16,
+  sheetActions: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    backgroundColor: "white",
+    borderTopWidth: 1,
+    borderColor: "rgba(0,0,0,0.08)",
+    gap: 12,
   },
 
-  dialogContainer: {
-    borderRadius: 8,
+  actionButton: { flex: 1, borderRadius: 5 },
+
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255,255,255,0.85)",
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

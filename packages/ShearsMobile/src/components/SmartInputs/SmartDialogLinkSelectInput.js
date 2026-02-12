@@ -99,22 +99,18 @@ export default function SmartDialogLinkSelectInput({
   placeholder = "Select...",
   mode = "edit",
   helperText,
-
-  // NEW quantity feature
+  useUserId = true,
   showQuantity = false,
-  autoEnableQuantityFor = ["products"],
 }) {
   const { token, user } = useContext(AuthContext);
   const theme = useTheme();
-
   const [visible, setVisible] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [quantity, setQuantity] = useState(value?.quantity || 1);
-
-  const quantityEnabled = showQuantity || autoEnableQuantityFor.includes(recordTypeName);
+  const quantityEnabled = showQuantity;
 
   /* Sync displayed name */
   useEffect(() => {
@@ -144,11 +140,13 @@ export default function SmartDialogLinkSelectInput({
       const response = await getRecords({
         recordType: recordTypeName.toLowerCase(),
         subscriberId: user.subscriberId,
-        userId: user.userId,
+         ...(useUserId && { userId: user.userId }),
         token,
         status: "active",
       });
-
+      console.log('user', user)
+      console.log(recordTypeName);
+console.log("Fetched records:", response);
       const formatted =
         response?.map((r) => {
           const fields = r.fieldsData || {};
@@ -198,7 +196,7 @@ const handleSelect = (record) => {
     return (
       <View style={{ marginBottom: 12 }}>
         <Text style={{ marginBottom: 6, color: theme.colors.primary, fontSize: 16 }}>
-          {label}
+          {recordTypeName.charAt(0).toUpperCase() + recordTypeName.slice(1)}
         </Text>
 
         <TouchableOpacity
@@ -278,7 +276,6 @@ const handleSelect = (record) => {
   ============================================================ */
   return (
     <View style={{ marginBottom: 16 }}>
-      <Text style={{ marginBottom: 6, color: theme.colors.text }}>{label}</Text>
 
       {/* Selector */}
       <TouchableOpacity onPress={() => setVisible(true)}>

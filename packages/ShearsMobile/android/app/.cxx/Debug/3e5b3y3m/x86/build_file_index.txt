@@ -1,5 +1,6 @@
 /Users/masonmerrell/Documents/CurentProjects/Shears_Master/node_modules/@react-native-async-storage/async-storage/android/build/generated/source/codegen/jni/CMakeLists.txt
 /Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/@react-native-community/datetimepicker/android/build/generated/source/codegen/jni/CMakeLists.txt
+/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/@react-native-documents/picker/android/build/generated/source/codegen/jni/CMakeLists.txt
 /Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/@stripe/stripe-react-native/android/build/generated/source/codegen/jni/CMakeLists.txt
 /Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/react-native-bottom-tabs/android/build/generated/source/codegen/jni/CMakeLists.txt
 /Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/node_modules/react-native-gesture-handler/android/build/generated/source/codegen/jni/CMakeLists.txt

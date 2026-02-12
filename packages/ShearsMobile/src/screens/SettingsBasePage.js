@@ -25,6 +25,7 @@ export default function SettingsBasePage({ route , navigation}) {
 
   const { item, appConfig } = route.params || {};
   const name = item?.name;
+  const recordType = item?.recordType;
   const displayName = item?.displayName || name;
   const views = item?.views || [];
 
@@ -82,10 +83,14 @@ console.log("SettingsBasePage mappedFields:", mappedFields);
   const dynamicProps = {
     name,
     fields: mappedFields,
+    recordType: recordType.toLowerCase() || name.toLowerCase(),
     data,
     appConfig,
     refreshing,
     onRefresh: () => fetchRecords(true),
+     modes: activeView?.modes || ['read', 'add', 'edit', 'delete'], // ⭐ Add this line
+    actionsMenu: activeView?.actionsMenu || [],
+
   };
 
   if (loading) {

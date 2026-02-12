@@ -33,6 +33,7 @@ const HOUR_HEIGHT = 120;
 const TIME_COLUMN_WIDTH = 70;
 const DATE_BUTTON_WIDTH = 60;
 const DAY_HEIGHT = HOUR_HEIGHT * 24;
+const MIN_EVENT_WIDTH = 200; // Minimum width for each event card
 
 const QUARTER_HOURS = Array.from({ length: 96 }, (_, i) => ({
   hour: Math.floor(i / 4),
@@ -68,7 +69,7 @@ const generateDateRange = (center) => {
 };
 
 /* ------------------------------------------------------
-   Overlap layout (same as RN)
+   Overlap layout
 ------------------------------------------------------ */
 const layoutOverlaps = (events) => {
   const sorted = [...events].sort(
@@ -110,6 +111,7 @@ export default function IACalendarHourlyViewWeb({
 
   const scrollRef = useRef(null);
   const dateScrollRef = useRef(null);
+  const horizontalScrollRef = useRef(null);
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDateSelector, setShowDateSelector] = useState(false);
@@ -139,7 +141,7 @@ export default function IACalendarHourlyViewWeb({
   }, [token, user.subscriberId]);
 
   /* --------------------------------------------------
-     Filter events by visibility (admins see everything)
+     Filter events by visibility
   -------------------------------------------------- */
   const visibleData = useMemo(() => {
     if (!user) return [];
@@ -196,7 +198,7 @@ export default function IACalendarHourlyViewWeb({
   }, [showDateSelector, selectedDate, dateRange]);
 
   /* --------------------------------------------------
-     Normalize + filter events (timezone-safe)
+     Normalize + filter events
   -------------------------------------------------- */
   const dayAppointments = useMemo(() => {
     const target = DateTime.fromJSDate(selectedDate).toISODate();
@@ -242,6 +244,22 @@ export default function IACalendarHourlyViewWeb({
     return layoutOverlaps(normalized);
   }, [visibleData, selectedDate]);
 
+  /* ------------------------------------------------------------
+     Calculate content width for horizontal scrolling
+  ------------------------------------------------------------ */
+  const contentWidth = useMemo(() => {
+    if (dayAppointments.length === 0) {
+      return window.innerWidth - TIME_COLUMN_WIDTH - 40;
+    }
+    
+    const maxCols = Math.max(...dayAppointments.map(a => a._cols), 1);
+    const calculatedWidth = maxCols * MIN_EVENT_WIDTH;
+    const availableWidth = window.innerWidth - TIME_COLUMN_WIDTH - 40;
+    
+    // Use the larger of calculated or available width
+    return Math.max(calculatedWidth, availableWidth);
+  }, [dayAppointments]);
+
   /* --------------------------------------------------
      Scroll to now
   -------------------------------------------------- */
@@ -262,8 +280,6 @@ export default function IACalendarHourlyViewWeb({
     const calendarNav = appConfig?.mainNavigation?.find(
       (r) => r.name?.toLowerCase() === 'calendar'
     );
-
-    console.log("Calendar Navigation Config:", calendarNav);
 
     let rawFields;
 
@@ -337,7 +353,7 @@ export default function IACalendarHourlyViewWeb({
         sx={{
           position: "absolute",
           top,
-          left: TIME_COLUMN_WIDTH,
+          left: 0,
           right: 0,
           height: 2,
           bgcolor: "red",
@@ -516,7 +532,7 @@ export default function IACalendarHourlyViewWeb({
         </Box>
       )}
 
-      {/* GRID */}
+      {/* GRID WITH HORIZONTAL SCROLL */}
       <Box
         ref={scrollRef}
         sx={{
@@ -530,103 +546,207 @@ export default function IACalendarHourlyViewWeb({
             height: DAY_HEIGHT,
             minHeight: DAY_HEIGHT,
             position: "relative",
+            display: "flex",
           }}
         >
-          {QUARTER_HOURS.map(({ hour, minutes, index }) => {
-            const isHour = minutes === 0;
+          {/* TIME COLUMN (FIXED) */}
+          <Box
+            sx={{
+              width: TIME_COLUMN_WIDTH,
+              flexShrink: 0,
+              position: "relative",
+            }}
+          >
+            {QUARTER_HOURS.map(({ hour, minutes, index }) => {
+              const isHour = minutes === 0;
 
-            return (
-              <Box
-                key={index}
-                sx={{
-                  height: HOUR_HEIGHT / 4,
-                  position: "relative",
-                }}
-              >
-                {isHour && (
-                  <Typography
+              return (
+                <Box
+                  key={index}
+                  sx={{
+                    height: HOUR_HEIGHT / 4,
+                    position: "relative",
+                  }}
+                >
+                  {isHour && (
+                    <Typography
+                      sx={{
+                        position: "absolute",
+                        left: 0,
+                        top: 2,
+                        width: TIME_COLUMN_WIDTH,
+                        textAlign: "right",
+                        pr: 1,
+                        opacity: 0.6,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        pointerEvents: "none",
+                      }}
+                    >
+                      {formatTime12(`${hour.toString().padStart(2, "0")}:00`)}
+                    </Typography>
+                  )}
+                </Box>
+              );
+            })}
+          </Box>
+
+          {/* HORIZONTAL SCROLL AREA FOR GRID LINES AND EVENTS */}
+          <Box
+            ref={horizontalScrollRef}
+            sx={{
+              flexGrow: 1,
+              overflowX: "auto",
+              position: "relative",
+              "&::-webkit-scrollbar": {
+                height: 8,
+              },
+              "&::-webkit-scrollbar-track": {
+                bgcolor: "grey.100",
+              },
+              "&::-webkit-scrollbar-thumb": {
+                bgcolor: "grey.400",
+                borderRadius: 1,
+                "&:hover": {
+                  bgcolor: "grey.500",
+                },
+              },
+            }}
+          >
+            <Box
+              sx={{
+                width: contentWidth,
+                height: DAY_HEIGHT,
+                position: "relative",
+              }}
+            >
+              {/* GRID LINES */}
+              {QUARTER_HOURS.map(({ hour, minutes, index }) => {
+                const isHour = minutes === 0;
+
+                return (
+                  <Divider
+                    key={index}
                     sx={{
                       position: "absolute",
+                      top: (index * HOUR_HEIGHT) / 4,
                       left: 0,
-                      top: 2,
-                      width: TIME_COLUMN_WIDTH,
-                      textAlign: "right",
-                      pr: 1,
-                      opacity: 0.6,
-                      fontSize: 12,
-                      fontWeight: 600,
-                      pointerEvents: "none",
+                      right: 0,
+                      opacity: isHour ? 0.9 : 0.4,
+                    }}
+                  />
+                );
+              })}
+
+              {renderNowLine()}
+
+              {/* APPOINTMENTS */}
+              {dayAppointments.map((appt) => {
+                const { top, height } = calculatePosition(
+                  appt.startTime,
+                  appt.endTime
+                );
+
+                const colWidth = contentWidth / appt._cols;
+
+                return (
+                  <Box
+                    key={appt._id}
+                    onClick={() => handleAppointmentClick(appt)}
+                    sx={{
+                      position: "absolute",
+                      top,
+                      left: appt._col * colWidth,
+                      width: colWidth - 6,
+                      height,
+                      bgcolor: "#DBEAFE",
+                      borderLeft: "4px solid #3B82F6",
+                      borderRadius: 1,
+                      p: 1,
+                      zIndex: 10,
+                      overflow: "hidden",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                      "&:hover": {
+                        bgcolor: "#BFDBFE",
+                        transform: "scale(1.02)",
+                        boxShadow: 2,
+                      },
                     }}
                   >
-                    {formatTime12(`${hour.toString().padStart(2, "0")}:00`)}
-                  </Typography>
-                )}
+                    <Typography fontSize={12} fontWeight={700}>
+                      {formatTime12(appt.startTime)} – {formatTime12(appt.endTime)}
+                    </Typography>
 
-                <Divider
-                  sx={{
-                    position: "absolute",
-                    top: 0,
-                    left: TIME_COLUMN_WIDTH,
-                    right: 0,
-                    opacity: isHour ? 0.9 : 0.4,
-                  }}
-                />
-              </Box>
-            );
-          })}
+                    <Typography fontWeight={600} noWrap>
+                      {appt.contactName}
+                    </Typography>
 
-          {renderNowLine()}
+                    <Typography variant="caption" noWrap>
+                      {appt.serviceName}
+                    </Typography>
 
-          {/* APPOINTMENTS - now filtered through visibleData */}
-          {dayAppointments.map((appt) => {
-            const { top, height } = calculatePosition(
-              appt.startTime,
-              appt.endTime
-            );
+                    {/* PRODUCTS LIST */}
+                    {appt.flatItem?.products?.length > 0 && (
+                      <Box
+                        sx={{
+                          mt: 1,
+                          pt: 0.5,
+                          borderTop: "1px solid",
+                          borderColor: "divider",
+                        }}
+                      >
+                        {(() => {
+                          // Estimate remaining vertical space after header content
+                          const usedSpace = 55; // approx: time + name + platforms + paddings
+                          const availablePx = height - usedSpace;
+                          const lineHeightPx = 16; // font-size ~13 + line-height + margin
+                          const maxLines = Math.max(0, Math.floor(availablePx / lineHeightPx));
 
-            const colWidth =
-              (window.innerWidth - TIME_COLUMN_WIDTH - 40) / appt._cols;
+                          const shownProducts = appt.flatItem.products.slice(0, maxLines);
+                          const remaining = appt.flatItem.products.length - shownProducts.length;
 
-            return (
-              <Box
-                key={appt._id}
-                onClick={() => handleAppointmentClick(appt)}
-                sx={{
-                  position: "absolute",
-                  top,
-                  left: TIME_COLUMN_WIDTH + appt._col * colWidth,
-                  width: colWidth - 6,
-                  height,
-                  bgcolor: "#DBEAFE",
-                  borderLeft: "4px solid #3B82F6",
-                  borderRadius: 1,
-                  p: 1,
-                  zIndex: 10,
-                  overflow: "hidden",
-                  cursor: "pointer",
-                  transition: "all 0.2s ease",
-                  "&:hover": {
-                    bgcolor: "#BFDBFE",
-                    transform: "scale(1.02)",
-                    boxShadow: 2,
-                  },
-                }}
-              >
-                <Typography fontSize={12} fontWeight={700}>
-                  {formatTime12(appt.startTime)} –{" "}
-                  {formatTime12(appt.endTime)}
-                </Typography>
+                          return (
+                            <>
+                              {shownProducts.map((prod, idx) => (
+                                <Typography
+                                  key={prod._id || idx}
+                                  variant="caption"
+                                  sx={{
+                                    display: "block",
+                                    lineHeight: 1.3,
+                                    color: "text.primary",
+                                    whiteSpace: "nowrap",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                  }}
+                                >
+                                  • {prod.productName || prod.name || "Product"}
+                                </Typography>
+                              ))}
 
-                <Typography fontWeight={600} noWrap>
-                  {appt.contactName}
-                </Typography>
-
-                <Typography variant="caption" noWrap>
-                  {appt.serviceName}
-                </Typography>
-              </Box>
-            );
-          })}
+                              {remaining > 0 && (
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    color: "primary.main",
+                                    fontWeight: 500,
+                                    mt: 0.5,
+                                  }}
+                                >
+                                  +{remaining} more
+                                </Typography>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </Box>
+                    )}
+                  </Box>
+                );
+              })}
+            </Box>
+          </Box>
         </Box>
       </Box>
 

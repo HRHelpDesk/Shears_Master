@@ -24,12 +24,11 @@ import { AuthContext } from "../../context/AuthContext";
 /* 🎨 Status Color Configuration                                               */
 /* -------------------------------------------------------------------------- */
 const STATUS_COLORS = {
-  pending: "#FF9800",    // Orange
-  approved: "#4CAF50",   // Green
-  rejected: "#F44336",   // Red
-  completed: "#2196F3",  // Blue
-  cancelled: "#9E9E9E",  // Gray
-  // Add more status-color mappings here as needed
+  pending: "#FF9800",
+  approved: "#4CAF50",
+  rejected: "#F44336",
+  completed: "#2196F3",
+  cancelled: "#9E9E9E",
 };
 
 function getStatusColor(status) {
@@ -45,6 +44,10 @@ function getPrimaryText(item) {
 
   if (item.firstName || item.lastName) {
     return [item.firstName, item.lastName].filter(Boolean).join(" ");
+  }
+
+  if (item.influencerName?.raw?.fullName) {
+    return item.influencerName.raw.fullName;
   }
 
   const nameFields = Object.keys(item).filter((k) =>
@@ -63,85 +66,95 @@ function getPrimaryText(item) {
 }
 
 /* -------------------------------------------------------------------------- */
-/* 📅 Date Resolver                                                            */
+/* 📅 Date Helpers - Now handles date ARRAY                                    */
 /* -------------------------------------------------------------------------- */
+function getDateArray(item) {
+  const raw = item.date ?? item.fieldsData?.date;
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === "string") return [raw];
+  return [];
+}
+
+function resolveDateObject(item) {
+  const dates = getDateArray(item)
+    .filter((d) => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d))
+    .map((d) => DateTime.fromFormat(d, "yyyy-MM-dd", { zone: "local" }))
+    .filter((dt) => dt.isValid);
+
+  if (dates.length === 0) return null;
+
+  // Return EARLIEST date for sorting & grouping
+  return DateTime.min(...dates);
+}
+
 function resolveDate(item) {
+  const dates = getDateArray(item)
+    .filter((d) => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d))
+    .map((d) => DateTime.fromFormat(d, "yyyy-MM-dd", { zone: "local" }))
+    .filter((dt) => dt.isValid)
+    .sort((a, b) => a - b); // chronological
+
+  if (dates.length === 0) return null;
+  if (dates.length === 1) {
+    return dates[0].toLocaleString(DateTime.DATE_MED);
+  }
+
+  const start = dates[0];
+  const end = dates[dates.length - 1];
+
+  // Nice range formatting
+  if (start.month === end.month && start.year === end.year) {
+    return `${start.toFormat("MMM d")} – ${end.toFormat("d, yyyy")}`;
+  }
+  if (start.year === end.year) {
+    return `${start.toFormat("MMM d")} – ${end.toFormat("MMM d, yyyy")}`;
+  }
+  return `${start.toLocaleString(DateTime.DATE_MED)} – ${end.toLocaleString(DateTime.DATE_MED)}`;
+}
+
+/* -------------------------------------------------------------------------- */
+/* 📅 Group label based on earliest date                                       */
+/* -------------------------------------------------------------------------- */
+function getDateGroupLabel(item) {
   const dt = resolveDateObject(item);
-  if (!dt) return null;
-  return dt.toLocaleString(DateTime.DATE_MED); // "Jan 17, 2026"
-}
+  if (!dt || !dt.isValid) return "No Date";
 
-/* -------------------------------------------------------------------------- */
-/* 📅 Date Resolver (returns Luxon DateTime for reliable local comparison)   */
-/* -------------------------------------------------------------------------- */
-function resolveDateObject(item, useRawDate = false) {
-  let raw;
-
-  if (useRawDate) {
-    raw = item.date; // ← only use the explicit .date field
-  } else {
-    raw =
-      item.date ||
-      item.startDate ||
-      item.requestDate ||
-      item.createdAt ||
-      item.updatedAt;
-  }
-
-  if (!raw) return null;
-
-  // ── Luxon: treat YYYY-MM-DD as local date (no UTC shift) ───────────────
-  if (typeof raw === "string") {
-    // Case 1: "2025-01-17" → local midnight
-    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
-      return DateTime.fromFormat(raw, "yyyy-MM-dd", { zone: "local" });
-    }
-
-    // Case 2: Full ISO (may be UTC) → force to local date only
-    try {
-      const dt = DateTime.fromISO(raw, { zone: "utc" }).toLocal();
-      return dt.startOf("day"); // ← strip time, keep only local date
-    } catch {}
-  }
-
-  // Fallback: native Date → convert to Luxon local
-  const native = new Date(raw);
-  if (!isNaN(native.getTime())) {
-    return DateTime.fromJSDate(native).startOf("day");
-  }
-
-  return null;
-}
-
-/* -------------------------------------------------------------------------- */
-/* 📅 Date Group Label (for date-based grouping)                              */
-/* -------------------------------------------------------------------------- */
-function getDateGroupLabel(date) {
-  if (!date) return "No Date";
-
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const itemDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  
-  const diffTime = today - itemDate;
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  const now = DateTime.now().startOf("day");
+  const diffDays = Math.floor(dt.diff(now, "days").days);
 
   if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
+  if (diffDays === 1) return "Tomorrow";
   if (diffDays > 1 && diffDays <= 7) return "This Week";
   if (diffDays > 7 && diffDays <= 30) return "This Month";
-  if (diffDays > 30 && diffDays <= 365) return "This Year";
-  
-  return date.getFullYear().toString();
+  if (diffDays > 30) return "Future";
+
+  if (diffDays === -1) return "Yesterday";
+  if (diffDays > -7 && diffDays < 0) return "This Week";
+  if (diffDays > -30 && diffDays <= -7) return "Recent";
+  if (diffDays > -365 && diffDays <= -30) return "This Year";
+
+  return dt.toFormat("yyyy");
 }
 
 /* -------------------------------------------------------------------------- */
 /* 🖼 Avatar Resolver                                                          */
 /* -------------------------------------------------------------------------- */
 function getAvatarUrl(item) {
+  if (item.influencerName?.raw?.avatar) {
+    return item.influencerName.raw.avatar;
+  }
+
   if (item.avatar) {
     if (Array.isArray(item.avatar) && item.avatar[0]?.url) return item.avatar[0].url;
     if (typeof item.avatar === "string") return item.avatar;
+  }
+
+  for (const [key, value] of Object.entries(item)) {
+    if (key.toLowerCase().includes("image") || key.toLowerCase().includes("avatar")) {
+      if (Array.isArray(value) && value[0]?.url) return value[0].url;
+      if (typeof value === "string") return value;
+    }
   }
 
   for (const v of Object.values(item)) {
@@ -153,32 +166,25 @@ function getAvatarUrl(item) {
 }
 
 /* -------------------------------------------------------------------------- */
-/* 🕒 Time + Timezone                                                          */
+/* 🕒 Time + Duration                                                          */
 /* -------------------------------------------------------------------------- */
 function formatTimeWithZone(value) {
   if (!value?.time || !value?.timezone) return "";
-
   try {
     const viewerTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const [hour, minute] = String(value.time).split(":").map(Number);
-
     return DateTime.fromObject({ hour, minute }, { zone: value.timezone })
       .setZone(viewerTZ)
       .toFormat("h:mm a");
   } catch {
-    return String(value.time);
+    return String(value.time || "");
   }
 }
 
-/* -------------------------------------------------------------------------- */
-/* ⏱ Duration                                                                  */
-/* -------------------------------------------------------------------------- */
 function formatDuration(value) {
   if (!value || typeof value !== "object") return "";
-
-  const h = value.hours ? `${value.hours} hour${value.hours === "1" ? "" : "s"}` : "";
-  const m = value.minutes ? `${value.minutes} minute${value.minutes === "1" ? "" : "s"}` : "";
-
+  const h = value.hours ? `${value.hours} hr${value.hours === "1" ? "" : "s"}` : "";
+  const m = value.minutes && value.minutes !== "00" ? `${value.minutes} min` : "";
   return [h, m].filter(Boolean).join(" ");
 }
 
@@ -193,14 +199,7 @@ function formatValueForList(value) {
 
   if (Array.isArray(value)) {
     return value
-      .map(
-        (v) =>
-          v?.platform ||
-          v?.label ||
-          v?.name ||
-          v?.raw?.fullName ||
-          v?.raw?.name
-      )
+      .map((v) => v?.value || v?.label || v?.platform || v?.name || v?.raw?.fullName || v?.raw?.name || "")
       .filter(Boolean)
       .join(", ");
   }
@@ -209,26 +208,16 @@ function formatValueForList(value) {
     if (value.time && value.timezone) return formatTimeWithZone(value);
     if (value.hours || value.minutes) return formatDuration(value);
     if (value.name) return value.name;
-
     if (value.raw) {
-      return (
-        value.raw.fullName ||
-        value.raw.name ||
-        value.raw.productName ||
-        value.raw.serviceName ||
-        value.raw.email ||
-        ""
-      );
+      return value.raw.fullName || value.raw.name || value.raw.productName || value.raw.serviceName || value.raw.email || "";
     }
-
-    return "";
   }
 
   return "";
 }
 
 /* -------------------------------------------------------------------------- */
-/* 🧾 MAIN COMPONENT                                                           */
+/* MAIN COMPONENT                                                              */
 /* -------------------------------------------------------------------------- */
 export default function ListView({
   data = [],
@@ -240,49 +229,29 @@ export default function ListView({
   refreshing = false,
   modes,
   actionsMenu = [],
-  sortBy = "name", // 👈 NEW: defaults to "name", can be "date"
+  sortBy = "name", // "name" | "date"
 }) {
   const theme = useTheme();
   const navigation = useNavigation();
   const [search, setSearch] = useState("");
   const [finalFields, setFinalFields] = useState([]);
-  const [localData, setLocalData] = useState(data);
   const { token } = useContext(AuthContext);
 
-  useEffect(() => 
-    {
-      console.log("actionsMenu in ListView:", actionsMenu);
-      console.log("Modes in ListView:", modes);
-      setLocalData(data), [data]
-    },[data]);
-    
+  const normalizedData = useMemo(() => {
+    return data.map((item) => {
+      const normalized = item.fieldsData
+        ? { ...item.fieldsData, _id: item._id, recordType: item.recordType }
+        : item;
 
-  const normalizedData = useMemo(
-    () =>
-      localData.map((item) => {
-        const normalized = item.fieldsData
-          ? { ...item.fieldsData, _id: item._id, recordType: item.recordType }
-          : item;
-        
-        // Preserve the date field from fieldsData (item.fieldsData.date)
-        if (item.fieldsData?.date) {
-          normalized.date = item.fieldsData.date;
-        }
-        
-        return normalized;
-      }),
-    [localData]
-  );
+      // Preserve top-level date if needed, but most logic now reads from .date
+      return normalized;
+    });
+  }, [data]);
 
-  /* ------------------------------------------------------------------------ */
-  /* Display Fields                                                           */
-  /* ------------------------------------------------------------------------ */
   const displayFields = useMemo(() => {
-    let appFields = [];
+    let appFields = fields?.length ? fields : [];
 
-    if (fields?.length) {
-      appFields = fields;
-    } else if (appConfig) {
+    if (!appFields.length && appConfig) {
       const route = appConfig.mainNavigation.find(
         (r) =>
           r.displayName?.toLowerCase() === name.toLowerCase() ||
@@ -294,130 +263,133 @@ export default function ListView({
     setFinalFields(appFields);
 
     return appFields
-      .filter((f) => {
-        if (f.displayInList === false) return false;
-        if (f.displayInList === true) return true;
-        return f.display?.order !== undefined;
-      })
+      .filter((f) => f.displayInList !== false)
       .sort((a, b) => (a.display?.order ?? 999) - (b.display?.order ?? 999));
   }, [fields, appConfig, name]);
 
   const keys = displayFields.map((f) => f.field);
 
-  /* ------------------------------------------------------------------------ */
-  /* Search                                                                    */
-  /* ------------------------------------------------------------------------ */
   const filteredData = useMemo(() => {
     if (!search) return normalizedData;
     const q = search.toLowerCase();
-
     return normalizedData.filter((item) =>
-      keys.some((k) =>
-        formatValueForList(item[k]).toLowerCase().includes(q)
-      )
+      keys.some((k) => formatValueForList(item[k]).toLowerCase().includes(q))
     );
   }, [normalizedData, search, keys]);
 
-  /* ------------------------------------------------------------------------ */
-  /* Grouping (supports both name and date sorting)                           */
-  /* ------------------------------------------------------------------------ */
   const sections = useMemo(() => {
-  if (!filteredData.length) return [{ title: "", data: [] }];
+    if (!filteredData.length) return [{ title: "No Results", data: [] }];
 
-  if (sortBy === "date") {
-    const sorted = [...filteredData].sort((a, b) => {
-      const dtA = resolveDateObject(a, true); // true = only item.date
-      const dtB = resolveDateObject(b, true);
+    if (sortBy === "date") {
+      const sorted = [...filteredData].sort((a, b) => {
+        const dtA = resolveDateObject(a);
+        const dtB = resolveDateObject(b);
+        if (!dtA) return 1;
+        if (!dtB) return -1;
+        return dtA - dtB; // earliest first (soonest upcoming)
+      });
 
-      if (!dtA && !dtB) return 0;
-      if (!dtA) return 1;
-      if (!dtB) return -1;
+      const grouped = {};
+      sorted.forEach((item) => {
+        const label = getDateGroupLabel(item);
+        if (!grouped[label]) grouped[label] = [];
+        grouped[label].push(item);
+      });
 
-      // Newest first
-      return dtB - dtA; // Luxon DateTime supports direct subtraction
-    });
+      return Object.keys(grouped)
+        .sort((a, b) => {
+          const order = ["Today", "Tomorrow", "This Week", "This Month", "Future", "Yesterday", "Recent", "This Year"];
+          const ia = order.indexOf(a);
+          const ib = order.indexOf(b);
+          if (ia !== -1 && ib !== -1) return ia - ib;
+          if (ia !== -1) return -1;
+          if (ib !== -1) return 1;
+          return a.localeCompare(b);
+        })
+        .map((k) => ({ title: k, data: grouped[k] }));
+    }
 
+    // Alphabetical grouping
     const grouped = {};
-    sorted.forEach((item) => {
-      const dt = resolveDateObject(item, true);
-      const key = dt
-        ? dt.toLocaleString(DateTime.DATE_HUGE) // "January 17, 2026"
-        : "No Date";
-
+    filteredData.forEach((item) => {
+      const primary = getPrimaryText(item);
+      const key = primary?.[0]?.toUpperCase() || "#";
       if (!grouped[key]) grouped[key] = [];
       grouped[key].push(item);
     });
 
-    // Preserve sort order
-    const sections = [];
-    const seen = new Set();
-    sorted.forEach((item) => {
-      const dt = resolveDateObject(item, true);
-      const key = dt ? dt.toLocaleString(DateTime.DATE_HUGE) : "No Date";
-      if (!seen.has(key)) {
-        seen.add(key);
-        sections.push({ title: key, data: grouped[key] });
-      }
-    });
-
-    return sections;
-  
-    } else {
-      // Default: Sort by name (alphabetically)
-      const grouped = {};
-      filteredData.forEach((item) => {
-        const primary = getPrimaryText(item);
-        const key = primary?.[0]?.toUpperCase() || "#";
-        if (!grouped[key]) grouped[key] = [];
-        grouped[key].push(item);
-      });
-
-      return Object.keys(grouped)
-        .sort()
-        .map((k) => ({ title: k, data: grouped[k] }));
-    }
+    return Object.keys(grouped)
+      .sort()
+      .map((k) => ({ title: k, data: grouped[k] }));
   }, [filteredData, sortBy]);
 
-  /* ------------------------------------------------------------------------ */
-  /* SubText Builder (EXCLUDES *name* fields)                                  */
-  /* ------------------------------------------------------------------------ */
   const buildSubText = (item) => {
-    const ordered = displayFields
-      .filter(
-        (f) =>
-          !["firstName", "lastName"].includes(f.field) &&
-          !f.field.toLowerCase().includes("name") &&
-          f.field.toLowerCase() !== "date" // Skip date field since it's in the overline
-      )
-      .sort((a, b) => (a.display?.order || 0) - (b.display?.order || 0));
-
     const lines = [];
+
+    // Date range (already shown in overline, but can reinforce if needed)
+    // const dateStr = resolveDate(item);
+    // if (dateStr) {
+    //   lines.push({ text: dateStr, isBold: true, color: theme.colors.primary });
+    // }
+
+    // Time + Duration
+    const timeStr = formatValueForList(item.startTimeWithZone);
+    const durationStr = formatValueForList(item.duration);
+    if (timeStr || durationStr) {
+      lines.push({
+        text: [timeStr, durationStr].filter(Boolean).join(" • "),
+      });
+    }
+
+    // Other fields (skip name/date/time/duration)
+    const ordered = displayFields.filter(
+      (f) =>
+        !["firstName", "lastName", "influencerName", "date", "startTimeWithZone", "duration"].includes(f.field) &&
+        !f.field.toLowerCase().includes("name")
+    );
 
     for (const field of ordered) {
       const raw = item[field.field];
       if (raw == null || raw === "") continue;
-
       const formatted = formatValueForList(raw);
-      if (formatted) {
-        const label = field.label || field.field;
-        const statusColor = field.field.toLowerCase() === "status" 
-          ? getStatusColor(formatted) 
-          : null;
-        
-        lines.push({
-          text: `${label}: ${formatted}`,
-          color: statusColor,
-          isBold: !!statusColor,
-        });
-      }
+      if (!formatted) continue;
+
+      const label = field.label || field.field;
+      const statusColor =
+        field.field.toLowerCase() === "status" ? getStatusColor(formatted) : null;
+
+      lines.push({
+        text: `${label}: ${formatted}`,
+        color: statusColor,
+        isBold: !!statusColor,
+      });
     }
 
     return lines;
   };
 
-  /* ------------------------------------------------------------------------ */
-  /* Render Item                                                              */
-  /* ------------------------------------------------------------------------ */
+  const handleDelete = async (item) => {
+    Alert.alert(
+      "Confirm Delete",
+      `Are you sure you want to delete this ${singularize(name)}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteRecord(item._id, token);
+              if (typeof onRefresh === "function") onRefresh();
+            } catch (error) {
+              Alert.alert("Delete Failed", error.message || "Unable to delete.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const renderItem = ({ item }) => {
     const primary = getPrimaryText(item);
     const subTextLines = buildSubText(item);
@@ -434,10 +406,7 @@ export default function ListView({
     return (
       <Swipeable
         renderRightActions={() => (
-          <TouchableOpacity
-            style={styles.deleteBtn}
-            onPress={() => deleteRecord(item._id, token)}
-          >
+          <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item)}>
             <Text style={styles.deleteText}>Delete</Text>
           </TouchableOpacity>
         )}
@@ -451,7 +420,7 @@ export default function ListView({
               appConfig,
               recordType,
               fields: finalFields,
-              modes: modes,
+              modes,
               actionsMenu,
             })
           }
@@ -459,10 +428,7 @@ export default function ListView({
           {/* Avatar */}
           <View style={{ marginRight: 12 }}>
             {avatarUrl ? (
-              <Image
-                source={{ uri: avatarUrl }}
-                style={{ width: 48, height: 48, borderRadius: 8 }}
-              />
+              <Image source={{ uri: avatarUrl }} style={{ width: 48, height: 48, borderRadius: 8 }} />
             ) : (
               <View
                 style={{
@@ -481,28 +447,26 @@ export default function ListView({
             )}
           </View>
 
-          {/* Text */}
+          {/* Content */}
           <View style={styles.textContainer}>
             {dateLabel && (
-              <Text style={{ fontSize: 12, color: theme.colors.onSurfaceVariant }}>
+              <Text style={{ fontSize: 12, color: theme.colors.primary, fontWeight: "600" }}>
                 {dateLabel}
               </Text>
             )}
 
-            <Text style={[styles.name, { color: theme.colors.onSurface }]}>
-              {primary}
-            </Text>
+            <Text style={[styles.name, { color: theme.colors.onSurface }]}>{primary}</Text>
 
             {subTextLines.length > 0 && (
-              <View>
-                {subTextLines.map((line, index) => (
+              <View style={{ marginTop: 2 }}>
+                {subTextLines.map((line, idx) => (
                   <Text
-                    key={index}
+                    key={idx}
                     style={[
                       styles.subText,
                       {
                         color: line.color || theme.colors.onSurfaceVariant,
-                        fontWeight: line.isBold ? "700" : "400",
+                        fontWeight: line.isBold ? "600" : "400",
                       },
                     ]}
                   >
@@ -528,13 +492,16 @@ export default function ListView({
 
       <SectionList
         sections={sections}
-        keyExtractor={(item, i) => item._id ?? i.toString()}
+        keyExtractor={(item) => item._id || Math.random().toString()}
         renderItem={renderItem}
         renderSectionHeader={({ section }) => (
-          <Text style={styles.sectionHeaderText}>{section.title}</Text>
+          <Text style={[styles.sectionHeaderText, { color: theme.colors.onSurfaceVariant }]}>
+            {section.title}
+          </Text>
         )}
         refreshing={refreshing}
         onRefresh={onRefresh}
+        stickySectionHeadersEnabled={false}
       />
 
       <FAB
@@ -549,7 +516,7 @@ export default function ListView({
             appConfig,
             recordType,
             fields: finalFields,
-            modes: modes,
+            modes,
             actionsMenu,
           })
         }
@@ -558,27 +525,47 @@ export default function ListView({
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* Styles                                                                      */
-/* -------------------------------------------------------------------------- */
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 10, paddingBottom:120 },
-  searchInput: { borderWidth: 1, borderRadius: 10, padding: 10, marginBottom: 10 },
-  card: { flexDirection: "row", padding: 14, borderRadius: 14, marginBottom: 8 },
+  container: { flex: 1, padding: 10, paddingBottom: 100 },
+  searchInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 12,
+    fontSize: 16,
+  },
+  card: {
+    flexDirection: "row",
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 8,
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+  },
   textContainer: { flex: 1 },
-  name: { fontSize: 16, fontWeight: "700" },
-  subText: { fontSize: 13, lineHeight: 18 },
+  name: { fontSize: 16, fontWeight: "700", marginBottom: 4 },
+  subText: { fontSize: 13, lineHeight: 18, opacity: 0.9 },
   deleteBtn: {
-    backgroundColor: "red",
+    backgroundColor: "#F44336",
     justifyContent: "center",
     alignItems: "center",
     width: 80,
   },
-  deleteText: { color: "white", fontWeight: "bold" },
-  sectionHeaderText: { fontWeight: "700", marginVertical: 6 },
+  deleteText: { color: "white", fontWeight: "bold", fontSize: 14 },
+  sectionHeaderText: {
+    fontSize: 14,
+    fontWeight: "600",
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
   fab: {
     position: "absolute",
-    right: 20,
-    bottom: Platform.OS === "ios" ? 100 : 20,
+    right: 16,
+    bottom: Platform.OS === "ios" ? 90 : 24,
   },
 });

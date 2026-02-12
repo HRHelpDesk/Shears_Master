@@ -21,7 +21,8 @@ import QuickPayScreen from '../../components/QuickPay/QuickPayScreen'
 import UserListView from '../../components/User/UserListView'
 import BasicLayoutPage from '../../components/BaseUI/BasicLayoutPage'
 import TransactionsListView from '../../components//Payment/TransactionsListView'
-
+import NotificationListView from '../../components/BaseUI/SmartLists/NotificationListView';
+import SmartImportContactView from '../../components/BaseUI/SmartViews/SmartImportContactView';
 const COMPONENTS = {
   ListView,
   CalendarView,
@@ -39,6 +40,8 @@ const COMPONENTS = {
   AdminListView,
   CardListView,
   AnnouncementListView,
+  NotificationListView,
+  SmartImportContactView
 };
 
 export default COMPONENTS;

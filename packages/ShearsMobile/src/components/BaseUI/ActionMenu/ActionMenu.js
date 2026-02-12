@@ -7,7 +7,8 @@ import PhoneCallActionMenuItem from "./PhoneCallActionMenuItem";
 import TextMessageActionMenuItem from "./TextMessageActionMenuItem";
 import EmailActionMenuItem from "./EmailActionMenuItem";
 import MapsActionMenuItem from "./MapsActionMenuItem";
-import AutofillActionMenuItem from "./AutofillActionMenuItem"; // ⭐ UPDATED IMPORT
+import AutofillActionMenuItem from "./AutofillActionMenuItem";
+import BossCrownsProductAction from './InfluencerApp/BossCrownsProductAction'
 
 /* ===================================================================
    ✅ Extract Helpers — Recursively scan for actionable fields
@@ -93,21 +94,24 @@ export default function ActionMenu({
   recordType, 
   recordTypeName,
   onAutofill,
-  fields, // ⭐ ADD THIS PROP
+  onProductSelect, // ⭐ NEW PROP
+  fields,
   appConfig,
-  actionsMenu = [], // ⭐ ADD THIS PROP
+  actionsMenu = [],
 }) {
   const theme = useTheme();
   const [showAutofillModal, setShowAutofillModal] = useState(false);
+  const [showProductModal, setShowProductModal] = useState(false); // ⭐ NEW STATE
 
-console.log('AppConfig in ActionMenu:', appConfig); 
+  console.log('AppConfig in ActionMenu:', appConfig); 
+  
   const phones = extractPhoneNumbers(item);
   const emails = extractEmails(item);
   const addresses = extractAddresses(item);
 
   const hasActions = phones.length || emails.length || addresses.length;
 
-   return (
+  return (
     <View style={[styles.container, { borderColor: theme.colors.outline }]}>
       <Text
         variant="labelLarge"
@@ -122,15 +126,25 @@ console.log('AppConfig in ActionMenu:', appConfig);
 
       <View style={styles.actionsRow}>
         {actionsMenu.includes('autofill') && (
-        <AutofillActionMenuItem
-          visible={showAutofillModal}
-          onPress={() => setShowAutofillModal(true)}
-          onDismiss={() => setShowAutofillModal(false)}
-          onAutofill={onAutofill}
-          recordType={recordType}
-          recordTypeName={recordTypeName}
-          fields={fields} // ⭐ PASS FIELDS
-        />
+          <AutofillActionMenuItem
+            visible={showAutofillModal}
+            onPress={() => setShowAutofillModal(true)}
+            onDismiss={() => setShowAutofillModal(false)}
+            onAutofill={onAutofill}
+            recordType={recordType}
+            recordTypeName={recordTypeName}
+            fields={fields}
+          />
+        )}
+
+        {/* ⭐ NEW BOSSCROWNS PRODUCT ACTION */}
+        {actionsMenu.includes('bc-products') && (
+          <BossCrownsProductAction
+            visible={showProductModal}
+            onPress={() => setShowProductModal(true)}
+            onDismiss={() => setShowProductModal(false)}
+            onProductSelect={onAutofill}
+          />
         )}
 
         {/* {hasActions && (

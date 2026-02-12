@@ -8,28 +8,17 @@
 
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-		3A50912C2EC9386900154F1F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
-		3A5091302EC9386900154F1F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
-		3A5091312EC9386900154F1F /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-		3A5091322EC9386900154F1F /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
-		3A5091412EC93A6900154F1F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
-		3A5091452EC93A6900154F1F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
-		3A5091462EC93A6900154F1F /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-		3A5091472EC93A6900154F1F /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
-		3AA255682F1AC5D100DA08B6 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
-		3AA2556A2F1AC5D100DA08B6 /* libPods-ShearsMobile.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 673D2823894EF73D5395F326 /* libPods-ShearsMobile.a */; };
-		3AA2556B2F1AC5D100DA08B6 /* libPods-ShearsMobile.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 673D2823894EF73D5395F326 /* libPods-ShearsMobile.a */; };
-		3AA2556D2F1AC5D100DA08B6 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
-		3AA2556E2F1AC5D100DA08B6 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-		3AA2556F2F1AC5D100DA08B6 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
-		3AA255792F1B044100DA08B6 /* LaunchScreen-BCIA.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 3AA255782F1B044100DA08B6 /* LaunchScreen-BCIA.storyboard */; };
-		3AA2557A2F1B044100DA08B6 /* LaunchScreen-BCIA.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 3AA255782F1B044100DA08B6 /* LaunchScreen-BCIA.storyboard */; };
-		3AA2557B2F1B044100DA08B6 /* LaunchScreen-BCIA.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 3AA255782F1B044100DA08B6 /* LaunchScreen-BCIA.storyboard */; };
-		3AA2557C2F1B044100DA08B6 /* LaunchScreen-BCIA.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 3AA255782F1B044100DA08B6 /* LaunchScreen-BCIA.storyboard */; };
+		198E2F0CC9F2E4C115A5CDB2 /* libPods-ShearsMobile.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 673D2823894EF73D5395F326 /* libPods-ShearsMobile.a */; };
+		35CDC1DC692964DFA3E80DF4 /* libPods-Boss Crowns Influencer App.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D194E01B2B1BB52F8ABD665F /* libPods-Boss Crowns Influencer App.a */; };
+		3A8987262F33D03D00EDBE91 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
+		3A89872D2F33D03D00EDBE91 /* LaunchScreen-BCIA.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 3AA255782F1B044100DA08B6 /* LaunchScreen-BCIA.storyboard */; };
+		3A89872E2F33D03D00EDBE91 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		3A89872F2F33D03D00EDBE91 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		88EF2B01A65F5B9422C954F9 /* libPods-ShearsMobile.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 673D2823894EF73D5395F326 /* libPods-ShearsMobile.a */; };
 		AB25B2C6EC3CFC00231F1A56 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
+		CBD336C4269D4C065F144102 /* libPods-ShearsMobile.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 673D2823894EF73D5395F326 /* libPods-ShearsMobile.a */; };
 		E96C4E7D690A200C2FBC10D1 /* libPods-ShearsMobile.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 673D2823894EF73D5395F326 /* libPods-ShearsMobile.a */; };
 /* End PBXBuildFile section */
 
@@ -39,15 +28,14 @@
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = ShearsMobile/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = ShearsMobile/Info.plist; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = ShearsMobile/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		1EA7DB412974B107AA48FF65 /* Pods-ShearsMobile.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ShearsMobile.release.xcconfig"; path = "Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile.release.xcconfig"; sourceTree = "<group>"; };
 		1FD07EDC2B2548F5B78077F6 /* Foundation.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Foundation.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Foundation.ttf"; sourceTree = "<group>"; };
 		21483308A6F545FF822A8AB6 /* Ionicons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Ionicons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Ionicons.ttf"; sourceTree = "<group>"; };
-		2688DE71C474703A88594172 /* Pods-ShearsMobile.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ShearsMobile.debug.xcconfig"; path = "Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile.debug.xcconfig"; sourceTree = "<group>"; };
+		2455865E70D7AAE9DD98A6AA /* Pods-ShearsMobile.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ShearsMobile.debug.xcconfig"; path = "Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile.debug.xcconfig"; sourceTree = "<group>"; };
 		34D8A36842AF46B697FA50DB /* Octicons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Octicons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Octicons.ttf"; sourceTree = "<group>"; };
 		368D8F9E56844BB4ACA7F58B /* FontAwesome5_Solid.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = FontAwesome5_Solid.ttf; path = "../node_modules/react-native-vector-icons/Fonts/FontAwesome5_Solid.ttf"; sourceTree = "<group>"; };
 		3A1F75EFF6A64DBCA1C157F1 /* FontAwesome6_Brands.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = FontAwesome6_Brands.ttf; path = "../node_modules/react-native-vector-icons/Fonts/FontAwesome6_Brands.ttf"; sourceTree = "<group>"; };
-		3A5091392EC9386900154F1F /* Shear.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Shear.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		3A50914E2EC93A6900154F1F /* Purpose.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Purpose.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		3AA255762F1AC5D100DA08B6 /* Boss Crowns Influencer App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Boss Crowns Influencer App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		3A8987362F33D03D00EDBE91 /* Boss Crowns Influencer App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Boss Crowns Influencer App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		3AA255782F1B044100DA08B6 /* LaunchScreen-BCIA.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "LaunchScreen-BCIA.storyboard"; sourceTree = "<group>"; };
 		3AB0D5772ED5C66B00C1D1B5 /* Shear.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Shear.entitlements; sourceTree = "<group>"; };
 		3AB0D5782ED5C66F00C1D1B5 /* Purpose.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Purpose.entitlements; sourceTree = "<group>"; };
@@ -57,15 +45,19 @@
 		673D2823894EF73D5395F326 /* libPods-ShearsMobile.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-ShearsMobile.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = ShearsMobile/AppDelegate.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = ShearsMobile/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		8AE78216A09898F44C76B643 /* Pods-Boss Crowns Influencer App.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Boss Crowns Influencer App.debug.xcconfig"; path = "Target Support Files/Pods-Boss Crowns Influencer App/Pods-Boss Crowns Influencer App.debug.xcconfig"; sourceTree = "<group>"; };
+		8B6A8592F298FAE3947A035E /* Pods-BossCrownsInfluencerApp.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BossCrownsInfluencerApp.debug.xcconfig"; path = "Target Support Files/Pods-BossCrownsInfluencerApp/Pods-BossCrownsInfluencerApp.debug.xcconfig"; sourceTree = "<group>"; };
 		8C9568169991495A8614D135 /* MaterialIcons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = MaterialIcons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/MaterialIcons.ttf"; sourceTree = "<group>"; };
-		9782FA7EA64D4A5AE3815FB0 /* Pods-ShearsMobile.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ShearsMobile.release.xcconfig"; path = "Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile.release.xcconfig"; sourceTree = "<group>"; };
 		ADDE1DF2BDB5423E948B4C82 /* Fontisto.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Fontisto.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Fontisto.ttf"; sourceTree = "<group>"; };
 		B4D86D7EC79A446495627FDD /* Zocial.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Zocial.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Zocial.ttf"; sourceTree = "<group>"; };
 		B9A69FD6E6234C5CBBF5E95C /* FontAwesome6_Solid.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = FontAwesome6_Solid.ttf; path = "../node_modules/react-native-vector-icons/Fonts/FontAwesome6_Solid.ttf"; sourceTree = "<group>"; };
 		C9185DCDC0B4446BAA6AB9FB /* AntDesign.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = AntDesign.ttf; path = "../node_modules/react-native-vector-icons/Fonts/AntDesign.ttf"; sourceTree = "<group>"; };
 		CEDAAA3FF92A4F26A0E03C2A /* Feather.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Feather.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Feather.ttf"; sourceTree = "<group>"; };
+		D194E01B2B1BB52F8ABD665F /* libPods-Boss Crowns Influencer App.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Boss Crowns Influencer App.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D655C71C444C032D52B533E2 /* Pods-Boss Crowns Influencer App.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Boss Crowns Influencer App.release.xcconfig"; path = "Target Support Files/Pods-Boss Crowns Influencer App/Pods-Boss Crowns Influencer App.release.xcconfig"; sourceTree = "<group>"; };
 		D68E853F60CB420AB149EB82 /* SimpleLineIcons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = SimpleLineIcons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/SimpleLineIcons.ttf"; sourceTree = "<group>"; };
 		DD62C9353EE5475FB88DE90C /* FontAwesome.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = FontAwesome.ttf; path = "../node_modules/react-native-vector-icons/Fonts/FontAwesome.ttf"; sourceTree = "<group>"; };
+		DF21232482850E86C17DB047 /* Pods-BossCrownsInfluencerApp.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BossCrownsInfluencerApp.release.xcconfig"; path = "Target Support Files/Pods-BossCrownsInfluencerApp/Pods-BossCrownsInfluencerApp.release.xcconfig"; sourceTree = "<group>"; };
 		E0AE50487EBB4A9C8084A31B /* FontAwesome5_Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = FontAwesome5_Regular.ttf; path = "../node_modules/react-native-vector-icons/Fonts/FontAwesome5_Regular.ttf"; sourceTree = "<group>"; };
 		E8F0B4A96AC540E787030160 /* FontAwesome5_Brands.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = FontAwesome5_Brands.ttf; path = "../node_modules/react-native-vector-icons/Fonts/FontAwesome5_Brands.ttf"; sourceTree = "<group>"; };
 		ECCEFA40E56449B3A1D278B4 /* MaterialCommunityIcons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = MaterialCommunityIcons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/MaterialCommunityIcons.ttf"; sourceTree = "<group>"; };
@@ -79,29 +71,16 @@
 			files = (
 				E96C4E7D690A200C2FBC10D1 /* libPods-ShearsMobile.a in Frameworks */,
 				88EF2B01A65F5B9422C954F9 /* libPods-ShearsMobile.a in Frameworks */,
+				198E2F0CC9F2E4C115A5CDB2 /* libPods-ShearsMobile.a in Frameworks */,
+				CBD336C4269D4C065F144102 /* libPods-ShearsMobile.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		3A50912D2EC9386900154F1F /* Frameworks */ = {
+		3A8987272F33D03D00EDBE91 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		3A5091422EC93A6900154F1F /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		3AA255692F1AC5D100DA08B6 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				3AA2556A2F1AC5D100DA08B6 /* libPods-ShearsMobile.a in Frameworks */,
-				3AA2556B2F1AC5D100DA08B6 /* libPods-ShearsMobile.a in Frameworks */,
+				35CDC1DC692964DFA3E80DF4 /* libPods-Boss Crowns Influencer App.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -127,6 +106,7 @@
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
 				673D2823894EF73D5395F326 /* libPods-ShearsMobile.a */,
+				D194E01B2B1BB52F8ABD665F /* libPods-Boss Crowns Influencer App.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -185,9 +165,7 @@
 			isa = PBXGroup;
 			children = (
 				13B07F961A680F5B00A75B9A /* ShearsMobile.app */,
-				3A5091392EC9386900154F1F /* Shear.app */,
-				3A50914E2EC93A6900154F1F /* Purpose.app */,
-				3AA255762F1AC5D100DA08B6 /* Boss Crowns Influencer App.app */,
+				3A8987362F33D03D00EDBE91 /* Boss Crowns Influencer App.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -195,8 +173,12 @@
 		BBD78D7AC51CEA395F1C20DB /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				2688DE71C474703A88594172 /* Pods-ShearsMobile.debug.xcconfig */,
-				9782FA7EA64D4A5AE3815FB0 /* Pods-ShearsMobile.release.xcconfig */,
+				2455865E70D7AAE9DD98A6AA /* Pods-ShearsMobile.debug.xcconfig */,
+				1EA7DB412974B107AA48FF65 /* Pods-ShearsMobile.release.xcconfig */,
+				8B6A8592F298FAE3947A035E /* Pods-BossCrownsInfluencerApp.debug.xcconfig */,
+				DF21232482850E86C17DB047 /* Pods-BossCrownsInfluencerApp.release.xcconfig */,
+				8AE78216A09898F44C76B643 /* Pods-Boss Crowns Influencer App.debug.xcconfig */,
+				D655C71C444C032D52B533E2 /* Pods-Boss Crowns Influencer App.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -225,53 +207,17 @@
 			productReference = 13B07F961A680F5B00A75B9A /* ShearsMobile.app */;
 			productType = "com.apple.product-type.application";
 		};
-		3A5091292EC9386900154F1F /* Shear */ = {
+		3A8987232F33D03D00EDBE91 /* Boss Crowns Influencer App */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 3A5091362EC9386900154F1F /* Build configuration list for PBXNativeTarget "Shear" */;
+			buildConfigurationList = 3A8987332F33D03D00EDBE91 /* Build configuration list for PBXNativeTarget "Boss Crowns Influencer App" */;
 			buildPhases = (
-				3A50912B2EC9386900154F1F /* Sources */,
-				3A50912D2EC9386900154F1F /* Frameworks */,
-				3A50912F2EC9386900154F1F /* Resources */,
-				3A5091332EC9386900154F1F /* Bundle React Native code and images */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = Shear;
-			productName = ShearsMobile;
-			productReference = 3A5091392EC9386900154F1F /* Shear.app */;
-			productType = "com.apple.product-type.application";
-		};
-		3A50913E2EC93A6900154F1F /* Purpose */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 3A50914B2EC93A6900154F1F /* Build configuration list for PBXNativeTarget "Purpose" */;
-			buildPhases = (
-				3A5091402EC93A6900154F1F /* Sources */,
-				3A5091422EC93A6900154F1F /* Frameworks */,
-				3A5091442EC93A6900154F1F /* Resources */,
-				3A5091482EC93A6900154F1F /* Bundle React Native code and images */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = Purpose;
-			productName = ShearsMobile;
-			productReference = 3A50914E2EC93A6900154F1F /* Purpose.app */;
-			productType = "com.apple.product-type.application";
-		};
-		3AA255652F1AC5D100DA08B6 /* Boss Crowns Influencer App */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 3AA255732F1AC5D100DA08B6 /* Build configuration list for PBXNativeTarget "Boss Crowns Influencer App" */;
-			buildPhases = (
-				3AA255662F1AC5D100DA08B6 /* [CP] Check Pods Manifest.lock */,
-				3AA255672F1AC5D100DA08B6 /* Sources */,
-				3AA255692F1AC5D100DA08B6 /* Frameworks */,
-				3AA2556C2F1AC5D100DA08B6 /* Resources */,
-				3AA255702F1AC5D100DA08B6 /* Bundle React Native code and images */,
-				3AA255712F1AC5D100DA08B6 /* [CP] Embed Pods Frameworks */,
-				3AA255722F1AC5D100DA08B6 /* [CP] Copy Pods Resources */,
+				CB614D1DDC3941313B3A61DF /* [CP] Check Pods Manifest.lock */,
+				3A8987252F33D03D00EDBE91 /* Sources */,
+				3A8987272F33D03D00EDBE91 /* Frameworks */,
+				3A89872B2F33D03D00EDBE91 /* Resources */,
+				3A8987302F33D03D00EDBE91 /* Bundle React Native code and images */,
+				B469455EBBCE3B8F9C02557A /* [CP] Embed Pods Frameworks */,
+				9BC4B76F3A1751B32D6B3456 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -279,7 +225,7 @@
 			);
 			name = "Boss Crowns Influencer App";
 			productName = ShearsMobile;
-			productReference = 3AA255762F1AC5D100DA08B6 /* Boss Crowns Influencer App.app */;
+			productReference = 3A8987362F33D03D00EDBE91 /* Boss Crowns Influencer App.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -310,9 +256,7 @@
 			projectRoot = "";
 			targets = (
 				13B07F861A680F5B00A75B9A /* ShearsMobile */,
-				3A5091292EC9386900154F1F /* Shear */,
-				3A50913E2EC93A6900154F1F /* Purpose */,
-				3AA255652F1AC5D100DA08B6 /* Boss Crowns Influencer App */,
+				3A8987232F33D03D00EDBE91 /* Boss Crowns Influencer App */,
 			);
 		};
 /* End PBXProject section */
@@ -323,42 +267,18 @@
 			buildActionMask = 2147483647;
 			files = (
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
-				3AA255792F1B044100DA08B6 /* LaunchScreen-BCIA.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				AB25B2C6EC3CFC00231F1A56 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		3A50912F2EC9386900154F1F /* Resources */ = {
+		3A89872B2F33D03D00EDBE91 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3A5091302EC9386900154F1F /* LaunchScreen.storyboard in Resources */,
-				3AA2557A2F1B044100DA08B6 /* LaunchScreen-BCIA.storyboard in Resources */,
-				3A5091312EC9386900154F1F /* Images.xcassets in Resources */,
-				3A5091322EC9386900154F1F /* PrivacyInfo.xcprivacy in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		3A5091442EC93A6900154F1F /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				3A5091452EC93A6900154F1F /* LaunchScreen.storyboard in Resources */,
-				3AA2557B2F1B044100DA08B6 /* LaunchScreen-BCIA.storyboard in Resources */,
-				3A5091462EC93A6900154F1F /* Images.xcassets in Resources */,
-				3A5091472EC93A6900154F1F /* PrivacyInfo.xcprivacy in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		3AA2556C2F1AC5D100DA08B6 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				3AA2556D2F1AC5D100DA08B6 /* LaunchScreen.storyboard in Resources */,
-				3AA2557C2F1B044100DA08B6 /* LaunchScreen-BCIA.storyboard in Resources */,
-				3AA2556E2F1AC5D100DA08B6 /* Images.xcassets in Resources */,
-				3AA2556F2F1AC5D100DA08B6 /* PrivacyInfo.xcprivacy in Resources */,
+				3A89872D2F33D03D00EDBE91 /* LaunchScreen-BCIA.storyboard in Resources */,
+				3A89872E2F33D03D00EDBE91 /* Images.xcassets in Resources */,
+				3A89872F2F33D03D00EDBE91 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -381,7 +301,7 @@
 			shellPath = /bin/sh;
 			shellScript = "set -e\n\nWITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n/bin/sh -c \"$WITH_ENVIRONMENT $REACT_NATIVE_XCODE\"\n";
 		};
-		3A5091332EC9386900154F1F /* Bundle React Native code and images */ = {
+		3A8987302F33D03D00EDBE91 /* Bundle React Native code and images */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -396,102 +316,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "set -e\n\nWITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n/bin/sh -c \"$WITH_ENVIRONMENT $REACT_NATIVE_XCODE\"\n";
-		};
-		3A5091482EC93A6900154F1F /* Bundle React Native code and images */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"$(SRCROOT)/.xcode.env.local",
-				"$(SRCROOT)/.xcode.env",
-			);
-			name = "Bundle React Native code and images";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "set -e\n\nWITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n/bin/sh -c \"$WITH_ENVIRONMENT $REACT_NATIVE_XCODE\"\n";
-		};
-		3AA255662F1AC5D100DA08B6 /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-ShearsMobile-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-		3AA255702F1AC5D100DA08B6 /* Bundle React Native code and images */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"$(SRCROOT)/.xcode.env.local",
-				"$(SRCROOT)/.xcode.env",
-			);
-			name = "Bundle React Native code and images";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "set -e\n\nWITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n/bin/sh -c \"$WITH_ENVIRONMENT $REACT_NATIVE_XCODE\"\n";
-		};
-		3AA255712F1AC5D100DA08B6 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-frameworks-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			inputPaths = (
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		3AA255722F1AC5D100DA08B6 /* [CP] Copy Pods Resources */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-resources-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			inputPaths = (
-			);
-			name = "[CP] Copy Pods Resources";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-resources-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-resources.sh\"\n";
-			showEnvVarsInLog = 0;
 		};
 		40362A8CEA455BF6A803C421 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -514,6 +338,27 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
+		9BC4B76F3A1751B32D6B3456 /* [CP] Copy Pods Resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Boss Crowns Influencer App/Pods-Boss Crowns Influencer App-resources-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			inputPaths = (
+			);
+			name = "[CP] Copy Pods Resources";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Boss Crowns Influencer App/Pods-Boss Crowns Influencer App-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Boss Crowns Influencer App/Pods-Boss Crowns Influencer App-resources.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
 		9CA8A2374C2B2F8AFCB0167B /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -533,6 +378,49 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		B469455EBBCE3B8F9C02557A /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Boss Crowns Influencer App/Pods-Boss Crowns Influencer App-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			inputPaths = (
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Boss Crowns Influencer App/Pods-Boss Crowns Influencer App-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Boss Crowns Influencer App/Pods-Boss Crowns Influencer App-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		CB614D1DDC3941313B3A61DF /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-Boss Crowns Influencer App-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
 		D7C77E0402247C8933FD0163 /* [CP] Check Pods Manifest.lock */ = {
@@ -568,27 +456,11 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		3A50912B2EC9386900154F1F /* Sources */ = {
+		3A8987252F33D03D00EDBE91 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3A50912C2EC9386900154F1F /* AppDelegate.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		3A5091402EC93A6900154F1F /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				3A5091412EC93A6900154F1F /* AppDelegate.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		3AA255672F1AC5D100DA08B6 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				3AA255682F1AC5D100DA08B6 /* AppDelegate.swift in Sources */,
+				3A8987262F33D03D00EDBE91 /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -597,9 +469,10 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 2688DE71C474703A88594172 /* Pods-ShearsMobile.debug.xcconfig */;
+			baseConfigurationReference = 2455865E70D7AAE9DD98A6AA /* Pods-ShearsMobile.debug.xcconfig */;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				APP_DISPLAY_NAME = Shear;
+				ASSETCATALOG_COMPILER_APPICON_NAME = ShearIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = ShearsMobile/ShearsMobile.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
@@ -607,7 +480,9 @@
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = ShearsMobile/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Shear;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				LAUNCH_SCREEN_NAME = LaunchScreen;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -631,16 +506,19 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 9782FA7EA64D4A5AE3815FB0 /* Pods-ShearsMobile.release.xcconfig */;
+			baseConfigurationReference = 1EA7DB412974B107AA48FF65 /* Pods-ShearsMobile.release.xcconfig */;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				APP_DISPLAY_NAME = Shear;
+				ASSETCATALOG_COMPILER_APPICON_NAME = ShearIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = ShearsMobile/ShearsMobile.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 2USCSV8NZ9;
 				INFOPLIST_FILE = ShearsMobile/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Shear;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				LAUNCH_SCREEN_NAME = LaunchScreen;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -661,163 +539,28 @@
 			};
 			name = Release;
 		};
-		3A5091372EC9386900154F1F /* Debug */ = {
+		3A8987342F33D03D00EDBE91 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8AE78216A09898F44C76B643 /* Pods-Boss Crowns Influencer App.debug.xcconfig */;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = ShearIcon;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
-				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = Shear.entitlements;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 2USCSV8NZ9;
-				ENABLE_BITCODE = NO;
-				INFOPLIST_FILE = "$(SRCROOT)/ShearsMobile/Info.plist\n";
-				INFOPLIST_KEY_CFBundleDisplayName = Shear;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-ObjC",
-					"-lc++",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.shear.shears;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VERSIONING_SYSTEM = "apple-generic";
-			};
-			name = Debug;
-		};
-		3A5091382EC9386900154F1F /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = ShearIcon;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
-				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = Shear.entitlements;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 2USCSV8NZ9;
-				INFOPLIST_FILE = "$(SRCROOT)/ShearsMobile/Info.plist\n";
-				INFOPLIST_KEY_CFBundleDisplayName = Shear;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-ObjC",
-					"-lc++",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.shear.shears;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VERSIONING_SYSTEM = "apple-generic";
-			};
-			name = Release;
-		};
-		3A50914C2EC93A6900154F1F /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = PurposeIcon;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
-				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = Purpose.entitlements;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 2USCSV8NZ9;
-				ENABLE_BITCODE = NO;
-				INFOPLIST_FILE = "$(SRCROOT)/ShearsMobile/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = Shear;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-ObjC",
-					"-lc++",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.purpose.shears;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VERSIONING_SYSTEM = "apple-generic";
-			};
-			name = Debug;
-		};
-		3A50914D2EC93A6900154F1F /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = PurposeIcon;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
-				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = Purpose.entitlements;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 2USCSV8NZ9;
-				INFOPLIST_FILE = "$(SRCROOT)/ShearsMobile/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = Shear;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-ObjC",
-					"-lc++",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.purpose.shears;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VERSIONING_SYSTEM = "apple-generic";
-			};
-			name = Release;
-		};
-		3AA255742F1AC5D100DA08B6 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 2688DE71C474703A88594172 /* Pods-ShearsMobile.debug.xcconfig */;
-			buildSettings = {
+				APP_DISPLAY_NAME = "Boss Crowns Influencer App";
 				ASSETCATALOG_COMPILER_APPICON_NAME = BossCrownsIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = ShearsMobile/ShearsMobile.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 9;
 				DEVELOPMENT_TEAM = 2USCSV8NZ9;
 				ENABLE_BITCODE = NO;
-				INFOPLIST_FILE = "$(SRCROOT)/ShearsMobile/Info.plist";
+				INFOPLIST_FILE = ShearsMobile/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Boss Crowns Influencer App";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
+				INFOPLIST_KEY_UILaunchStoryboardName = "LaunchScreen-BCIA";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				LAUNCH_SCREEN_NAME = "LaunchScreen-BCIA";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.002;
+				MARKETING_VERSION = 0.009;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -825,7 +568,6 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.shear.bcia;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -835,26 +577,27 @@
 			};
 			name = Debug;
 		};
-		3AA255752F1AC5D100DA08B6 /* Release */ = {
+		3A8987352F33D03D00EDBE91 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 9782FA7EA64D4A5AE3815FB0 /* Pods-ShearsMobile.release.xcconfig */;
+			baseConfigurationReference = D655C71C444C032D52B533E2 /* Pods-Boss Crowns Influencer App.release.xcconfig */;
 			buildSettings = {
+				APP_DISPLAY_NAME = "Boss Crowns Influencer App";
 				ASSETCATALOG_COMPILER_APPICON_NAME = BossCrownsIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = ShearsMobile/ShearsMobile.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 9;
 				DEVELOPMENT_TEAM = 2USCSV8NZ9;
-				INFOPLIST_FILE = "$(SRCROOT)/ShearsMobile/Info.plist";
+				INFOPLIST_FILE = ShearsMobile/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Boss Crowns Influencer App";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
+				INFOPLIST_KEY_UILaunchStoryboardName = "LaunchScreen-BCIA";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				LAUNCH_SCREEN_NAME = "LaunchScreen-BCIA";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.002;
+				MARKETING_VERSION = 0.009;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -862,7 +605,6 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.shear.bcia;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_VERSION = 5.0;
@@ -1027,29 +769,11 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		3A5091362EC9386900154F1F /* Build configuration list for PBXNativeTarget "Shear" */ = {
+		3A8987332F33D03D00EDBE91 /* Build configuration list for PBXNativeTarget "Boss Crowns Influencer App" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				3A5091372EC9386900154F1F /* Debug */,
-				3A5091382EC9386900154F1F /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		3A50914B2EC93A6900154F1F /* Build configuration list for PBXNativeTarget "Purpose" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				3A50914C2EC93A6900154F1F /* Debug */,
-				3A50914D2EC93A6900154F1F /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		3AA255732F1AC5D100DA08B6 /* Build configuration list for PBXNativeTarget "Boss Crowns Influencer App" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				3AA255742F1AC5D100DA08B6 /* Debug */,
-				3AA255752F1AC5D100DA08B6 /* Release */,
+				3A8987342F33D03D00EDBE91 /* Debug */,
+				3A8987352F33D03D00EDBE91 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

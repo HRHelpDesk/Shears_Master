@@ -151,13 +151,14 @@ export default function BasePage({
           dateFilters,
         });
 console.log('Using record type:', resolvedRecordType);
+console.log('Active view:', activeView);
 const isAdmin = user.role === "admin";
 
         const response = await getRecords({
           recordType: resolvedRecordType,  // ⭐ Clean + dynamic
           token,
           subscriberId: user.subscriberId,
-          userId: isAdmin ? undefined : user.userId,
+          userId: isAdmin && activeView?.adminAllowed === true ? undefined : user.userId,
           ...dateFilters,
         });
 

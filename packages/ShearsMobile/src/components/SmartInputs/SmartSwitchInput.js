@@ -9,9 +9,10 @@ export default function SmartSwitchInput({
   mode = "edit",
   error,
   helperText,
+  inputConfig
 }) {
   const theme = useTheme();
-
+console.log('inputConfig',inputConfig)
   /* --------------------------------------------- */
   /* ✅ READ MODE                                  */
   /* --------------------------------------------- */
@@ -64,7 +65,7 @@ export default function SmartSwitchInput({
           color={theme.colors.primary}
         />
         <Text style={{ marginLeft: 10, color: theme.colors.text }}>
-          {value ? "Enabled" : "Disabled"}
+          {value ? inputConfig.onLabel ? inputConfig.onLabel : "Enabled" : inputConfig.offLabel ? inputConfig.offLabel : "Disabled"}
         </Text>
       </View>
 

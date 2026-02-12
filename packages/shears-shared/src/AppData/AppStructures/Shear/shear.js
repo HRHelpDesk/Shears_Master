@@ -100,8 +100,9 @@ export const Shear = [
           },
           {
             field: 'time',
+           
             override: {
-              type: 'object',
+               type:'object',
               required: true,
               display: { order: 5 },
               arrayConfig: { minItems: 1 },
@@ -198,6 +199,14 @@ export const Shear = [
               required: true,
               display: { order: 5 },
               arrayConfig: { minItems: 1 },
+            },
+          },
+          {
+            field: "notes",
+            override: {
+              field: "notes",
+              label: "Client Notes",
+              display: { order: 8 },
             },
           },
         ],

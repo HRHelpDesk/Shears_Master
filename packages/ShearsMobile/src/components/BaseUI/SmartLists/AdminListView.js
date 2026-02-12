@@ -13,7 +13,8 @@ export default function AdminListView({
   fields,
   appConfig,
   modes,
-  sortBy
+  sortBy,
+  actionsMenu
 }) {
   const { token, user } = useContext(AuthContext);
 
@@ -82,6 +83,7 @@ const [isFirstLoad, setIsFirstLoad] = useState(true);
       onRefresh={() => loadData(true)}  // ⭐ Trigger refresh mode
       modes={modes}
       sortBy={sortBy}
+      actionsMenu={actionsMenu}
     />
   );
 }

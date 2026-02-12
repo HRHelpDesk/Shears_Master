@@ -2,6 +2,8 @@
 // import others as you build them
 
 import DatePickerInput from "../../components/SmartInputs/DatePickerInput";
+import DateRangePickerInput from "../../components/SmartInputs/DateRangePickerInput";
+
 import TimePickerInput from "../../components/SmartInputs/TimePickerInput";
 import SmartTimeTimeZone from "../../components/SmartInputs/SmartTimeTimeZone";
 
@@ -43,6 +45,7 @@ export const FieldMap = {
   video:SmartVideoInput,
   autoUser: SmartAutoUserInput,
   readOnly: SmartReadOnlyField,
+  dateRange: DateRangePickerInput,
 
   ...WidgetMap
 };

@@ -22,6 +22,7 @@ const { width } = Dimensions.get('window');
 const HOUR_HEIGHT = 120;
 const TIME_COLUMN_WIDTH = 60;
 const DAY_HEIGHT = HOUR_HEIGHT * 24;
+const MIN_EVENT_WIDTH = 200; // Minimum width for each event card
 
 const QUARTER_HOURS = Array.from({ length: 96 }, (_, i) => {
   const hour = Math.floor(i / 4);
@@ -92,6 +93,7 @@ export default function HourlyView({
   const theme = useTheme();
   const navigation = useNavigation();
   const scrollRef = useRef(null);
+  const horizontalScrollRef = useRef(null);
 
   /* ------------------------------------------------------------
      Filter + normalize events for selected day
@@ -103,12 +105,10 @@ export default function HourlyView({
       .map((item) => {
         const fd = item.fieldsData || {};
 
-
-         if (!canSeeCalendarEvent(item, user)) {
-                  return false;
-                }
+        if (!canSeeCalendarEvent(item, user)) {
+          return false;
+        }
         if (!fd.date || !fd.timeZoneTime?.start) return null;
-
 
         const startLocal = DateTime.fromISO(
           `${fd.date}T${fd.timeZoneTime.start}`,
@@ -145,7 +145,21 @@ export default function HourlyView({
       .filter(Boolean);
 
     return layoutOverlaps(normalized);
-  }, [data, selectedDate]);
+  }, [data, selectedDate, user]);
+
+  /* ------------------------------------------------------------
+     Calculate content width for horizontal scrolling
+  ------------------------------------------------------------ */
+  const contentWidth = useMemo(() => {
+    if (dayAppointments.length === 0) return width - TIME_COLUMN_WIDTH - 40;
+    
+    const maxCols = Math.max(...dayAppointments.map(a => a._cols), 1);
+    const calculatedWidth = maxCols * MIN_EVENT_WIDTH;
+    const availableWidth = width - TIME_COLUMN_WIDTH - 40;
+    
+    // Use the larger of calculated or available width
+    return Math.max(calculatedWidth, availableWidth);
+  }, [dayAppointments]);
 
   /* ------------------------------------------------------------
      Scroll to earliest event or 8am
@@ -241,79 +255,146 @@ export default function HourlyView({
         )}
       </View>
 
-      {/* Hourly Grid */}
+      {/* Hourly Grid with Horizontal Scroll */}
       <ScrollView ref={scrollRef} style={styles.scrollView}>
         <View style={{ height: DAY_HEIGHT }}>
           {QUARTER_HOURS.map(renderQuarterHourRow)}
           {renderNowLine()}
 
-          <View
+          {/* Horizontal ScrollView for appointments */}
+          <ScrollView
+            ref={horizontalScrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={true}
             style={[
-              styles.appointments,
-              { 
-                left: TIME_COLUMN_WIDTH, 
-                width: width - TIME_COLUMN_WIDTH - 40 
-              },
+              styles.horizontalScroll,
+              { left: TIME_COLUMN_WIDTH }
             ]}
+            contentContainerStyle={{ width: contentWidth }}
           >
-            {dayAppointments.map((appt) => {
-              const { top, height } = calculatePosition(
-                appt.startTime,
-                appt.endTime
-              );
-              const colWidth = (width - TIME_COLUMN_WIDTH - 44) / appt._cols;
+            <View
+              style={[
+                styles.appointments,
+                { width: contentWidth, height: DAY_HEIGHT }
+              ]}
+            >
+              {dayAppointments.map((appt) => {
+                const { top, height } = calculatePosition(
+                  appt.startTime,
+                  appt.endTime
+                );
+                const colWidth = contentWidth / appt._cols;
 
-              return (
-                <TouchableOpacity
-                  key={appt._id}
-                  style={[
-                    styles.event,
-                    {
-                      top,
-                      height,
-                      width: colWidth - 6,
-                      left: appt._col * colWidth,
-                      backgroundColor: theme.colors.primaryContainer,
-                      borderLeftColor: theme.colors.primary,
-                    },
-                  ]}
-                  onPress={() =>
-                    navigation.navigate('ListItemDetail', {
-                      item: appt.flatItem,
-                      name,
-                      appConfig,
-                      fields: mapFields(
-                        appConfig?.mainNavigation?.find(
-                          r => r.name === 'Calendar'
-                        )?.fields || []
-                      ),
-                      mode: 'read',
-                      modes: modes
-                    })
-                  }
-                >
-                  <Text style={[
-                    styles.eventTime,
-                    { color: theme.colors.onPrimaryContainer }
-                  ]}>
-                    {formatTime12(appt.startTime)} – {formatTime12(appt.endTime)}
-                  </Text>
-                  <Text style={[
-                    styles.eventTitle,
-                    { color: theme.colors.onPrimaryContainer }
-                  ]}>
-                    {appt.contactName}
-                  </Text>
-                  <Text style={[
-                    styles.eventSub,
-                    { color: theme.colors.onPrimaryContainer }
-                  ]}>
-                    {appt.serviceName}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+                return (
+                  <TouchableOpacity
+                    key={appt._id}
+                    style={[
+                      styles.event,
+                      {
+                        top,
+                        height,
+                        width: colWidth - 6,
+                        left: appt._col * colWidth,
+                        backgroundColor: theme.colors.primaryContainer,
+                        borderLeftColor: theme.colors.primary,
+                      },
+                    ]}
+                    onPress={() =>
+                      navigation.navigate('ListItemDetail', {
+                        item: appt.flatItem,
+                        name,
+                        appConfig,
+                        fields: mapFields(
+                          appConfig?.mainNavigation?.find(
+                            r => r.name === 'Calendar'
+                          )?.fields || []
+                        ),
+                        mode: 'read',
+                        modes: modes
+                      })
+                    }
+                  >
+                    <Text style={[
+                      styles.eventTime,
+                      { color: theme.colors.onPrimaryContainer }
+                    ]}>
+                      {formatTime12(appt.startTime)} – {formatTime12(appt.endTime)}
+                    </Text>
+                    <Text style={[
+                      styles.eventTitle,
+                      { color: theme.colors.onPrimaryContainer }
+                    ]}>
+                      {appt.contactName}
+                    </Text>
+                    <Text style={[
+                      styles.eventSub,
+                      { color: theme.colors.onPrimaryContainer }
+                    ]}>
+                      {appt.serviceName}
+                    </Text>
+
+                    {/* ────────────────────────────────────────────────
+                        PRODUCTS – text list with truncation
+                    ──────────────────────────────────────────────── */}
+                    {appt.flatItem?.products?.length > 0 && (
+                      <View
+                        style={{
+                          marginTop: 6,
+                          paddingTop: 4,
+                          borderTopWidth: StyleSheet.hairlineWidth,
+                          borderTopColor: theme.colors.outline + '60',
+                        }}
+                      >
+                        {(() => {
+                          // Rough estimate: subtract ~65–75px for time + name + platform + padding
+                          const availablePx = height - 75;
+                          const pixelsPerLine = 15; // ~ fontSize 11 + lineHeight 14 + margin
+                          const maxFit = Math.max(0, Math.floor(availablePx / pixelsPerLine));
+
+                          const shown = appt.flatItem.products.slice(0, maxFit);
+                          const remaining = appt.flatItem.products.length - shown.length;
+
+                          return (
+                            <>
+                              {shown.map((prod, idx) => (
+                                <Text
+                                  key={prod._id || idx}
+                                  style={{
+                                    fontSize: 11,
+                                    lineHeight: 14,
+                                    color: theme.colors.onPrimaryContainer,
+                                    opacity: 0.85,
+                                    marginBottom: 1,
+                                  }}
+                                  numberOfLines={1}
+                                  ellipsizeMode="tail"
+                                >
+                                  • {prod.productName || prod.name || 'Product'}
+                                </Text>
+                              ))}
+
+                              {remaining > 0 && (
+                                <Text
+                                  style={{
+                                    fontSize: 11,
+                                    color: theme.colors.primary,
+                                    fontWeight: '500',
+                                    marginTop: 2,
+                                  }}
+                                >
+                                  +{remaining} more
+                                </Text>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </ScrollView>
         </View>
       </ScrollView>
 
@@ -333,7 +414,7 @@ export default function HourlyView({
 }
 
 /* =============================================================
-   STYLES – now mostly theme-aware, fewer hardcoded values
+   STYLES
 ============================================================= */
 const styles = StyleSheet.create({
   container: { 
@@ -375,13 +456,18 @@ const styles = StyleSheet.create({
   },
   hourLine: {
     flex: 1,
-    borderTopWidth: 0.5,  // slightly thicker for better visibility
+    borderTopWidth: 0.5,
+  },
+
+  horizontalScroll: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    height: DAY_HEIGHT,
   },
 
   appointments: {
-    position: 'absolute',
-    top: 0,
-    height: DAY_HEIGHT,
+    position: 'relative',
   },
 
   event: {
@@ -389,7 +475,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderRadius: 8,
     padding: 8,
-    elevation: 2,           // subtle shadow for better depth
+    elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -413,7 +499,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: TIME_COLUMN_WIDTH,
     right: 0,
-    height: 3,              // slightly thicker
+    height: 3,
     zIndex: 1000,
   },
   nowDot: {
@@ -425,7 +511,7 @@ const styles = StyleSheet.create({
     top: -4.5,
     zIndex: 1001,
     borderWidth: 2,
-    borderColor: '#fff',    // white border for contrast on both themes
+    borderColor: '#fff',
   },
 
   emptyState: {

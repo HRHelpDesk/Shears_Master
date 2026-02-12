@@ -80,4 +80,38 @@ export const CommunicationFields = [
     display: { order: 3 },
     input: 'array',
   },
+  {
+  field: 'socialMediaHandles',
+  type: 'Array',
+  label: 'Social Media Accounts',
+  displayInList: false,
+  required: false,
+  arrayConfig: {
+    object: [
+      {
+        field: 'platform',
+        type: 'string',
+        label: 'Platform',
+        input: 'select',
+        inputConfig: { 
+          options: ['Instagram', 'TikTok', 'Facebook', 'YouTube', 'Twitter/X', 'Snapchat'] 
+        },
+      },
+      {
+        field: 'handle',
+        type: 'string',
+        label: 'Handle',
+        input: 'text',
+        inputConfig: { 
+          placeholder: '@username',
+          autoComplete: 'off',
+        },
+      },
+    ],
+    minItems: 0,
+    maxItems: 6,
+  },
+  display: { order: 2 },
+  input: 'array',
+}
 ];

@@ -65,7 +65,8 @@ export default function SmartDialogLinkSelectInput({
   placeholder = "Select...",
   mode = "edit",
   showQuantity = false,
-  autoEnableQuantityFor = ["products"],
+  useUserId = true,
+
 }) {
   const theme = useTheme();
   const { token, user } = useContext(AuthContext);
@@ -79,8 +80,7 @@ export default function SmartDialogLinkSelectInput({
 
   const [quantity, setQuantity] = useState(value?.quantity || 1);
 
-  const quantityEnabled =
-    showQuantity || autoEnableQuantityFor.includes(recordTypeName);
+  const quantityEnabled = showQuantity;
 
   /* --------------------------------------------------------------
      Sync displayed value
@@ -106,7 +106,7 @@ export default function SmartDialogLinkSelectInput({
         const response = await getRecords({
           recordType: recordTypeName.toLowerCase(),
           subscriberId: user.subscriberId,
-          userId: user.userId,
+          ...(useUserId && { userId: user.userId }),
           token,
           status: "active",
         });

@@ -105,12 +105,13 @@ export default function BasePage({ appConfig, name, viewData = [], displayName, 
         }
 
         const dateFilters = getDateFiltersForActiveView(activeView?.name);
+        const isAdmin = user.role === "admin";
 
         const response = await getRecords({
           recordType: recordType.toLowerCase(),
           token,
           subscriberId: user.subscriberId,
-          userId: user.userId,
+          userId: isAdmin && activeView?.adminAllowed === true ? undefined : user.userId,
           ...dateFilters,
         });
 

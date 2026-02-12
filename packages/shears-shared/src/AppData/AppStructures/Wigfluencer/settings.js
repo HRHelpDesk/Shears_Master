@@ -1,5 +1,6 @@
 import { Users } from "../../view-schema/user-view";
 import { AnnouncementsAdmin } from "./view-schema/Announcements";
+import { ProductsView } from "./view-schema/Products";
 import { SalesCouponsView } from "./view-schema/SalesCoupons";
 
 export const InfluencerSettings = [
@@ -64,21 +65,14 @@ export const InfluencerSettings = [
           order: 3 
         }
       },
-      {
-        field: 'socialHandle',
-        label: 'Social Media Handle',
-        type: 'string',
-        input: 'text',
-        required: true,
-        validations: {
-          minLength: 2,
-          maxLength: 50,
-        },
-        display: { 
-          placeholder: 'Enter Social Media Handle (e.g., @username)', 
-          order: 4 
-        }
-      },
+       {
+            field: 'socialMediaHandles',
+            override: {
+              required: true,
+              display: { order: 4 },
+              arrayConfig: { minItems: 1 },
+            },
+          },
       {
         field: 'role',
         label: 'User Role',
@@ -151,6 +145,77 @@ export const InfluencerSettings = [
   },
   input: "video",
 }
+    ]
+  },
+
+   /* ----------------------------------------------------------
+     📦 PRODUCTS
+  ---------------------------------------------------------- */
+  {
+    name: "Products",
+    permissions: ["admin"],
+    recordType: "products",
+    displayName: "Products",
+    icon: { ios: "cube.box.fill", android: "package-variant", web: "fa fa-box" },
+    views: [ProductsView],
+    fields: [
+      {
+        field: "name",
+        override: {
+          field: "productName",
+          label: "Product Name",
+          displayInList: true,
+          required: true,
+        },
+        input: "text",
+        type: "string",
+        validations: {
+          minLength: 2,
+          maxLength: 100,
+        },
+        display: { 
+          placeholder: "Enter Product Name", 
+          order: 1 
+        }
+      },
+        {
+        field: "image",
+        override: {
+          field: "productImage",
+          label: "Product Image",
+          displayInList: false,
+        },
+        input: "image",
+        display: { 
+          order: 4 
+        }
+      },
+      {
+        field: "description",
+        label: "Description",
+        type: "string",
+        input: "textarea",
+        required: true,
+        validations: {
+          minLength: 10,
+          maxLength: 500,
+        },
+        display: { 
+          placeholder: "Enter Product Description", 
+          order: 2 
+        }
+      },
+      {
+        field: "isActive",
+        label: "Active",
+        type: "boolean",
+        input: "checkbox",
+        required: false,
+        display: { 
+          order: 3 
+        }
+      },
+    
     ]
   },
 

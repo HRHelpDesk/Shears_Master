@@ -15,6 +15,7 @@ import {
   Button,
   Grid,
   Chip,
+  Typography,
 } from "@mui/material";
 import { Search as SearchIcon, Add as AddIcon } from "@mui/icons-material";
 import { styled } from "@mui/material/styles";
@@ -31,12 +32,11 @@ import ListItemDetail from "./ListItemDetail";
    🎨 Status Color Configuration
 ============================================================ */
 const STATUS_COLORS = {
-  pending: "#FF9800",    // Orange
-  approved: "#4CAF50",   // Green
-  rejected: "#F44336",   // Red
-  completed: "#2196F3",  // Blue
-  cancelled: "#9E9E9E",  // Gray
-  // Add more status-color mappings here as needed
+  pending: "#FF9800",
+  approved: "#4CAF50",
+  rejected: "#F44336",
+  completed: "#2196F3",
+  cancelled: "#9E9E9E",
 };
 
 function getStatusColor(status) {
@@ -51,9 +51,10 @@ const TableContainerStyled = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(2),
   borderRadius: theme.shape.borderRadius,
   boxShadow: theme.shadows[2],
-  flex: 1,
   display: "flex",
   flexDirection: "column",
+  height: "100%",
+  maxHeight: "100vh",
 }));
 
 const SearchField = styled(TextField)(({ theme }) => ({
@@ -68,16 +69,64 @@ const StatusChip = styled(Chip)(({ statuscolor }) => ({
 }));
 
 /* ============================================================
+   Date Range Formatter (NEW)
+============================================================ */
+function resolveDateRange(item) {
+  let raw = item.fieldsData?.date ?? item.date;
+
+  if (!raw) return "";
+
+  // Normalize to array
+  const dateStrings = Array.isArray(raw) ? raw : [raw];
+
+  const validDates = dateStrings
+    .filter((d) => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d))
+    .map((d) => DateTime.fromFormat(d, "yyyy-MM-dd", { zone: "local" }))
+    .filter((dt) => dt.isValid)
+    .sort((a, b) => a - b); // chronological
+
+  if (validDates.length === 0) return "—";
+
+  if (validDates.length === 1) {
+    return validDates[0].toLocaleString(DateTime.DATE_MED);
+  }
+
+  const start = validDates[0];
+  const end = validDates[validDates.length - 1];
+
+  if (start.month === end.month && start.year === end.year) {
+    return `${start.toFormat("MMM d")} – ${end.toFormat("d, yyyy")}`;
+  }
+  if (start.year === end.year) {
+    return `${start.toFormat("MMM d")} – ${end.toFormat("MMM d, yyyy")}`;
+  }
+  return `${start.toLocaleString(DateTime.DATE_MED)} – ${end.toLocaleString(DateTime.DATE_MED)}`;
+}
+
+/* ============================================================
    Avatar Resolver
 ============================================================ */
 function getAvatarUrl(item) {
   const fd = item?.fieldsData ?? item;
-  return (
-    fd?.avatar?.[0]?.url ||
-    fd?.raw?.avatar ||
-    fd?.influencerName?.raw?.avatar ||
-    null
-  );
+
+  if (fd.avatar) {
+    if (Array.isArray(fd.avatar) && fd.avatar[0]?.url) return fd.avatar[0].url;
+    if (typeof fd.avatar === "string") return fd.avatar;
+  }
+
+  for (const [key, value] of Object.entries(fd)) {
+    if (key.toLowerCase().includes("image") || key.toLowerCase().includes("avatar")) {
+      if (Array.isArray(value) && value[0]?.url) return value[0].url;
+      if (typeof value === "string") return value;
+    }
+  }
+
+  for (const v of Object.values(fd)) {
+    if (v?.raw?.avatar) return v.raw.avatar;
+    if (Array.isArray(v?.avatar) && v.avatar[0]?.url) return v.avatar[0].url;
+  }
+
+  return null;
 }
 
 /* ============================================================
@@ -88,6 +137,10 @@ function getPrimaryText(item) {
 
   if (fd.firstName || fd.lastName) {
     return [fd.firstName, fd.lastName].filter(Boolean).join(" ");
+  }
+
+  if (fd.influencerName?.raw?.fullName) {
+    return fd.influencerName.raw.fullName;
   }
 
   const nameField = Object.values(fd).find(
@@ -105,7 +158,7 @@ function getPrimaryText(item) {
 }
 
 /* ============================================================
-   🕒 TIME + TIMEZONE → LOCAL (MATCHES SmartTimeTimeZone)
+   🕒 TIME + TIMEZONE
 ============================================================ */
 function formatTimeWithZone(value) {
   if (!value?.time || !value?.timezone) return "";
@@ -114,68 +167,66 @@ function formatTimeWithZone(value) {
     const viewerTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const [hour, minute] = value.time.split(":").map(Number);
 
-    return DateTime.fromObject(
-      { hour, minute },
-      { zone: value.timezone }
-    )
+    return DateTime.fromObject({ hour, minute }, { zone: value.timezone })
       .setZone(viewerTZ)
       .toFormat("h:mm a");
   } catch {
-    return value.time;
+    return value.time || "";
   }
 }
 
 /* ============================================================
-   Smart Field Formatter
+   Smart Field Formatter – now handles date arrays
 ============================================================ */
 function formatFieldValue(value, field) {
   if (value == null) return "";
 
-  /* ---------- STRING ---------- */
+  // Special case: date field → use range formatter
+  if (field?.field === "date" || field?.type === "date") {
+    return resolveDateRange({ fieldsData: { date: value }, date: value });
+  }
+
   if (typeof value === "string") {
     if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-      return new Date(`${value}T00:00:00`).toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
+      return DateTime.fromFormat(value, "yyyy-MM-dd", { zone: "local" })
+        .toLocaleString(DateTime.DATE_MED);
     }
-
     if (!isNaN(Date.parse(value))) {
-      return new Date(value).toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
+      return DateTime.fromISO(value).toLocaleString(DateTime.DATE_MED);
     }
-
     return value;
   }
 
-  /* ---------- ARRAY ---------- */
   if (Array.isArray(value)) {
+    if (value.every((v) => typeof v === "object" && ("value" in v || "label" in v))) {
+      return value
+        .map((v) => v.value || v.raw?.value || v.name)
+        .filter(Boolean)
+        .join(", ");
+    }
     return value
       .map(
         (v) =>
-          v.platform ||
-          v.label ||
-          v.name ||
-          v.raw?.fullName ||
-          v.raw?.name
+          v?.value ||
+          v?.label ||
+          v?.platform ||
+          v?.name ||
+          v?.raw?.fullName ||
+          v?.raw?.name ||
+          ""
       )
       .filter(Boolean)
       .join(", ");
   }
 
-  /* ---------- OBJECT ---------- */
   if (typeof value === "object") {
-    // 🔥 FINAL FIX: time + timezone
-    if (value.time && value.timezone) {
-      return formatTimeWithZone(value);
+    if (value.time && value.timezone) return formatTimeWithZone(value);
+    if (value.hours || value.minutes) {
+      const h = value.hours ? `${value.hours} hr${value.hours !== "1" ? "s" : ""}` : "";
+      const m = value.minutes && value.minutes !== "00" ? `${value.minutes} min` : "";
+      return [h, m].filter(Boolean).join(" ");
     }
-
     if (value.name) return value.name;
-
     if (value.raw) {
       return (
         value.raw.fullName ||
@@ -185,43 +236,35 @@ function formatFieldValue(value, field) {
         ""
       );
     }
-
-    if (value.hours || value.minutes) {
-      const h = value.hours
-        ? `${value.hours} hour${value.hours !== "1" ? "s" : ""}`
-        : "";
-      const m = value.minutes
-        ? `${value.minutes} minute${value.minutes !== "1" ? "s" : ""}`
-        : "";
-      return [h, m].filter(Boolean).join(" ");
-    }
-
-    return Object.values(value)
-      .filter((v) => typeof v === "string")
-      .join(" ");
   }
 
   return String(value);
 }
 
 /* ============================================================
-   Sorting Helpers
+   Sorting Helpers – improved for date arrays
 ============================================================ */
 function getSortValue(item, field, fieldConfig) {
   const raw = item.fieldsData?.[field] ?? item[field];
 
-  if (fieldConfig?.type === "date" || fieldConfig?.field === "date") {
-    return raw ? new Date(raw).getTime() : 0;
+  if (field === "date" || fieldConfig?.type === "date" || fieldConfig?.field === "date") {
+    const dates = Array.isArray(raw) ? raw : raw ? [raw] : [];
+    const valid = dates
+      .filter((d) => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d))
+      .map((d) => DateTime.fromFormat(d, "yyyy-MM-dd").toJSDate().getTime())
+      .filter((t) => !isNaN(t));
+
+    return valid.length > 0 ? Math.min(...valid) : Number.MAX_SAFE_INTEGER;
   }
 
   const formatted = formatFieldValue(raw, fieldConfig);
-  return formatted?.toLowerCase?.() ?? formatted;
+  return typeof formatted === "string" ? formatted.toLowerCase() : formatted;
 }
 
 function compare(a, b, order) {
   if (a === b) return 0;
-  if (a == null) return 1;
-  if (b == null) return -1;
+  if (a == null || a === Number.MAX_SAFE_INTEGER) return 1;
+  if (b == null || b === Number.MAX_SAFE_INTEGER) return -1;
   return (a < b ? -1 : 1) * (order === "asc" ? 1 : -1);
 }
 
@@ -238,7 +281,7 @@ export default function ListView({
   refreshing,
   onRefresh,
   modes,
-  sortBy,
+  sortBy = "name", // "name" | "date"
   actionsMenu = [],
 }) {
   const [search, setSearch] = useState("");
@@ -247,6 +290,7 @@ export default function ListView({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState("read");
   const [selectedItem, setSelectedItem] = useState(null);
+
   const rawFields = useMemo(() => {
     if (Array.isArray(fields)) return fields;
     if (fields && typeof fields === "object") return Object.values(fields);
@@ -262,10 +306,7 @@ export default function ListView({
   const displayFields = useMemo(() => {
     return mappedFields
       .filter((f) => f.displayInList !== false)
-      .sort(
-        (a, b) =>
-          (a.display?.order ?? 999) - (b.display?.order ?? 999)
-      );
+      .sort((a, b) => (a.display?.order ?? 999) - (b.display?.order ?? 999));
   }, [mappedFields]);
 
   const filteredData = useMemo(() => {
@@ -273,6 +314,7 @@ export default function ListView({
       displayFields.some((field) => {
         const raw = item.fieldsData?.[field.field] ?? item[field.field];
         return formatFieldValue(raw, field)
+          .toString()
           .toLowerCase()
           .includes(search.toLowerCase());
       })
@@ -280,19 +322,13 @@ export default function ListView({
 
     // Apply sorting
     if (sortBy === "date") {
-      // Sort by date (newest to oldest)
+  // Sort by newest date first
       rows = [...rows].sort((a, b) => {
-        const dateA = a.fieldsData?.date ?? a.date;
-        const dateB = b.fieldsData?.date ?? b.date;
-        
-        if (!dateA && !dateB) return 0;
-        if (!dateA) return 1;
-        if (!dateB) return -1;
-        
-        return new Date(dateB) - new Date(dateA);
+        const valA = getSortValue(a, "date", { field: "date" });
+        const valB = getSortValue(b, "date", { field: "date" });
+        return compare(valA, valB, "desc"); // newest → oldest
       });
-    } else if (sortField) {
-      // Manual column sorting
+} else if (sortField) {
       const fieldConfig = displayFields.find((f) => f.field === sortField);
       rows = [...rows].sort((a, b) =>
         compare(
@@ -302,12 +338,10 @@ export default function ListView({
         )
       );
     } else {
-      // Default: sort by name (alphabetically)
-      rows = [...rows].sort((a, b) => {
-        const nameA = getPrimaryText(a).toLowerCase();
-        const nameB = getPrimaryText(b).toLowerCase();
-        return nameA.localeCompare(nameB);
-      });
+      // Default: alphabetical by primary name
+      rows = [...rows].sort((a, b) =>
+        getPrimaryText(a).localeCompare(getPrimaryText(b))
+      );
     }
 
     return rows;
@@ -315,60 +349,57 @@ export default function ListView({
 
   return (
     <TableContainerStyled>
-     {/* Header */}
-<Grid 
-  container 
-  spacing={2} 
-  sx={{ 
-    mb: 2,
-    alignItems: "center",
-    justifyContent: "space-between",
-  }}
->
-  <Grid item xs={12} sm={8} md={6}>
-    <SearchField
-      size="small"
-      placeholder={`Search ${displayName}...`}
-      value={search}
-      onChange={(e) => setSearch(e.target.value)}
-      InputProps={{
-        startAdornment: (
-          <InputAdornment position="start">
-            <SearchIcon />
-          </InputAdornment>
-        ),
-      }}
-    />
-  </Grid>
+      {/* Header */}
+      <Grid
+        container
+        spacing={2}
+        sx={{
+          mb: 2,
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <Grid item xs={12} sm={8} md={6}>
+          <SearchField
+            size="small"
+            placeholder={`Search ${displayName}...`}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Grid>
 
-  <Grid item xs={12} sm="auto">
-    {modes.includes("add") && (
-    <Button
-      variant="contained"
-      startIcon={<AddIcon />}
-      onClick={() => {
-        setSelectedItem(null);
-        setDrawerMode("add");
-        setDrawerOpen(true);
-      }}
-      disabled={refreshing}
-      sx={{ 
-        minWidth: 150,
-        whiteSpace: "nowrap",
-      }}
-    >
-      Add {singularize(displayName)}
-    </Button>
-    )}
-  </Grid>
-</Grid>
+        <Grid item xs={12} sm="auto">
+          {modes.includes("add") && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => {
+                setSelectedItem(null);
+                setDrawerMode("add");
+                setDrawerOpen(true);
+              }}
+              disabled={refreshing}
+              sx={{ minWidth: 150, whiteSpace: "nowrap" }}
+            >
+              Add {singularize(displayName)}
+            </Button>
+          )}
+        </Grid>
+      </Grid>
 
       {/* Table */}
       <Box sx={{ flex: 1, overflowY: "auto" }}>
         <Table stickyHeader>
           <TableHead>
             <TableRow>
-              <TableCell />
+              <TableCell width={60} /> {/* Avatar column */}
               {displayFields.map((field) => (
                 <TableCell key={field.field}>
                   <TableSortLabel
@@ -421,7 +452,7 @@ export default function ListView({
                         style={{
                           width: 40,
                           height: 40,
-                          borderRadius: 4,
+                          borderRadius: 6,
                           objectFit: "cover",
                         }}
                       />
@@ -435,8 +466,9 @@ export default function ListView({
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          borderRadius: 1,
+                          borderRadius: 6,
                           fontWeight: 700,
+                          fontSize: "1rem",
                         }}
                       >
                         {initials}
@@ -446,20 +478,32 @@ export default function ListView({
 
                   {displayFields.map((field) => {
                     const rawValue = item.fieldsData?.[field.field] ?? item[field.field];
-                    const formattedValue = formatFieldValue(rawValue, field);
-                    const isStatusField = field.field.toLowerCase() === "status";
-                    const statusColor = isStatusField ? getStatusColor(formattedValue) : null;
+                    const formatted = formatFieldValue(rawValue, field);
+                    const isStatus = field.field.toLowerCase() === "status";
+                    const isDate = field.field.toLowerCase() === "date";
+                    const statusColor = isStatus ? getStatusColor(formatted) : null;
 
                     return (
                       <TableCell key={field.field}>
-                        {isStatusField && statusColor ? (
+                        {isStatus && statusColor ? (
                           <StatusChip
-                            label={formattedValue}
+                            label={formatted}
                             statuscolor={statusColor}
                             size="small"
                           />
+                        ) : isDate ? (
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontWeight: 500,
+                              color: "primary.main",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {formatted || "—"}
+                          </Typography>
                         ) : (
-                          formattedValue
+                          formatted || "—"
                         )}
                       </TableCell>
                     );

@@ -42,41 +42,76 @@ export default function LoginScreen({ appConfig, logo }) {
       >
         {/* Card wrapper with max width */}
         <View style={styles.cardWrapper}>
-          <Card style={styles.card} elevation={8}>
+          <Card
+              style={[
+                styles.card,
+                {
+                  backgroundColor: theme.dark
+                    ? theme.colors.elevation.level3
+                    : theme.colors.surface,
+                },
+              ]}
+              elevation={theme.dark ? 0 : 8}
+            >
             <Card.Content style={styles.cardContent}>
               {/* Logo inside card */}
               <View style={styles.logoContainer}>
                 <Image source={logo} style={styles.logo} resizeMode="contain" />
               </View>
 
-              <Text variant="headlineMedium" style={styles.title}>
+              <Text
+                  variant="headlineMedium"
+                  style={[
+                    styles.title,
+                    { color: theme.colors.onSurface }
+                  ]}
+                >
                 Welcome Back
               </Text>
-              <Text variant="bodyMedium" style={styles.subtitle}>
+              <Text
+                variant="bodyMedium"
+                style={[
+                  styles.subtitle,
+                  { color: theme.colors.onSurfaceVariant }
+                ]}
+              >
                 Sign in to continue
               </Text>
 
               <TextInput
-                label="Email"
-                value={email}
-                onChangeText={setEmail}
-                mode="outlined"
-                style={styles.input}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                left={<TextInput.Icon icon="email-outline" />}
-                outlineStyle={styles.inputOutline}
-              />
+              label="Email"
+              value={email}
+              onChangeText={setEmail}
+              mode="outlined"
+              style={[
+                styles.input,
+                { backgroundColor: theme.colors.surface }
+              ]}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              textColor={theme.colors.onSurface}
+              outlineColor={theme.colors.outline}
+              activeOutlineColor={theme.colors.primary}
+              left={<TextInput.Icon icon="email-outline" />}
+              outlineStyle={styles.inputOutline}
+            />
 
               <TextInput
                 label="Password"
                 value={password}
                 onChangeText={setPassword}
-                mode="outlined"
-                secureTextEntry
-                style={styles.input}
-                left={<TextInput.Icon icon="lock-outline" />}
-                outlineStyle={styles.inputOutline}
+               mode="outlined"
+              style={[
+                styles.input,
+                { backgroundColor: theme.colors.surface }
+              ]}
+              secureTextEntry
+              autoCapitalize="none"
+              textColor={theme.colors.onSurface}
+              outlineColor={theme.colors.outline}
+              activeOutlineColor={theme.colors.primary}
+              left={<TextInput.Icon icon="email-outline" />}
+              outlineStyle={styles.inputOutline}
               />
 
               <TouchableOpacity 
@@ -156,11 +191,12 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    textAlign: 'center',
-    marginBottom: 8,
-    fontWeight: '700',
-    color: '#1a1a1a',
-  },
+  textAlign: 'center',
+  marginBottom: 6,
+  fontWeight: '700',
+  letterSpacing: 0.3,
+},
+
 
   subtitle: {
     textAlign: 'center',

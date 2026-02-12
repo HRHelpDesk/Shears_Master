@@ -39,7 +39,7 @@ android {
         }
         bossCrowns {
             dimension "app"
-            applicationId "com.bosscrowns.influencer"
+            applicationId "com.bosscrowns.bcia"
             resValue "string", "app_name", "Boss Crowns Influencer"
             manifestPlaceholders.appIcon = "@mipmap/ic_bosscrowns"
         }
@@ -59,6 +59,14 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            if (project.hasProperty('KEYSTORE_PASSWORD')) {
+                storeFile file('my-upload-key.keystore')
+                storePassword project.property("KEYSTORE_PASSWORD")
+                keyAlias project.property("KEY_ALIAS")
+                keyPassword project.property("KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
@@ -66,7 +74,7 @@ android {
             signingConfig signingConfigs.debug 
         }
         release {
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }

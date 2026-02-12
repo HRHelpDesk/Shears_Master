@@ -13,6 +13,8 @@ import { createTheme } from './src/theme/createTheme';
 import { BASE_URL } from 'shears-shared/src/config/api';
 import { AuthProvider, AuthContext } from './src/context/AuthContext';
 import { getStripeTerminalToken } from 'shears-shared/src/Services/Authentication';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { Host } from 'react-native-portalize';
 
 const appConfig = getAppConfig(CURRENT_APP, CURRENT_WHITE_LABEL);
 
@@ -57,7 +59,6 @@ function TerminalProviderWrapper({ children }) {
   );
 }
 
-
 // -----------------------------------------------------
 
 export default function App() {
@@ -87,7 +88,11 @@ export default function App() {
           <TerminalProviderWrapper>
             <SafeAreaProvider>
               <PaperProvider theme={theme}>
-                <AppNavigator />
+                <Host>
+                  <BottomSheetModalProvider>
+                    <AppNavigator />
+                  </BottomSheetModalProvider>
+                </Host>
               </PaperProvider>
             </SafeAreaProvider>
           </TerminalProviderWrapper>

@@ -71,21 +71,28 @@ const getPrimaryText = (item) => {
 
 // Avatar resolver
 const getAvatarUrl = (item) => {
-  const data = item.fieldsData ? { ...item, ...item.fieldsData } : item;
+  if (!item) return null;
 
-  const paths = [
-    data.avatar,
-    data.avatar?.url,
-    data.avatar?.[0]?.url,
-    data.raw?.avatar,
-    data.raw?.avatar?.url,
-    data.raw?.avatar?.[0]?.url,
-  ];
-
-  for (const p of paths) {
-    if (typeof p === "string" && p) return p;
-    if (p?.url) return p.url;
+  // Check for avatar field
+  if (item.avatar) {
+    if (Array.isArray(item.avatar) && item.avatar[0]?.url) return item.avatar[0].url;
+    if (typeof item.avatar === "string") return item.avatar;
   }
+
+  // ⭐ Check for any field with "image" in the name (like productImage)
+  for (const [key, value] of Object.entries(item)) {
+    if (key.toLowerCase().includes('image')) {
+      if (Array.isArray(value) && value[0]?.url) return value[0].url;
+      if (typeof value === "string") return value;
+    }
+  }
+
+  // Check nested raw objects
+  for (const v of Object.values(item)) {
+    if (v?.raw?.avatar) return v.raw.avatar;
+    if (Array.isArray(v?.avatar) && v.avatar[0]?.url) return v.avatar[0].url;
+  }
+
   return null;
 };
 

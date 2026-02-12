@@ -13,6 +13,7 @@ import ListItemDetail from '../../BaseUI/ListItemDetail';
 const HOUR_HEIGHT = 120;
 const TIME_COLUMN_WIDTH = 70;
 const DAY_HEIGHT = HOUR_HEIGHT * 24;
+const MIN_EVENT_WIDTH = 200; // Minimum width for each event card
 
 const QUARTER_HOURS = Array.from({ length: 96 }, (_, i) => ({
   hour: Math.floor(i / 4),
@@ -44,6 +45,7 @@ const formatTime12 = (time) => {
   const hour12 = h % 12 || 12;
   return `${hour12}:${m.toString().padStart(2, '0')} ${period}`;
 };
+
 const layoutOverlaps = (events) => {
   const sorted = [...events].sort(
     (a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime)
@@ -85,6 +87,7 @@ export default function HourlyView({
   onDataRefresh
 }) {
   const scrollRef = useRef(null);
+  const horizontalScrollRef = useRef(null);
   const { token, user } = useContext(AuthContext);
 
   const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -96,7 +99,7 @@ export default function HourlyView({
     setLocalData(data);
   }, [data]);
 
-  // Filter events by visibility (admins see all, others see public + own private)
+  // Filter events by visibility
   const visibleData = useMemo(() => {
     if (!user) return [];
     return localData.filter(item => canSeeCalendarEvent(item, user));
@@ -147,23 +150,35 @@ export default function HourlyView({
     return layoutOverlaps(normalized);
   }, [visibleData, selectedDate]);
 
+  /* ------------------------------------------------------------
+     Calculate content width for horizontal scrolling
+  ------------------------------------------------------------ */
+  const contentWidth = useMemo(() => {
+    if (dayAppointments.length === 0) {
+      return window.innerWidth - TIME_COLUMN_WIDTH - 40;
+    }
+    
+    const maxCols = Math.max(...dayAppointments.map(a => a._cols), 1);
+    const calculatedWidth = maxCols * MIN_EVENT_WIDTH;
+    const availableWidth = window.innerWidth - TIME_COLUMN_WIDTH - 40;
+    
+    // Use the larger of calculated or available width
+    return Math.max(calculatedWidth, availableWidth);
+  }, [dayAppointments]);
+
   /* --------------------------------------------------
      Calendar fields configuration
   -------------------------------------------------- */
   const calendarFields = useMemo(() => {
-    // Find calendar fields in appConfig.mainNavigation
     const calendarNav = appConfig?.mainNavigation?.find(
       (r) => r.name?.toLowerCase() === 'calendar'
     );
-
-    console.log('Calendar Navigation Config:', calendarNav);
 
     let rawFields;
 
     if (calendarNav?.fields) {
       rawFields = calendarNav.fields;
     } else {
-      // Fallback to default calendar fields if not found in appConfig
       rawFields = [
         { field: 'date', label: 'Date', input: 'date' },
         { 
@@ -190,7 +205,6 @@ export default function HourlyView({
       ];
     }
 
-    // Use mapFields to normalize the field structure
     return mapFields(rawFields);
   }, [appConfig]);
 
@@ -208,12 +222,9 @@ export default function HourlyView({
     setSelectedAppointment(null);
     setDetailMode('read');
 
-    // Refresh calendar data
     if (onDataRefresh) {
-      // If parent provides refresh callback
       onDataRefresh();
     } else {
-      // Otherwise fetch directly
       const res = await getRecords({
         recordType: 'calendar',
         token,
@@ -225,7 +236,7 @@ export default function HourlyView({
 
   /* ------------------------------------------------------------
      Scroll to earliest event or 8am
------------------------------------------------------------- */
+  ------------------------------------------------------------ */
   useEffect(() => {
     if (dayAppointments.length > 0) {
       const firstEvent = dayAppointments[0];
@@ -236,7 +247,6 @@ export default function HourlyView({
         }
       }, 100);
     } else {
-      // Default to 8am if no events
       setTimeout(() => {
         if (scrollRef.current) {
           scrollRef.current.scrollTop = 8 * HOUR_HEIGHT;
@@ -247,7 +257,7 @@ export default function HourlyView({
 
   /* ------------------------------------------------------------
      Now line (only if viewing today)
------------------------------------------------------------- */
+  ------------------------------------------------------------ */
   const renderNowLine = () => {
     const now = DateTime.local();
     if (!now.hasSame(DateTime.fromJSDate(selectedDate), 'day')) return null;
@@ -259,7 +269,7 @@ export default function HourlyView({
         sx={{
           position: 'absolute',
           top,
-          left: TIME_COLUMN_WIDTH,
+          left: 0,
           right: 0,
           height: 2,
           bgcolor: 'red',
@@ -283,7 +293,7 @@ export default function HourlyView({
 
   /* =============================================================
      RENDER
-============================================================= */
+  ============================================================= */
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Date Header */}
@@ -318,104 +328,210 @@ export default function HourlyView({
             height: DAY_HEIGHT,
             minHeight: DAY_HEIGHT,
             position: 'relative',
+            display: 'flex',
           }}
         >
-          {QUARTER_HOURS.map(({ hour, minutes, index }) => {
-            const isHour = minutes === 0;
+          {/* TIME COLUMN (FIXED) */}
+          <Box
+            sx={{
+              width: TIME_COLUMN_WIDTH,
+              flexShrink: 0,
+              position: 'relative',
+            }}
+          >
+            {QUARTER_HOURS.map(({ hour, minutes, index }) => {
+              const isHour = minutes === 0;
 
-            return (
-              <Box
-                key={index}
-                sx={{
-                  height: HOUR_HEIGHT / 4,
-                  position: 'relative',
-                }}
-              >
-                {/* TIME LABEL */}
-                {isHour && (
-                  <Typography
+              return (
+                <Box
+                  key={index}
+                  sx={{
+                    height: HOUR_HEIGHT / 4,
+                    position: 'relative',
+                  }}
+                >
+                  {/* TIME LABEL */}
+                  {isHour && (
+                    <Typography
+                      sx={{
+                        position: 'absolute',
+                        left: 0,
+                        top: 2,
+                        width: TIME_COLUMN_WIDTH,
+                        textAlign: 'right',
+                        pr: 1,
+                        opacity: 0.6,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      {formatTime12(`${hour.toString().padStart(2, '0')}:00`)}
+                    </Typography>
+                  )}
+                </Box>
+              );
+            })}
+          </Box>
+
+          {/* HORIZONTAL SCROLL AREA FOR GRID LINES AND EVENTS */}
+          <Box
+            ref={horizontalScrollRef}
+            sx={{
+              flexGrow: 1,
+              overflowX: 'auto',
+              position: 'relative',
+              '&::-webkit-scrollbar': {
+                height: 8,
+              },
+              '&::-webkit-scrollbar-track': {
+                bgcolor: 'grey.100',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                bgcolor: 'grey.400',
+                borderRadius: 1,
+                '&:hover': {
+                  bgcolor: 'grey.500',
+                },
+              },
+            }}
+          >
+            <Box
+              sx={{
+                width: contentWidth,
+                height: DAY_HEIGHT,
+                position: 'relative',
+              }}
+            >
+              {/* GRID LINES */}
+              {QUARTER_HOURS.map(({ hour, minutes, index }) => {
+                const isHour = minutes === 0;
+
+                return (
+                  <Divider
+                    key={index}
                     sx={{
                       position: 'absolute',
+                      top: (index * HOUR_HEIGHT) / 4,
                       left: 0,
-                      top: 2,
-                      width: TIME_COLUMN_WIDTH,
-                      textAlign: 'right',
-                      pr: 1,
-                      opacity: 0.6,
-                      fontSize: 12,
-                      fontWeight: 600,
-                      pointerEvents: 'none',
+                      right: 0,
+                      opacity: isHour ? 0.9 : 0.4,
+                    }}
+                  />
+                );
+              })}
+
+              {renderNowLine()}
+
+              {/* APPOINTMENTS */}
+              {dayAppointments.map((appt) => {
+                const { top, height } = calculatePosition(
+                  appt.startTime,
+                  appt.endTime
+                );
+
+                const colWidth = contentWidth / appt._cols;
+
+                return (
+                  <Box
+                    key={appt._id}
+                    onClick={() => handleAppointmentClick(appt)}
+                    sx={{
+                      position: 'absolute',
+                      top,
+                      left: appt._col * colWidth,
+                      width: colWidth - 6,
+                      height,
+                      bgcolor: '#DBEAFE',
+                      borderLeft: '4px solid #3B82F6',
+                      borderRadius: 1,
+                      p: 1,
+                      zIndex: 10,
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        bgcolor: '#BFDBFE',
+                        transform: 'scale(1.02)',
+                        boxShadow: 2,
+                      },
                     }}
                   >
-                    {formatTime12(`${hour.toString().padStart(2, '0')}:00`)}
-                  </Typography>
-                )}
+                    <Typography fontSize={12} fontWeight={700}>
+                      {formatTime12(appt.startTime)} – {formatTime12(appt.endTime)}
+                    </Typography>
 
-                {/* GRID LINE */}
-                <Divider
-                  sx={{
-                    position: 'absolute',
-                    top: 0,
-                    left: TIME_COLUMN_WIDTH,
-                    right: 0,
-                    opacity: isHour ? 0.9 : 0.4,
-                  }}
-                />
-              </Box>
-            );
-          })}
+                    <Typography fontWeight={600} noWrap>
+                      {appt.contactName}
+                    </Typography>
 
-          {renderNowLine()}
+                    <Typography variant="caption" noWrap>
+                      {appt.serviceName}
+                    </Typography>
 
-          {/* APPOINTMENTS */}
-          {dayAppointments.map((appt) => {
-            const { top, height } = calculatePosition(
-              appt.startTime,
-              appt.endTime
-            );
+                    {/* ────────────────────────────────────────────────
+                        PRODUCTS LIST – only text, truncate with +more
+                    ──────────────────────────────────────────────── */}
+                    {appt.flatItem?.products?.length > 0 && (
+                      <Box
+                        sx={{
+                          mt: 1,
+                          pt: 0.5,
+                          borderTop: '1px solid',
+                          borderColor: 'divider',
+                          opacity: 0.9,
+                        }}
+                      >
+                        {(() => {
+                          // Estimate remaining space (subtract ~50–60px for time+name+platform+padding)
+                          const availablePx = height - 65;
+                          const pixelsPerLine = 16; // approx: fontSize ~13 + lineHeight + margin
+                          const maxFit = Math.max(0, Math.floor(availablePx / pixelsPerLine));
 
-            const colWidth =
-              (window.innerWidth - TIME_COLUMN_WIDTH - 40) / appt._cols;
+                          const shown = appt.flatItem.products.slice(0, maxFit);
+                          const remaining = appt.flatItem.products.length - shown.length;
 
-            return (
-              <Box
-                key={appt._id}
-                onClick={() => handleAppointmentClick(appt)}
-                sx={{
-                  position: 'absolute',
-                  top,
-                  left: TIME_COLUMN_WIDTH + appt._col * colWidth,
-                  width: colWidth - 6,
-                  height,
-                  bgcolor: '#DBEAFE',
-                  borderLeft: '4px solid #3B82F6',
-                  borderRadius: 1,
-                  p: 1,
-                  zIndex: 10,
-                  overflow: 'hidden',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    bgcolor: '#BFDBFE',
-                    transform: 'scale(1.02)',
-                    boxShadow: 2,
-                  },
-                }}
-              >
-                <Typography fontSize={12} fontWeight={700}>
-                  {formatTime12(appt.startTime)} – {formatTime12(appt.endTime)}
-                </Typography>
+                          return (
+                            <>
+                              {shown.map((prod, idx) => (
+                                <Typography
+                                  key={prod._id || idx}
+                                  variant="caption"
+                                  sx={{
+                                    display: 'block',
+                                    lineHeight: 1.3,
+                                    color: 'text.primary',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                  }}
+                                >
+                                  • {prod.productName || prod.name || 'Product'}
+                                </Typography>
+                              ))}
 
-                <Typography fontWeight={600} noWrap>
-                  {appt.contactName}
-                </Typography>
-
-                <Typography variant="caption" noWrap>
-                  {appt.serviceName}
-                </Typography>
-              </Box>
-            );
-          })}
+                              {remaining > 0 && (
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    color: 'primary.main',
+                                    fontWeight: 500,
+                                    mt: 0.5,
+                                  }}
+                                >
+                                  +{remaining} more
+                                </Typography>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </Box>
+                    )}
+                  </Box>
+                );
+              })}
+            </Box>
+          </Box>
         </Box>
       </Box>
 

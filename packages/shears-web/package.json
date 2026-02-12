@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:bcia":   "vite build --mode bcia",
+    "build:shear":  "vite build --mode shear",
+    "build:default": "vite build",    
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -20,6 +23,7 @@
     "js-cookie": "^3.0.5",
     "liquid-glass-react": "^1.1.1",
     "luxon": "^3.7.2",
+    "papaparse": "^5.5.3",
     "react": "19.1.1",
     "react-dom": "19.1.1",
     "react-router": "^7.9.4",

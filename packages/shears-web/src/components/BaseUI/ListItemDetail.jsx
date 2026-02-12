@@ -175,7 +175,7 @@ function RenderField({
     handleChange(fieldPath, []);
   }
 
-  if (isArray) {
+  if (isArray && inputType !== 'dateRange') {
 
      if (fieldDef.field === "comments") {
     return (
@@ -279,6 +279,7 @@ function RenderField({
                 <FieldMap.linkSelect
                   label={fieldDef.label}
                   value={entry}
+                  useUserId={fieldDef.inputConfig?.useUserId ?? true}
                   mode={mode}
                   recordTypeName={fieldDef.inputConfig?.recordType}
                   onChangeText={(nv) => {
@@ -315,6 +316,7 @@ function RenderField({
           item={item}
           recordTypeName={fieldDef.inputConfig?.recordType}
           onChangeText={(nv) => handleChange(fieldPath, nv)}
+          inputConfig={fieldDef.inputConfig}
         />
       </Box>
     );
@@ -415,6 +417,7 @@ function RenderField({
         defaultValue={defaultValue}
         multiline={fieldDef.input === "textarea"}
         required={fieldDef.required}
+        inputConfig={fieldDef.inputConfig}
       />
     </Box>
   );

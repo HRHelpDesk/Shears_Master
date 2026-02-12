@@ -16,6 +16,7 @@ export const RequestsAdminView = {
   sortBy:'date',
   component: 'BaseUI/SmartLists/AdminListView',
   mobileComponent: 'AdminListView',
+  actionsMenu: ['autofill'],
   modes:['read','edit','delete','add'],
 
   display: 3

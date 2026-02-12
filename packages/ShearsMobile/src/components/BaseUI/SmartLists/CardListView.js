@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useTheme, Chip, IconButton, Badge } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
+import { useWindowDimensions } from "react-native";
 
 import { mapFields } from "shears-shared/src/config/fieldMapper";
 
@@ -101,6 +102,8 @@ export default function CardListViewReadOnlyMobile({
   const theme = useTheme();
   const navigation = useNavigation();
   const [refreshing, setRefreshing] = useState(false);
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768; // tweak breakpoint if needed
 
   // Normalize schema fields
   const mappedFields = useMemo(() => mapFields(fields || []), [fields]);
@@ -147,7 +150,8 @@ export default function CardListViewReadOnlyMobile({
         />
       }
     >
-      {data.map((item) => {
+      <View style={isTablet ? styles.grid : null}>
+        {data.map((item) => {
         const imageUrl = getImage(item);
         const videoUrl = getVideoUrl(item);
         const title = getTitle(item);
@@ -168,7 +172,10 @@ export default function CardListViewReadOnlyMobile({
             onPress={() => handleCardPress(item)}
             style={[
               styles.card,
-              { backgroundColor: theme.colors.surface },
+              {
+                backgroundColor: theme.colors.surface,
+                width: isTablet ? "48%" : "100%",
+              },
             ]}
           >
             {(imageUrl || videoUrl) && (
@@ -269,7 +276,7 @@ export default function CardListViewReadOnlyMobile({
           </TouchableOpacity>
         );
       })}
-
+    </View>
       {data.length === 0 && (
         <View style={styles.emptyContainer}>
           <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 16 }}>
@@ -289,6 +296,11 @@ const styles = StyleSheet.create({
     padding: 12,
     paddingBottom: 80,
   },
+  grid: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  justifyContent: "space-between",
+},
   card: {
     borderRadius: 14,
     marginBottom: 16,

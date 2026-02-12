@@ -339,7 +339,7 @@ export default function CalendarView({
         visible={modalVisible}
         animationType="slide"
         onRequestClose={closeModal}
-        presentationStyle="pageSheet"
+        transparent={true} 
       >
         <View style={[
           styles.modalContainer, 
@@ -473,8 +473,17 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     elevation: 5,
   },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
   modalContainer: {
     flex: 1,
+    marginTop: 50, // Adjust this to control how much of the calendar shows behind
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    overflow: 'hidden',
   },
   modalHeader: {
     flexDirection: 'row',

@@ -1,7 +1,8 @@
-// src/components/ActionMenu/ActionMenu.jsx (web)
+// src/components/ActionMenu/ActionMenuWeb.jsx
 import React, { useState } from "react";
 import { Box, Typography, styled } from "@mui/material";
 import AutofillActionMenuItem from "./AutofillActionMenuItem";
+import BossCrownsProductActionWeb from "./InfluencerApp/BossCrownsProductActionWeb";
 
 const ActionContainer = styled(Box)(({ theme }) => ({
   marginTop: theme.spacing(1),
@@ -21,18 +22,21 @@ const ActionsRow = styled(Box)(({ theme }) => ({
   alignItems: "center",
 }));
 
-export default function ActionMenu({
+export default function ActionMenuWeb({
   item,
   recordType,
   recordTypeName,
   onAutofill,
-  fields,          // required for autofill
-  appConfig,       // required for field lookup fallback
-  actionsMenu = [], // array like ['autofill', ...]
+  onProductSelect,  // ⭐ NEW PROP
+  fields,
+  appConfig,
+  actionsMenu = [],
 }) {
   const [showAutofillModal, setShowAutofillModal] = useState(false);
+  const [showProductModal, setShowProductModal] = useState(false); // ⭐ NEW STATE
 
   const hasAutofill = actionsMenu.includes("autofill");
+  const hasBCProducts = actionsMenu.includes("bc-products"); // ⭐ NEW CHECK
 
   return (
     <ActionContainer>
@@ -41,7 +45,8 @@ export default function ActionMenu({
         sx={{ 
           mb: 1, 
           color: "text.secondary", 
-          opacity: 0.8 
+          opacity: 0.8,
+          fontWeight: 600,
         }}
       >
         Actions
@@ -61,12 +66,17 @@ export default function ActionMenu({
           />
         )}
 
+        {/* ⭐ BOSSCROWNS PRODUCT ACTION */}
+        {hasBCProducts && (
+          <BossCrownsProductActionWeb
+            visible={showProductModal}
+            onPress={() => setShowProductModal(true)}
+            onDismiss={() => setShowProductModal(false)}
+            onProductSelect={onProductSelect || onAutofill} // ⭐ Use same handler as autofill
+          />
+        )}
+
         {/* Future actions can go here */}
-        {/* {hasActions && !hasAutofill && (
-          <Typography variant="caption" color="text.secondary">
-            • More actions coming soon
-          </Typography>
-        )} */}
       </ActionsRow>
     </ActionContainer>
   );

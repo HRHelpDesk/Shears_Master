@@ -5,6 +5,7 @@ import SmartAvatarInput from "../../components/BaseUI/SmartWidgets/SmartAvatarIn
 import SmartFullCircleGauge from "../../components/BaseUI/SmartWidgets/SmartSemiCircleGauge";
 import SmartStatusWidget from "../../components/BaseUI/SmartWidgets/SmartStatusWidget";
 import SmartCommentWidget from "../../components/BaseUI/SmartWidgets/SmartCommentWidget";
+import SmartLivesScheduleWidget from "../../components/BaseUI/SmartWidgets/InfluencerApp/SmartLivesScheduleWidget";
 
 // import more widgets here...
 
@@ -14,5 +15,6 @@ export const WidgetMap = {
   appointmentSummary: SmartAppointmentsSummaryWidget,
   requestStatusWidget: SmartStatusWidget,
   comments: SmartCommentWidget,
+  todaysLives: SmartLivesScheduleWidget,
   // ... other widgets
 };

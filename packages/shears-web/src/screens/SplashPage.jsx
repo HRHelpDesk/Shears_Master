@@ -24,7 +24,7 @@ export default function SplashPage() {
       }}
     >
       <Typography variant="h4" gutterBottom>
-        Shear App Loading...
+        
       </Typography>
       <CircularProgress />
     </Box>

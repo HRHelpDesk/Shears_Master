@@ -6,16 +6,19 @@ import {
   Typography,
   TextField,
   Divider,
-  Collapse,
   CircularProgress,
   Alert,
   Avatar,
   IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { AuthContext } from '../../../context/AuthContext';
 import { updateRecord } from 'shears-shared/src/Services/Authentication';
-import { ExpandLess, ExpandMore, DeleteOutline } from '@mui/icons-material';
+import { DeleteOutline, Close, CommentOutlined } from '@mui/icons-material';
 
 export default function SmartCommentWidget({
   comments = [],
@@ -26,7 +29,7 @@ export default function SmartCommentWidget({
   const theme = useTheme();
   const { token, user } = useContext(AuthContext);
 
-  const [showComments, setShowComments] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [newCommentText, setNewCommentText] = useState('');
   const [localComments, setLocalComments] = useState(comments);
   const [saving, setSaving] = useState(false);
@@ -56,6 +59,17 @@ export default function SmartCommentWidget({
     if (!currentUserId) return false;
     const commentUserId = comment.user?._id || comment.user?.userId;
     return isAdmin || commentUserId === currentUserId;
+  };
+
+  const handleOpenDialog = () => {
+    setDialogOpen(true);
+    setError(null);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setNewCommentText('');
+    setError(null);
   };
 
   const handleAddComment = async () => {
@@ -97,7 +111,7 @@ export default function SmartCommentWidget({
     if (!canDeleteComment(commentToDelete) || saving) return;
 
     const updated = localComments.filter(
-      (c) => c.date !== commentToDelete.date // or use a unique ID if you have one
+      (c) => c.date !== commentToDelete.date
     );
     setLocalComments(updated);
 
@@ -109,7 +123,7 @@ export default function SmartCommentWidget({
       } catch (err) {
         console.error('Failed to delete comment:', err);
         setError('Failed to delete comment.');
-        setLocalComments(comments); // revert
+        setLocalComments(comments);
       }
     }
   };
@@ -125,110 +139,178 @@ export default function SmartCommentWidget({
   };
 
   return (
-    <Box sx={{ my: 3, marginTop:0 }}>
+    <Box sx={{ my: 3, marginTop: 0 }}>
+      {/* Toggle Button */}
       <Button
         variant="outlined"
         size="small"
-        onClick={() => setShowComments(!showComments)}
-        endIcon={showComments ? <ExpandLess /> : <ExpandMore />}
-        sx={{ textTransform: 'none', mb: showComments ? 2 : 0}}
+        onClick={handleOpenDialog}
+        startIcon={<CommentOutlined />}
+        sx={{ textTransform: 'none' }}
       >
         Comments ({localComments.length})
       </Button>
 
-      <Collapse in={showComments}>
-        <Box
-          sx={{
-            border: `1px solid ${theme.palette.divider}`,
+      {/* Dialog Modal */}
+      <Dialog
+        open={dialogOpen}
+        onClose={handleCloseDialog}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
             borderRadius: 2,
-            p: 2,
-            bgcolor: theme.palette.background.paper,
+            maxHeight: '80vh',
+          },
+        }}
+      >
+        {/* Header */}
+        <DialogTitle
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            pb: 2,
           }}
         >
+          <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>
+            Comments ({localComments.length})
+          </Typography>
+          <IconButton
+            onClick={handleCloseDialog}
+            size="small"
+            sx={{
+              color: theme.palette.text.secondary,
+            }}
+          >
+            <Close />
+          </IconButton>
+        </DialogTitle>
+
+        {/* Content */}
+        <DialogContent dividers sx={{ px: 3, py: 2 }}>
           {error && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {error}
             </Alert>
           )}
 
+          {/* Comments List */}
           {sortedComments.length === 0 ? (
-            <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 4 }}>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              align="center"
+              sx={{ py: 6, fontStyle: 'italic' }}
+            >
               No comments yet. Be the first to comment!
             </Typography>
           ) : (
-            sortedComments.map((comment, index) => {
-              const commentUser = comment.user || {};
-              const avatarUrl = commentUser.avatar || (commentUser._id === currentUserId ? currentUserAvatar : null);
-              const initials = commentUser.name?.charAt(0)?.toUpperCase() || '?';
-              const canDelete = canDeleteComment(comment);
+            <Box>
+              {sortedComments.map((comment, index) => {
+                const commentUser = comment.user || {};
+                const avatarUrl =
+                  commentUser.avatar ||
+                  (commentUser._id === currentUserId ? currentUserAvatar : null);
+                const initials = commentUser.name?.charAt(0)?.toUpperCase() || '?';
+                const canDelete = canDeleteComment(comment);
 
-              return (
-                <Box key={index} sx={{ mb: 2.5, position: 'relative' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-                    <Avatar
-                      src={avatarUrl}
-                      alt={commentUser.name || 'User'}
-                      sx={{
-                        width: 36,
-                        height: 36,
-                        bgcolor: avatarUrl ? 'transparent' : theme.palette.primary.main,
-                      }}
-                    >
-                      {!avatarUrl && initials}
-                    </Avatar>
+                return (
+                  <Box key={index} sx={{ mb: 2.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                      <Avatar
+                        src={avatarUrl}
+                        alt={commentUser.name || 'User'}
+                        sx={{
+                          width: 40,
+                          height: 40,
+                          bgcolor: avatarUrl ? 'transparent' : theme.palette.primary.main,
+                        }}
+                      >
+                        {!avatarUrl && initials}
+                      </Avatar>
 
-                    <Box sx={{ flex: 1 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.25, alignItems: 'center' }}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                          {commentUser.name || 'Anonymous'}
-                        </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography variant="caption" color="text.secondary">
-                            {formatDate(comment.date)}
+                      <Box sx={{ flex: 1 }}>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            mb: 0.5,
+                            alignItems: 'center',
+                          }}
+                        >
+                          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                            {commentUser.name || 'Anonymous'}
                           </Typography>
-                          {canDelete && (
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => handleDeleteComment(comment)}
-                              disabled={saving}
-                              sx={{ p: 0.5 }}
-                            >
-                              <DeleteOutline fontSize="small" />
-                            </IconButton>
-                          )}
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography variant="caption" color="text.secondary">
+                              {formatDate(comment.date)}
+                            </Typography>
+                            {canDelete && (
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => handleDeleteComment(comment)}
+                                disabled={saving}
+                                sx={{ p: 0.5 }}
+                              >
+                                <DeleteOutline fontSize="small" />
+                              </IconButton>
+                            )}
+                          </Box>
                         </Box>
+
+                        <Typography
+                          variant="body2"
+                          sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}
+                        >
+                          {comment.text}
+                        </Typography>
                       </Box>
-
-                      <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                        {comment.text}
-                      </Typography>
                     </Box>
+
+                    {index < sortedComments.length - 1 && <Divider sx={{ mt: 2.5 }} />}
                   </Box>
-
-                  {index < sortedComments.length - 1 && <Divider sx={{ mt: 2 }} />}
-                </Box>
-              );
-            })
+                );
+              })}
+            </Box>
           )}
+        </DialogContent>
 
-          <Box sx={{ mt: 3 }}>
-            <TextField
-              fullWidth
-              multiline
-              minRows={2}
-              placeholder="Write your comment..."
-              value={newCommentText}
-              onChange={(e) => setNewCommentText(e.target.value)}
+        {/* Add Comment Form */}
+        <DialogActions
+          sx={{
+            flexDirection: 'column',
+            alignItems: 'stretch',
+            px: 3,
+            py: 2,
+            gap: 1.5,
+          }}
+        >
+          <TextField
+            fullWidth
+            multiline
+            minRows={3}
+            placeholder="Write your comment..."
+            value={newCommentText}
+            onChange={(e) => setNewCommentText(e.target.value)}
+            variant="outlined"
+            size="small"
+            disabled={saving || !token}
+          />
+
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+            <Button
               variant="outlined"
-              size="small"
-              disabled={saving || !token}
-              sx={{ mb: 1.5 }}
-            />
-
+              size="medium"
+              onClick={handleCloseDialog}
+              disabled={saving}
+            >
+              Close
+            </Button>
             <Button
               variant="contained"
-              size="small"
+              size="medium"
               onClick={handleAddComment}
               disabled={!newCommentText.trim() || saving || (mode !== 'add' && !item?._id)}
               startIcon={saving ? <CircularProgress size={20} /> : null}
@@ -236,8 +318,8 @@ export default function SmartCommentWidget({
               {saving ? 'Posting...' : 'Post Comment'}
             </Button>
           </Box>
-        </Box>
-      </Collapse>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
