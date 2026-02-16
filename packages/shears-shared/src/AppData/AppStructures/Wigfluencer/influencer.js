@@ -105,6 +105,7 @@ const requestFields = {
       offLabel: 'Not Private',
     },
   },
+
  
 };
 
@@ -126,15 +127,41 @@ export const InfluencerApp = [
       /* ----------------------------------------------------------
          🟦 ADMIN DASHBOARD
       ---------------------------------------------------------- */
-      // {
-      //   name: "AdminDashboard",
-      //   permissions: ["admin"],
-      //   displayName: "Dashboard",
-      //   recordType: "dashboard",
-      //   icon: { ios: "rectangle.grid.2x2", android: "view-dashboard", web: "fa fa-th-large" },
-      //   views: [AdminDashboardView],
-      //   fields: []
-      // },
+      {
+        name: "AdminDashboard",
+        permissions: ["admin"],
+        displayName: "Dashboard",
+        recordType: "dashboard",
+        icon: { ios: "rectangle.grid.2x2", android: "view-dashboard", web: "fa fa-th-large" },
+        views: [AdminDashboardView],
+        fields: [
+          {
+            field: "welcomeMessage",
+            label: "",
+            type: "string",
+            display: { order: 1 }
+          },
+       
+        {
+          field: "weeklySnapshot",
+          label: "Upcoming Lives",
+          type: "string",
+          display: { order: 2 }
+        },
+        {
+          field: "todaysLives",
+          label: "Today's Lives",
+          type: "string",
+          display: { order: 1 }
+        },
+         {
+          field: "pendingRequests",
+          label: "Today's Lives",
+          type: "string",
+          display: { order: 1 }
+        },
+      ]
+      },
 
       /* ----------------------------------------------------------
          🟪 INFLUENCER DASHBOARD
@@ -222,7 +249,18 @@ export const InfluencerApp = [
       display: { order: 1 },
     },
   },
-       
+       {
+    field: "flashSales",
+    label: "Flash Sales Status",
+    type: "string",
+    input: "readOnlyBool",
+   displayInList: false,
+    display: { order: 7 },
+    inputConfig: {
+      onLabel: 'Flash Sales Provided',   // ✅ optional config for UI
+      offLabel: 'Flash Sales Pending',
+    },
+},
           {
             field: "notes",
             label: "Internal Notes",
@@ -307,6 +345,18 @@ export const InfluencerApp = [
       display: { order: 1 },
     },
   },
+  {
+    field: "flashSales",
+    label: "Flash Sales Status",
+    type: "string",
+    input: "readOnlyBool",
+   displayInList: false,
+    display: { order: 7 },
+    inputConfig: {
+      onLabel: 'Flash Sales Provided',   // ✅ optional config for UI
+      offLabel: 'Flash Sales Pending',
+    },
+},
        
       
           {
@@ -411,6 +461,7 @@ export const InfluencerApp = [
         name: "requests",
         permissions: ["influencer"],
         recordType: "requests",
+        enableSearch: true,
         displayName: "My Requests",
         icon: { ios: "list.bullet.rectangle.portrait", android: "clipboard-list", web: "fa fa-calendar-plus" },
         views: [RequestsInfluencerView],
@@ -452,6 +503,7 @@ export const InfluencerApp = [
       {
         name: "RequestsAdmin",
         permissions: ["admin"],
+        enableSearch: true,
         recordType: "requests",
         displayName: "Requests",
         icon: { ios: "checkmark.seal", android: "check-decagram", web: "fa fa-check-circle" },
@@ -488,7 +540,40 @@ export const InfluencerApp = [
         ]
       },
 
+     
+
       /* ----------------------------------------------------------
+         👤 PROFILE
+      ---------------------------------------------------------- */
+      // {
+      //   name: "Profile",
+      //   permissions: ["admin", "influencer"],
+      //   displayName: "Profile",
+      //   recordType: "profile",
+      //   icon: { ios: "person.crop.circle", android: "account-circle", web: "fa fa-user-circle" },
+      //   views: [ProfileView],
+      //   fields: [
+       
+      //     {
+      //       field: "todaysLives",
+      //       label: "Today's Lives",
+      //       type: "string",
+      //       display: { order: 2 }
+      //     }
+      //   ]
+      // }
+    ],
+
+    /* ----------------------------------------------------------
+       ⚙️ SETTINGS
+    ---------------------------------------------------------- */
+    settings: [InfluencerSettings],
+
+    /* ----------------------------------------------------------
+       🧩 SUB NAVIGATION
+    ---------------------------------------------------------- */
+    subNavigation: [
+       /* ----------------------------------------------------------
          🔔 NOTIFICATIONS
       ---------------------------------------------------------- */
       {
@@ -520,46 +605,7 @@ export const InfluencerApp = [
           }
         ]
       },
-
-      /* ----------------------------------------------------------
-         👤 PROFILE
-      ---------------------------------------------------------- */
-      {
-        name: "Profile",
-        permissions: ["admin", "influencer"],
-        displayName: "Profile",
-        recordType: "profile",
-        icon: { ios: "person.crop.circle", android: "account-circle", web: "fa fa-user-circle" },
-        views: [ProfileView],
-        fields: [
-          {
-            field: "avatar",
-            label: "Profile Image",
-            type: "string",
-            input: "image",
-            displayInList: false,
-            inputConfig: { maxPhotos: 1 },
-            display: { order: 1 }
-          },
-          {
-            field: "todaysLives",
-            label: "Today's Lives",
-            type: "string",
-            display: { order: 2 }
-          }
-        ]
-      }
     ],
-
-    /* ----------------------------------------------------------
-       ⚙️ SETTINGS
-    ---------------------------------------------------------- */
-    settings: [InfluencerSettings],
-
-    /* ----------------------------------------------------------
-       🧩 SUB NAVIGATION
-    ---------------------------------------------------------- */
-    subNavigation: [],
 
     /* ----------------------------------------------------------
        🏠 DEFAULT ROUTE

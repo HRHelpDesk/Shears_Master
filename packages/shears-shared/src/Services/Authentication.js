@@ -45,6 +45,26 @@ export async function updateUser(userId, updates, token) {
   }
 }
 
+// Get updated user:
+
+export const getCurrentUser = async (token) => {
+  try {
+    const response = await axios.get(
+      `${BASE_URL}/v1/auth/me`,
+      {
+        headers: {
+          ...getAppHeaders(),
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    return response.data.user;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to refresh user");
+  }
+};
+
 
 /* -------------------------------------------------------------
    AUTH: Login
@@ -535,106 +555,100 @@ export function buildCalendarAndNotification(request, user, notify = true, messa
 
   console.log("🔧 Normalizing request for calendar + notification:", request);
 
-  // ------------------------------
   // Extract influencer raw object
-  // ------------------------------
-  const influencer = request.influencerName?.raw || null;
+  const influencerRaw = request.influencerName?.raw || null;
 
-  // ------------------------------
-  // Extract start time + timezone
-  // ------------------------------
-  const startTime = request.startTimeWithZone?.time || null;
-  const timezone = request.startTimeWithZone?.timezone || null;
+  // Extract start time + timezone (keep as strings)
+  const startTime = request.startTimeWithZone?.time || null;     // e.g. "14:30"
+  const timezone  = request.startTimeWithZone?.timezone || null; // e.g. "America/New_York"
 
-  // ------------------------------
-  // Compute end time based on duration
-  // ------------------------------
+  // Compute end time as string (HH:mm)
   let endTime = null;
 
-  try {
-    if (startTime && request.duration) {
-      const [sh, sm] = startTime.split(":").map(Number);
+  if (startTime && request.duration) {
+    try {
+      const [startHour, startMin] = startTime.split(":").map(Number);
+      if (isNaN(startHour) || isNaN(startMin)) throw new Error("Invalid startTime format");
 
-      const addMinutes =
+      const durationMinutes =
         Number(request.duration.hours || 0) * 60 +
         Number(request.duration.minutes || 0);
 
-      const startDate = new Date(0, 0, 0, sh, sm);
-      const end = new Date(startDate.getTime() + addMinutes * 60000);
+      const startDate = new Date(1970, 0, 1, startHour, startMin);
+      const endDate   = new Date(startDate.getTime() + durationMinutes * 60_000);
 
-      endTime =
-        `${String(end.getHours()).padStart(2, "0")}:` +
-        `${String(end.getMinutes()).padStart(2, "0")}`;
+      endTime = `${String(endDate.getHours()).padStart(2, "0")}:${String(endDate.getMinutes()).padStart(2, "0")}`;
+    } catch (err) {
+      console.warn("⚠️ Failed to calculate endTime:", err.message);
+      // endTime remains null → you may want to decide whether to fail the whole function here
     }
-  } catch (err) {
-    console.warn("⚠️ Failed calculating endTime:", err);
   }
 
-  // ------------------------------
-  // Normalize Dates (single or multi)
-  // ------------------------------
+  // Normalize dates → always array of strings (assuming YYYY-MM-DD or similar)
   const dates = Array.isArray(request.date)
     ? request.date
     : request.date
-    ? [request.date]
-    : [];
+      ? [request.date]
+      : [];
 
-  if (!dates.length) {
-    console.warn("⚠️ No dates provided in request.");
+  if (!dates.length || dates.some(d => !d || typeof d !== 'string')) {
+    console.warn("⚠️ No valid dates provided in request.");
     return null;
   }
 
-  // ------------------------------
-  // CALENDAR RECORDS (one per date)
-  // ------------------------------
-  const calendarRecords = dates.map((date) => ({
-    date,
+  // ── Calendar records ── one per date, times as strings
+  const calendarRecords = dates.map(date => ({
+    date,                           // string – e.g. "2025-04-12"
     influencerName: request.influencerName,
     timeZoneTime: {
-      start: startTime,
-      end: endTime,
-      timezone,
+      start: startTime,             // string or null
+      end:   endTime,               // string or null
+      timezone,                     // string or null
     },
     platforms: request.socialMediaPlatforms || [],
-    assignedInfluencer: influencer
+    assignedInfluencer: influencerRaw
       ? {
-          userId: influencer.userId,
-          _id: influencer._id,
-          firstName: influencer.firstName,
-          lastName: influencer.lastName,
-          fullName: influencer.fullName,
-          avatar: influencer.avatar,
+          userId:    influencerRaw.userId,
+          _id:       influencerRaw._id,
+          firstName: influencerRaw.firstName,
+          lastName:  influencerRaw.lastName,
+          fullName:  influencerRaw.fullName,
+          avatar:    influencerRaw.avatar,
         }
       : null,
     products: request.products || [],
-    notes: request.notes || "",
+    notes:    request.notes || "",
+    flashSales: false,
     isPrivate: request.isPrivate || false,
     requestId: request._id,
     createdBy: user?.userId || null,
     createdAt: new Date().toISOString(),
   }));
 
-  console.log("📅 Built Calendar Records:", calendarRecords);
+  console.log(`📅 Built ${calendarRecords.length} calendar record(s)`);
 
-  // ------------------------------
-  // NOTIFICATION RECORD (Optional)
-  // ------------------------------
+  // ── Notification (optional) ──
   if (!notify) {
     console.log("⏭️ Notification skipped (notify = false)");
     return { calendarRecords, notificationRecord: null };
   }
 
+  if (!influencerRaw?.userId) {
+    console.warn("⚠️ Cannot create notification: missing influencer userId");
+    return { calendarRecords, notificationRecord: null };
+  }
+
   const notificationRecord = {
-    forUserId: influencer?.userId || null,
+    forUserId: influencerRaw.userId,           // ← fixed: using .raw.userId
     notificationName: "New Scheduled Live Assignment",
-    message,
+    message: message || "You have been assigned a new live event.", // fallback if message undefined
     relatedRecordId: request._id,
     relatedRecordType: "requests",
     createdAt: new Date().toISOString(),
     read: false,
   };
 
-  console.log("🔔 Built Notification Record:", notificationRecord);
+  console.log("🔔 Built notification record");
 
   return { calendarRecords, notificationRecord };
 }
@@ -662,7 +676,7 @@ export async function saveCalendarAndNotification(
     }
 
     const { calendarRecords, notificationRecord } = result;
-
+ console.log("Built calendar and notification records:", { calendarRecords, notificationRecord });
     console.log("📌 Saving Calendar Records...");
 
     // --------------------------------------------

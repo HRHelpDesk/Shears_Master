@@ -22,6 +22,7 @@ import SmartImageInput from "../../components/SmartInputs/SmartImageInput";
 import SmartVideoInput from "../../components/SmartInputs/SmartVideoInput";
 import SmartAutoUserInput from "../../components/SmartInputs/SmartAutoUserInput";
 import SmartReadOnlyField from "../../components/SmartInputs/SmartReadOnlyField";
+import SmartReadOnlyBool from "../../components/SmartInputs/SmartReadOnlyBool";
 import CalendarTimeZoneInput from "../../components/SmartInputs/CalendarTimeZoneInput";
 
 import {WidgetMap} from './WidgetMap'
@@ -46,6 +47,7 @@ export const FieldMap = {
   autoUser: SmartAutoUserInput,
   readOnly: SmartReadOnlyField,
   dateRange: DateRangePickerInput,
+  readOnlyBool: SmartReadOnlyBool,
 
   ...WidgetMap
 };

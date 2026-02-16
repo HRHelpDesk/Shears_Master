@@ -140,6 +140,7 @@ export default function HourlyView({
             recordType: item.recordType,
             subscriberId: item.subscriberId,
           },
+          flashSales: fd.flashSales || "",
         };
       })
       .filter(Boolean);
@@ -328,10 +329,19 @@ export default function HourlyView({
                     </Text>
                     <Text style={[
                       styles.eventSub,
-                      { color: theme.colors.onPrimaryContainer }
+                      { color: theme.colors.onPrimaryContainer}
                     ]}>
                       {appt.serviceName}
                     </Text>
+                     {appt.flashSales &&(
+                        <Text style={[
+                      styles.eventSub,
+                      { color: appt.flashSales === true ? '#019506' : '#FF9800', fontWeight:'bold'  }
+                    ]}>
+                      {appt.flashSales === true ? "Flash Sales Set": "Flash Sales Pending"}
+                    </Text>
+                     )}
+                   
 
                     {/* ────────────────────────────────────────────────
                         PRODUCTS – text list with truncation

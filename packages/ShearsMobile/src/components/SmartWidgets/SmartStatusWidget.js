@@ -51,6 +51,7 @@ export default function SmartStatusWidget({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    console.log(item)
     if (value && value !== selectedStatus) {
       setSelectedStatus(value);
     }

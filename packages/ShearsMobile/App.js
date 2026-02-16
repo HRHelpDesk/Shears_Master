@@ -15,7 +15,7 @@ import { AuthProvider, AuthContext } from './src/context/AuthContext';
 import { getStripeTerminalToken } from 'shears-shared/src/Services/Authentication';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { Host } from 'react-native-portalize';
-
+import {RefreshProvider} from './src/context/RefreshContext';
 const appConfig = getAppConfig(CURRENT_APP, CURRENT_WHITE_LABEL);
 
 // -----------------------------------------------------
@@ -85,6 +85,7 @@ export default function App() {
         urlScheme="shears"
       >
         <AuthProvider>
+              <RefreshProvider>
           <TerminalProviderWrapper>
             <SafeAreaProvider>
               <PaperProvider theme={theme}>
@@ -96,6 +97,7 @@ export default function App() {
               </PaperProvider>
             </SafeAreaProvider>
           </TerminalProviderWrapper>
+          </RefreshProvider>
         </AuthProvider>
       </StripeProvider>
     </GestureHandlerRootView>

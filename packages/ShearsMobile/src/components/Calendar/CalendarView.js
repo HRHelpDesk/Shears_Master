@@ -131,7 +131,7 @@ export default function CalendarView({
 
   const handlePrevMonth = () => animateMonthChange(subMonths(currentDate, 1), 1);
   const handleNextMonth = () => animateMonthChange(addMonths(currentDate, 1), -1);
-
+const dayHeight = Math.floor(daySize * 1.15);
   const animateMonthChange = (newDate, direction) => {
     Animated.timing(translateX, {
       toValue: direction * containerWidth,
@@ -255,7 +255,8 @@ export default function CalendarView({
             return (
               <TouchableOpacity
                 key={day.toISOString()}
-                style={[styles.dayCell, { width: daySize, height: daySize }]}
+                style={[styles.dayCell, { width: daySize, height: dayHeight }]}
+
                 onPress={() => openDayModal(day)}
                 activeOpacity={eventCount > 0 ? 0.7 : 1}
               >
@@ -288,27 +289,16 @@ export default function CalendarView({
                 </View>
 
                 {eventCount > 0 && (
-                  <View style={styles.eventContainer}>
-                    {[...Array(Math.min(eventCount, 3))].map((_, i) => (
-                      <View
-                        key={i}
-                        style={[
-                          styles.eventDot,
-                          { backgroundColor: theme.colors.primary },
-                        ]}
-                      />
-                    ))}
-                    {eventCount > 3 && (
-                      <Text
-                        style={{
-                          fontSize: 10,
-                          color: theme.colors.primary,
-                          marginLeft: 2,
-                        }}
-                      >
-                        +{eventCount - 3}
-                      </Text>
-                    )}
+                  <View style={[
+                    styles.eventBadge,
+                    { backgroundColor: theme.colors.primary }
+                  ]}>
+                    <Text style={[
+                      styles.eventBadgeText,
+                      { color: theme.colors.onPrimary }
+                    ]}>
+                      {eventCount}
+                    </Text>
                   </View>
                 )}
               </TouchableOpacity>
@@ -428,7 +418,7 @@ const styles = StyleSheet.create({
   },
   weekdays: {
     flexDirection: 'row',
-    marginBottom: 6,
+    marginVertical: 4,
   },
   weekdayText: {
     textAlign: 'center',
@@ -453,19 +443,19 @@ const styles = StyleSheet.create({
   dayText: {
     fontSize: 15,
   },
-  eventContainer: {
-    flexDirection: 'row',
-    marginTop: 4,
-    height: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  eventDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    marginHorizontal: 1,
-  },
+  eventBadge: {
+  minWidth: 18,
+  height: 18,
+  borderRadius: 9,
+  justifyContent: 'center',
+  alignItems: 'center',
+  marginTop: 2,
+  paddingHorizontal: 5,
+},
+eventBadgeText: {
+  fontSize: 10,
+  fontWeight: '600',
+},
   fab: {
     position: 'absolute',
     right: 20,

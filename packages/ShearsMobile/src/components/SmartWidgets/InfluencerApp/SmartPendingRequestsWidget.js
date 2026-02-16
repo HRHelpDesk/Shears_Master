@@ -1,4 +1,4 @@
-// src/components/SmartInputs/SmartLivesScheduleWidget.js
+// src/components/SmartInputs/SmartPendingRequestsWidget.js
 import React, { useState, useContext, useRef, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
@@ -7,12 +7,14 @@ import {
   StyleSheet,
   ActivityIndicator,
   Image,
+  TextInput as RNTextInput,
 } from 'react-native';
-import { useTheme, Divider, Chip, Switch } from 'react-native-paper';
+import { useTheme, Divider, Chip, Button, Switch, Portal, Dialog } from 'react-native-paper';
 import { AuthContext } from '../../../context/AuthContext';
-import { getRecords, updateRecord } from 'shears-shared/src/Services/Authentication';
+import { getRecords, updateRecord, saveCalendarAndNotification, sendRejectionNotification } from 'shears-shared/src/Services/Authentication';
 import { DateTime } from 'luxon';
 import { GlassActionButton } from '../../UI/GlassActionButton';
+import { formatDateValue } from 'shears-shared/src/utils/stringHelpers';
 
 import {
   BottomSheetModal,
@@ -21,25 +23,9 @@ import {
 import { useRefreshVersion } from '../../../context/RefreshContext';
 
 /* ============================================================
-   Time + Timezone Formatting (handles both structures)
+   Time + Timezone Formatting
 ============================================================ */
 function formatTimeWithZone(value) {
-  if (value?.start && value?.timezone) {
-    try {
-      const viewerTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const [hour, minute] = value.start.split(':').map(Number);
-
-      return DateTime.fromObject(
-        { hour, minute },
-        { zone: value.timezone }
-      )
-        .setZone(viewerTZ)
-        .toFormat('h:mm a');
-    } catch {
-      return value.start;
-    }
-  }
-
   if (value?.time && value?.timezone) {
     try {
       const viewerTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -60,30 +46,8 @@ function formatTimeWithZone(value) {
 }
 
 /* ============================================================
-   Duration Formatting & Calculation
+   Duration Formatting
 ============================================================ */
-function calculateDuration(timeZoneTime) {
-  if (!timeZoneTime?.start || !timeZoneTime?.end) return null;
-
-  try {
-    const [startHour, startMin] = timeZoneTime.start.split(':').map(Number);
-    const [endHour, endMin] = timeZoneTime.end.split(':').map(Number);
-
-    const startMinutes = startHour * 60 + startMin;
-    const endMinutes = endHour * 60 + endMin;
-    const totalMinutes = endMinutes - startMinutes;
-
-    if (totalMinutes <= 0) return null;
-
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-
-    return { hours: hours || '', minutes: minutes || '' };
-  } catch {
-    return null;
-  }
-}
-
 function formatDuration(duration) {
   if (!duration) return '—';
   
@@ -108,11 +72,28 @@ function formatDate(dateString) {
 }
 
 /* ============================================================
-   MAIN COMPONENT – Using BottomSheetModal
+   Status Colors
 ============================================================ */
-export default function SmartLivesScheduleWidget({
-  targetDate = null,
-  title = "Today's Scheduled Lives",
+const getStatusColor = (status, theme) => {
+  switch (status) {
+    case "Approved":
+      return theme.colors.success || "#4CAF50";
+    case "Rejected":
+      return theme.colors.error || "#F44336";
+    case "Completed":
+      return theme.colors.tertiary || "#9C27B0";
+    default:
+      return theme.colors.warning || "#FF9800";
+  }
+};
+
+const STATUS_OPTIONS = ["Pending", "Approved", "Rejected", "Completed"];
+
+/* ============================================================
+   MAIN COMPONENT
+============================================================ */
+export default function SmartPendingRequestsWidget({
+  title = "Pending Requests",
 }) {
   const theme = useTheme();
   const { token, user } = useContext(AuthContext);
@@ -121,63 +102,60 @@ export default function SmartLivesScheduleWidget({
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [updatingIds, setUpdatingIds] = useState(new Set());
+
+  // Status dialog state
+  const [statusDialogVisible, setStatusDialogVisible] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [selectedStatus, setSelectedStatus] = useState('Pending');
+  const [notify, setNotify] = useState(true);
+  const [rejectionMessage, setRejectionMessage] = useState('');
+  const [updating, setUpdating] = useState(false);
 
   const bottomSheetModalRef = useRef(null);
 
   const snapPoints = useMemo(() => ['60%', '90%'], []);
 
-const dateToShow = useMemo(() => {
-  if (targetDate) return targetDate;
+  const fetchData = useCallback(async () => {
+    if (!user?.subscriberId || !token) return;
 
-  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  return DateTime.now().setZone(tz).toISODate();
-}, [targetDate]);
+    setLoading(true);
+    setError(null);
 
+    try {
+      const res = await getRecords({
+        recordType: 'requests',
+        subscriberId: user.subscriberId,
+        token,
+        limit: 500,
+      });
+
+      setData(res || []);
+    } catch (err) {
+      console.error('Failed to fetch requests:', err);
+      setError('Failed to load pending requests.');
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.subscriberId, token]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!user?.subscriberId || !token) return;
-
-      setLoading(true);
-      setError(null);
-
-      try {
-        const res = await getRecords({
-          recordType: 'calendar',
-          subscriberId: user.subscriberId,
-          token,
-          limit: 500,
-        });
-
-        setData(res || []);
-      } catch (err) {
-        console.error('Failed to fetch calendar records:', err);
-        setError('Failed to load scheduled lives.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
-  }, [user?.subscriberId, token, refreshVersion]);
+  }, [fetchData, refreshVersion]);
 
-  const filteredLives = useMemo(() => {
+  const pendingRequests = useMemo(() => {
     return data
       .filter((item) => {
-        const itemDate = item.fieldsData?.date || item.date;
-        return itemDate === dateToShow;
+        const fd = item.fieldsData || item;
+        const innerFd = fd.fieldsData || fd;
+        const status = innerFd.status || fd.status || 'Pending';
+        return status === 'Pending';
       })
       .sort((a, b) => {
-        const fd_a = a.fieldsData || a;
-        const fd_b = b.fieldsData || b;
-
-        const timeA = fd_a.timeZoneTime?.start || fd_a.startTimeWithZone?.time || '';
-        const timeB = fd_b.timeZoneTime?.start || fd_b.startTimeWithZone?.time || '';
-
-        return timeA.localeCompare(timeB);
+        const dateA = new Date(a.createdAt || 0);
+        const dateB = new Date(b.createdAt || 0);
+        return dateB - dateA; // newest first
       });
-  }, [data, dateToShow]);
+  }, [data]);
 
   const handlePresentModal = useCallback(() => {
     bottomSheetModalRef.current?.present();
@@ -187,68 +165,31 @@ const dateToShow = useMemo(() => {
     bottomSheetModalRef.current?.dismiss();
   }, []);
 
-  const handleFlashSalesToggle = useCallback(async (item) => {
-    const itemId = item._id;
-    const currentValue = item.fieldsData?.flashSales || false;
-    const newValue = !currentValue;
-
-    // Add to updating set
-    setUpdatingIds(prev => new Set(prev).add(itemId));
-
-    try {
-      // Update the record
-      const updatedFieldsData = {
-        ...item.fieldsData,
-        flashSales: newValue,
-      };
-
-      await updateRecord(itemId,  updatedFieldsData, token);
-
-      // Update local state
-      setData(prevData =>
-        prevData.map(dataItem =>
-          dataItem._id === itemId
-            ? {
-                ...dataItem,
-                fieldsData: {
-                  ...dataItem.fieldsData,
-                  flashSales: newValue,
-                },
-              }
-            : dataItem
-        )
-      );
-    } catch (err) {
-      console.error('Failed to update flashSales:', err);
-      setError('Failed to update flash sales status.');
-    } finally {
-      // Remove from updating set
-      setUpdatingIds(prev => {
-        const next = new Set(prev);
-        next.delete(itemId);
-        return next;
-      });
-    }
-  }, [token]);
-
   const getInfluencerName = (item) => {
     const fd = item.fieldsData || item;
+    const innerFd = fd.fieldsData || fd;
     return (
+      innerFd.influencerName?.name ||
+      innerFd.influencerName?.raw?.fullName ||
+      (innerFd.influencerName?.raw?.firstName && innerFd.influencerName?.raw?.lastName
+        ? `${innerFd.influencerName.raw.firstName} ${innerFd.influencerName.raw.lastName}`
+        : null) ||
       fd.influencerName?.name ||
       fd.influencerName?.raw?.fullName ||
-      (fd.influencerName?.raw?.firstName + ' ' + fd.influencerName?.raw?.lastName) ||
       'Unknown'
     );
   };
 
   const getInfluencerAvatar = (item) => {
     const fd = item.fieldsData || item;
-    return fd.influencerName?.raw?.avatar || null;
+    const innerFd = fd.fieldsData || fd;
+    return innerFd.influencerName?.raw?.avatar || fd.influencerName?.raw?.avatar || null;
   };
 
   const getProducts = (item) => {
     const fd = item.fieldsData || item;
-    const products = fd.products || [];
+    const innerFd = fd.fieldsData || fd;
+    const products = innerFd.products || fd.products || [];
     if (products.length === 0) return [];
     return products.map(
       (p) => p.name || p.productName || p.raw?.productName || 'Unnamed Product'
@@ -257,20 +198,117 @@ const dateToShow = useMemo(() => {
 
   const getPlatforms = (item) => {
     const fd = item.fieldsData || item;
-    const platforms = fd.platforms || fd.socialMediaPlatforms || [];
+    const innerFd = fd.fieldsData || fd;
+    const platforms = innerFd.socialMediaPlatforms || fd.socialMediaPlatforms || [];
     return platforms.map((p) => p.platform).filter(Boolean);
   };
 
   const getTimeData = (item) => {
     const fd = item.fieldsData || item;
-    return fd.timeZoneTime || fd.startTimeWithZone;
+    const innerFd = fd.fieldsData || fd;
+    return innerFd.startTimeWithZone || fd.startTimeWithZone;
   };
 
   const getDuration = (item) => {
     const fd = item.fieldsData || item;
-    if (fd.duration) return fd.duration;
-    if (fd.timeZoneTime) return calculateDuration(fd.timeZoneTime);
-    return null;
+    const innerFd = fd.fieldsData || fd;
+    return innerFd.duration || fd.duration || null;
+  };
+
+  const getRequestDates = (item) => {
+    const fd = item.fieldsData || item;
+    const innerFd = fd.fieldsData || fd;
+    return innerFd.date || fd.date || [];
+  };
+
+  const getStatus = (item) => {
+    const fd = item.fieldsData || item;
+    const innerFd = fd.fieldsData || fd;
+    return innerFd.status || fd.status || 'Pending';
+  };
+
+  const getNotes = (item) => {
+    const fd = item.fieldsData || item;
+    const innerFd = fd.fieldsData || fd;
+    return innerFd.notes || fd.notes || '';
+  };
+
+  const getFieldsData = (item) => {
+    const fd = item.fieldsData || item;
+    return fd.fieldsData || fd;
+  };
+
+  const handleOpenStatusDialog = (item) => {
+    setSelectedItem(item);
+    setSelectedStatus(getStatus(item));
+    setNotify(true);
+    setRejectionMessage('');
+    setStatusDialogVisible(true);
+  };
+
+  const handleCloseStatusDialog = () => {
+    setStatusDialogVisible(false);
+    setSelectedItem(null);
+    setRejectionMessage('');
+  };
+
+  const handleConfirmStatus = async () => {
+    if (!selectedItem || updating) return;
+
+    try {
+      setUpdating(true);
+
+      // Get the current fieldsData (flattened)
+      const currentFieldsData = getFieldsData(selectedItem);
+      const dates = getRequestDates(selectedItem);
+
+      // Create updated fieldsData with new status
+      const updatedFieldsData = {
+        ...currentFieldsData,
+        status: selectedStatus,
+      };
+
+      // Add rejection message if rejecting
+      if (selectedStatus === "Rejected" && rejectionMessage.trim() !== "") {
+        updatedFieldsData.rejectionMessage = rejectionMessage.trim();
+        
+        // Send rejection notification
+        await sendRejectionNotification(
+          { ...selectedItem, fieldsData: updatedFieldsData },
+          user,
+          token,
+          rejectionMessage.trim()
+        );
+      }
+
+      // Update the record with ONLY fieldsData
+      await updateRecord(selectedItem._id, updatedFieldsData, token);
+
+      // If approved, create calendar entry and send notification
+      if (selectedStatus === "Approved" && dates.length > 0) {
+        const message = `Your request for ${dates
+          .map((d) => formatDateValue(d))
+          .join(", ")} has been approved. Please check your calendar for the details.`;
+console.log("selectedItem for calendar:", selectedItem);
+        await saveCalendarAndNotification(
+          updatedFieldsData,
+          user,
+          token,
+          notify,
+          message
+        );
+      }
+
+      // Close dialog and refresh data
+      handleCloseStatusDialog();
+      fetchData();
+
+    } catch (err) {
+      console.error("Status update failed:", err);
+      setError('Failed to update status. Please try again.');
+    } finally {
+      setUpdating(false);
+    }
   };
 
   return (
@@ -281,18 +319,18 @@ const dateToShow = useMemo(() => {
         disabled={loading}
       >
         <Text style={[styles.toggleText, { color: theme.colors.primary }]}>
-          {title} ({filteredLives.length})
+          {title} ({pendingRequests.length})
         </Text>
         {loading ? (
           <ActivityIndicator size="small" color={theme.colors.primary} />
         ) : (
-          <Text style={[styles.toggleIcon, { color: theme.colors.primary }]}>📅</Text>
+          <Text style={[styles.toggleIcon, { color: theme.colors.primary }]}>📋</Text>
         )}
       </TouchableOpacity>
 
       <BottomSheetModal
         ref={bottomSheetModalRef}
-        index={1}                        // opens to first snap point
+        index={1}
         snapPoints={snapPoints}
         enablePanDownToClose={true}
         enableDismissOnClose={true}
@@ -317,7 +355,7 @@ const dateToShow = useMemo(() => {
         <View style={styles.sheetHeader}>
           <View style={styles.headerContent}>
             <Text style={[styles.sheetTitle, { color: theme.colors.onSurface }]}>
-              {title} ({filteredLives.length})
+              {title} ({pendingRequests.length})
             </Text>
             <GlassActionButton
               icon="close"
@@ -336,19 +374,19 @@ const dateToShow = useMemo(() => {
         )}
 
         <BottomSheetScrollView
-          contentContainerStyle={styles.livesContent}
+          contentContainerStyle={styles.requestsContent}
           showsVerticalScrollIndicator={true}
         >
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={theme.colors.primary} />
             </View>
-          ) : filteredLives.length === 0 ? (
+          ) : pendingRequests.length === 0 ? (
             <Text style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}>
-              No scheduled lives for {formatDate(dateToShow)}
+              No pending requests
             </Text>
           ) : (
-            filteredLives.map((item, index) => {
+            pendingRequests.map((item, index) => {
               const influencerName = getInfluencerName(item);
               const avatar = getInfluencerAvatar(item);
               const initials = influencerName
@@ -358,16 +396,17 @@ const dateToShow = useMemo(() => {
                 .slice(0, 2)
                 .toUpperCase();
 
-              const fd = item.fieldsData || item;
               const platforms = getPlatforms(item);
               const products = getProducts(item);
               const timeData = getTimeData(item);
               const duration = getDuration(item);
-              const isUpdating = updatingIds.has(item._id);
+              const dates = getRequestDates(item);
+              const status = getStatus(item);
+              const notes = getNotes(item);
 
               return (
                 <View key={item._id || index}>
-                  <View style={[styles.liveCard, { backgroundColor: theme.colors.background }]}>
+                  <View style={[styles.requestCard, { backgroundColor: theme.colors.background }]}>
                     <View style={styles.cardHeader}>
                       <View style={styles.influencerRow}>
                         {avatar ? (
@@ -407,7 +446,7 @@ const dateToShow = useMemo(() => {
                               { color: theme.colors.onSurfaceVariant },
                             ]}
                           >
-                            {formatDate(fd.date)}
+                            {dates.map((d) => formatDate(d)).join(', ')}
                           </Text>
                         </View>
                       </View>
@@ -453,29 +492,6 @@ const dateToShow = useMemo(() => {
                       </View>
                     </View>
 
-                    {/* Flash Sales Toggle */}
-                    <View style={styles.flashSalesContainer}>
-                      <View style={styles.flashSalesRow}>
-                        <Text
-                          style={[
-                            styles.flashSalesLabel,
-                            { color: theme.colors.onSurface },
-                          ]}
-                        >
-                          Flash Sales
-                        </Text>
-                        {isUpdating ? (
-                          <ActivityIndicator size="small" color={theme.colors.primary} />
-                        ) : (
-                          <Switch
-                            value={fd.flashSales || false}
-                            onValueChange={() => handleFlashSalesToggle(item)}
-                            color={theme.colors.primary}
-                          />
-                        )}
-                      </View>
-                    </View>
-
                     {platforms.length > 0 && (
                       <View style={styles.platformsContainer}>
                         <Text
@@ -509,7 +525,7 @@ const dateToShow = useMemo(() => {
                             { color: theme.colors.onSurfaceVariant },
                           ]}
                         >
-                          Flash Sale Products ({products.length})
+                          Requested Products ({products.length})
                         </Text>
                         {products.map((productName, idx) => (
                           <Text
@@ -524,9 +540,63 @@ const dateToShow = useMemo(() => {
                         ))}
                       </View>
                     )}
+
+                    {notes && (
+                      <View style={styles.notesContainer}>
+                        <Text
+                          style={[
+                            styles.sectionLabel,
+                            { color: theme.colors.onSurfaceVariant },
+                          ]}
+                        >
+                          Notes
+                        </Text>
+                        <Text
+                          style={[
+                            styles.notesText,
+                            { color: theme.colors.onSurface },
+                          ]}
+                        >
+                          {notes}
+                        </Text>
+                      </View>
+                    )}
+
+                    <View style={styles.statusWidgetContainer}>
+                      <Text
+                        style={[
+                          styles.statusLabel,
+                          { color: theme.colors.onSurfaceVariant },
+                        ]}
+                      >
+                        Request Status
+                      </Text>
+                      <TouchableOpacity
+                        style={[
+                          styles.statusButton,
+                          { 
+                            borderColor: getStatusColor(status, theme),
+                            backgroundColor: `${getStatusColor(status, theme)}10`,
+                          }
+                        ]}
+                        onPress={() => handleOpenStatusDialog(item)}
+                      >
+                        <Text
+                          style={[
+                            styles.statusButtonText,
+                            { color: getStatusColor(status, theme) },
+                          ]}
+                        >
+                          {status}
+                        </Text>
+                        <Text style={[styles.statusButtonIcon, { color: getStatusColor(status, theme) }]}>
+                          ⌄
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
 
-                  {index < filteredLives.length - 1 && (
+                  {index < pendingRequests.length - 1 && (
                     <Divider style={{ marginVertical: 12 }} />
                   )}
                 </View>
@@ -535,6 +605,97 @@ const dateToShow = useMemo(() => {
           )}
         </BottomSheetScrollView>
       </BottomSheetModal>
+
+      {/* Status Update Dialog */}
+      <Portal>
+        <Dialog
+          visible={statusDialogVisible}
+          onDismiss={handleCloseStatusDialog}
+          style={{ backgroundColor: theme.colors.surface, borderRadius:5 }}
+        >
+          <Dialog.Title>Update Status</Dialog.Title>
+          <Dialog.Content>
+            <View style={{ marginBottom: 16 }}>
+              {STATUS_OPTIONS.map((statusOption) => (
+                <TouchableOpacity
+                  key={statusOption}
+                  style={[
+                    styles.statusOption,
+                    {
+                      backgroundColor:
+                        statusOption === selectedStatus
+                          ? `${theme.colors.primary}15`
+                          : 'transparent',
+                      borderColor:
+                        statusOption === selectedStatus
+                          ? theme.colors.primary
+                          : theme.colors.outline,
+                    },
+                  ]}
+                  onPress={() => setSelectedStatus(statusOption)}
+                >
+                  <Text
+                    style={[
+                      styles.statusOptionText,
+                      {
+                        color:
+                          statusOption === selectedStatus
+                            ? theme.colors.primary
+                            : theme.colors.onSurface,
+                        fontWeight: statusOption === selectedStatus ? '600' : '400',
+                      },
+                    ]}
+                  >
+                    {statusOption}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {selectedStatus === 'Rejected' && (
+              <View style={{ marginBottom: 16 }}>
+                <Text style={{ marginBottom: 6, fontWeight: '500' }}>
+                  Rejection Message
+                </Text>
+                <RNTextInput
+                  placeholder="Enter message..."
+                  value={rejectionMessage}
+                  onChangeText={setRejectionMessage}
+                  editable={!updating}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: theme.colors.outline,
+                    borderRadius: 8,
+                    padding: 10,
+                    minHeight: 80,
+                    textAlignVertical: 'top',
+                    backgroundColor: theme.colors.background,
+                  }}
+                  multiline
+                />
+              </View>
+            )}
+
+            <View style={styles.switchRow}>
+              <Text style={{ flex: 1 }}>Send notification?</Text>
+              <Switch
+                value={notify}
+                onValueChange={setNotify}
+                disabled={updating}
+                color={theme.colors.primary}
+              />
+            </View>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={handleCloseStatusDialog} disabled={updating}>
+              Cancel
+            </Button>
+            <Button onPress={handleConfirmStatus} disabled={updating} loading={updating}>
+              Save
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
     </>
   );
 }
@@ -577,7 +738,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
-  livesContent: {
+  requestsContent: {
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 40,
@@ -592,7 +753,7 @@ const styles = StyleSheet.create({
     paddingVertical: 48,
     fontSize: 15,
   },
-  liveCard: {
+  requestCard: {
     borderRadius: 12,
     padding: 16,
   },
@@ -650,22 +811,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  flashSalesContainer: {
-    marginBottom: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.03)',
-  },
-  flashSalesRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  flashSalesLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
   platformsContainer: {
     marginBottom: 16,
   },
@@ -688,11 +833,64 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   productsContainer: {
-    marginTop: 4,
+    marginBottom: 16,
   },
   productText: {
     fontSize: 14,
     lineHeight: 22,
     marginBottom: 4,
+  },
+  notesContainer: {
+    marginBottom: 16,
+  },
+  notesText: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontStyle: 'italic',
+  },
+  statusWidgetContainer: {
+    marginTop: 8,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  statusLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  statusButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  statusButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  statusButtonIcon: {
+    fontSize: 18,
+  },
+  statusOption: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  statusOptionText: {
+    fontSize: 16,
+  },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
   },
 });

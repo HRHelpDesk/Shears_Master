@@ -1,3 +1,4 @@
+import { ProfileView } from "../../view-schema/profile-view";
 import { Users } from "../../view-schema/user-view";
 import { AnnouncementsAdmin } from "./view-schema/Announcements";
 import { ProductsView } from "./view-schema/Products";
@@ -84,6 +85,98 @@ export const InfluencerSettings = [
         },
         display: { order: 5 }
       }
+    ]
+  },
+
+/* ----------------------------------------------------------
+     📢 Edit Profile
+  ---------------------------------------------------------- */
+
+  {
+    name: 'edit-profile',
+    displayName: 'Edit Profile',
+    recordType: 'users',
+    permissions: ['influencer','admin'], 
+    icon: { ios: 'person.crop.circle', android: 'account-circle', web: 'fa fa-user-circle' },
+    views: [ProfileView],
+    fields: [
+         {
+            field: "avatar",
+            label: "Profile Image",
+            type: "string",
+            input: "image",
+            displayInList: false,
+            inputConfig: { maxPhotos: 1 },
+            display: { order: 1 }
+          },
+      {
+        field: 'firstName',
+        label: 'First Name',
+        type: 'string',
+        input: 'text',
+        required: true,
+        validations: {
+          minLength: 2,
+          maxLength: 50,
+        },
+        display: { 
+          placeholder: "Enter User's First Name", 
+          order: 1 
+        }
+      },
+      {
+        field: 'lastName',
+        label: 'Last Name',
+        type: 'string',
+        input: 'text',
+        required: true,
+        validations: {
+          minLength: 2,
+          maxLength: 50,
+        },
+        display: { 
+          placeholder: "Enter User's Last Name", 
+          order: 2 
+        }
+      },
+      {
+        field: 'singleEmail',
+        override:{
+          field: 'email',
+        },
+        label: 'Email Address',
+        type: 'string',
+        input: 'email',
+        required: true,
+        validations: {
+          minLength: 2,
+          maxLength: 100,
+          pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+        },
+        display: { 
+          placeholder: 'Enter Email Address', 
+          order: 3 
+        }
+      },
+       {
+            field: 'socialMediaHandles',
+            override: {
+              required: true,
+              display: { order: 4 },
+              arrayConfig: { minItems: 1 },
+            },
+          },
+      // {
+      //   field: 'role',
+      //   label: 'User Role',
+      //   type: 'string',
+      //   input: 'select',
+      //   required: true,
+      //   inputConfig: {
+      //     options: ['admin', 'influencer']
+      //   },
+      //   display: { order: 5 }
+      // }
     ]
   },
 

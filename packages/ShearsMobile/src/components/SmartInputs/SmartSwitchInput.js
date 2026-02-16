@@ -33,7 +33,7 @@ console.log('inputConfig',inputConfig)
             { color: theme.colors.text },
           ]}
         >
-          {value === true ? "Yes" : value === false ? "No" : (
+          {value === true ? inputConfig.onLabel ? inputConfig.onLabel : "Enabled" : value === false ? inputConfig.offLabel ? inputConfig.offLabel : "Disabled" : (
             <Text style={{ color: theme.colors.onSurfaceVariant, fontStyle: "italic" }}>
               Not set
             </Text>

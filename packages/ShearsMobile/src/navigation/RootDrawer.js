@@ -1,18 +1,17 @@
 // src/navigation/RootDrawer.js
-import React, { useContext, useEffect } from 'react';
+import React, { useContext, useEffect, useMemo } from 'react';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import MainNavigator from './MainNavigator';
 import SettingsStack from './SettingsNavigator';
 import { Icon, useTheme } from 'react-native-paper';
 import BasePage from '../screens/BasePage';
 import { AuthContext } from '../context/AuthContext';
-import { 
-  DrawerContentScrollView, 
+import {
+  DrawerContentScrollView,
   DrawerItemList,
-  DrawerItem 
 } from "@react-navigation/drawer";
 import SmartProfileCard from "../components/SmartWidgets/SmartProfileCard";
-import { View, StyleSheet } from 'react-native';
+import { View } from 'react-native';
 
 const Drawer = createDrawerNavigator();
 
@@ -30,22 +29,15 @@ function CustomDrawerContent(props) {
       }}
       style={{ backgroundColor: theme.colors.surface }}
     >
-      {/* Profile Card */}
       <SmartProfileCard user={user} />
-
       <View style={{ height: 20 }} />
-
-      {/* Drawer Items - main list */}
-      <DrawerItemList 
-        {...props} 
-        itemStyle={{ 
+      <DrawerItemList
+        {...props}
+        itemStyle={{
           borderRadius: 8,
           marginHorizontal: 8,
           marginVertical: 2,
         }}
-        activeTintColor={theme.colors.primary}
-        inactiveTintColor={theme.colors.onSurfaceVariant}
-        activeBackgroundColor={theme.colors.primaryContainer}
       />
     </DrawerContentScrollView>
   );
@@ -66,13 +58,54 @@ export default function RootDrawer({ appConfig }) {
   const hasSubNav = appConfig.subNavigation?.length > 0;
   const subNavOnly = !hasMainNav && hasSubNav;
 
-  const filteredSubNav = (appConfig.subNavigation || []).filter(item => {
-    if (!item.permissions) return true;
-    return item.permissions.includes(user.role);
-  });
+  const filteredSubNav = useMemo(() => {
+    return (appConfig.subNavigation || []).filter(item => {
+      if (!item.permissions) return true;
+      return item.permissions.includes(user.role);
+    });
+  }, [appConfig.subNavigation, user.role]);
 
   const firstSubNav = filteredSubNav[0];
 
+  /* ===========================================================
+     🔥 BUILD VIEW DATA (MATCHES MainNavigator EXACTLY)
+  =========================================================== */
+  const buildViewData = (routes = []) =>
+    routes.reduce((acc, route) => {
+      const recordType = route.recordType || null;
+
+      acc[route.name] = route.views
+        ? route.views.map((view) => ({
+            ...view,
+            displayName: view.displayName || view.name,
+            component: view.component,
+            fields: route.fields || [],
+            recordType,
+            data: view.data || [],
+            icon: route.icon,
+          }))
+        : [
+            {
+              displayName: route.displayName || route.name,
+              component: route.component || null,
+              fields: route.fields || [],
+              recordType,
+              data: route.data || [],
+              icon: route.icon,
+            },
+          ];
+
+      return acc;
+    }, {});
+
+  const subNavViewData = useMemo(
+    () => buildViewData(filteredSubNav),
+    [filteredSubNav]
+  );
+
+  /* ===========================================================
+     RENDER
+  =========================================================== */
   return (
     <Drawer.Navigator
       screenOptions={{
@@ -86,10 +119,10 @@ export default function RootDrawer({ appConfig }) {
         drawerActiveTintColor: theme.colors.primary,
         drawerActiveBackgroundColor: theme.colors.primaryContainer,
         drawerInactiveTintColor: theme.colors.onSurfaceVariant,
-        drawerLabelStyle: { 
-          fontSize: 16, 
+        drawerLabelStyle: {
+          fontSize: 16,
           fontWeight: '500',
-          marginLeft: -4, // reduced from -12 for better spacing between icon and text
+          marginLeft: -4,
         },
         drawerItemStyle: {
           borderRadius: 8,
@@ -100,35 +133,45 @@ export default function RootDrawer({ appConfig }) {
       initialRouteName={subNavOnly ? firstSubNav?.name : "Home"}
     >
 
-      {/* SUBNAV ONLY MODE */}
+      {/* =======================================================
+         SUBNAV ONLY MODE
+      ======================================================= */}
       {subNavOnly ? (
         <>
           {filteredSubNav.map((route) => (
             <Drawer.Screen
               key={route.name}
               name={route.name}
-              children={() => (
+              options={{
+                drawerLabel: route.displayName || route.name,
+                drawerIcon: ({ color, size }) => (
+                  <Icon
+                    source={route.icon?.android || "folder"}
+                    color={color}
+                    size={size}
+                  />
+                ),
+              }}
+            >
+              {() => (
                 <BasePage
                   appConfig={appConfig}
                   name={route.name}
-                  viewData={route.views || []}
+                  recordType={route.recordType || null}
+                  viewData={subNavViewData[route.name] || []}
                   displayName={route.displayName || route.name}
                   settings={route.settings || []}
                   subNav={true}
                 />
               )}
-              options={{
-                drawerLabel: route.displayName || route.name,
-                drawerIcon: ({ color, size }) => (
-                  <Icon source={route.icon?.android || "folder"} color={color} size={size} />
-                ),
-              }}
-            />
+            </Drawer.Screen>
           ))}
         </>
       ) : (
         <>
-          {/* NORMAL MODE – Home + subNav */}
+          {/* ===================================================
+             NORMAL MODE – Home + subNav
+          =================================================== */}
           <Drawer.Screen
             name="Home"
             options={{
@@ -144,29 +187,37 @@ export default function RootDrawer({ appConfig }) {
             <Drawer.Screen
               key={route.name}
               name={route.name}
-              children={() => (
+              options={{
+                drawerLabel: route.displayName || route.name,
+                drawerIcon: ({ color, size }) => (
+                  <Icon
+                    source={route.icon?.android || "folder"}
+                    color={color}
+                    size={size}
+                  />
+                ),
+              }}
+            >
+              {() => (
                 <BasePage
                   appConfig={appConfig}
                   name={route.name}
-                  viewData={route.views || []}
+                  recordType={route.recordType || null}
+                  viewData={subNavViewData[route.name] || []}
                   displayName={route.displayName || route.name}
                   settings={route.settings || []}
                   subNav={true}
                 />
               )}
-              options={{
-                drawerLabel: route.displayName || route.name,
-                drawerIcon: ({ color, size }) => (
-                  <Icon source={route.icon?.android || "folder"} color={color} size={size} />
-                ),
-              }}
-            />
+            </Drawer.Screen>
           ))}
         </>
       )}
 
-      {/* SETTINGS */}
-      {appConfig.settings.length > 0 && (
+      {/* =======================================================
+         SETTINGS
+      ======================================================= */}
+      {appConfig.settings?.length > 0 && (
         <Drawer.Screen
           name="Settings"
           options={{
@@ -179,7 +230,9 @@ export default function RootDrawer({ appConfig }) {
         </Drawer.Screen>
       )}
 
-      {/* LOGOUT – special styling */}
+      {/* =======================================================
+         LOGOUT
+      ======================================================= */}
       <Drawer.Screen
         name="Logout"
         component={() => null}
@@ -194,9 +247,9 @@ export default function RootDrawer({ appConfig }) {
           drawerLabelStyle: {
             color: theme.colors.error,
             fontWeight: '600',
-            marginLeft: -4, // same spacing as other items
+            marginLeft: -4,
           },
-          drawerItemStyle: { 
+          drawerItemStyle: {
             marginTop: 32,
             marginHorizontal: 8,
             borderRadius: 8,
@@ -204,6 +257,7 @@ export default function RootDrawer({ appConfig }) {
           unmountOnBlur: true,
         }}
       />
+
     </Drawer.Navigator>
   );
 }

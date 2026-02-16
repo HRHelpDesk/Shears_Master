@@ -1,7 +1,7 @@
 export const ProfileView = {
     name: 'ProfileView',
     displayName: 'Profile',
-    component: 'BaseUI/BaseLayoutPage',
-    mobileComponent:'BasicLayoutPage',
+    component: 'BaseUI/SmartViews/SmartEditProfileView',
+    mobileComponent:'SmartEditProfileView',
     display:4
 }

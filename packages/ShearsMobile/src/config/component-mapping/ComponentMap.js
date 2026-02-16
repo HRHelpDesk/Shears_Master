@@ -23,6 +23,8 @@ import BasicLayoutPage from '../../components/BaseUI/BasicLayoutPage'
 import TransactionsListView from '../../components//Payment/TransactionsListView'
 import NotificationListView from '../../components/BaseUI/SmartLists/NotificationListView';
 import SmartImportContactView from '../../components/BaseUI/SmartViews/SmartImportContactView';
+import SmartEditProfileView from '../../components/BaseUI/SmartViews/SmartEditProfileView';
+
 const COMPONENTS = {
   ListView,
   CalendarView,
@@ -41,7 +43,8 @@ const COMPONENTS = {
   CardListView,
   AnnouncementListView,
   NotificationListView,
-  SmartImportContactView
+  SmartImportContactView,
+  SmartEditProfileView, // Reusing the same component for editing profile
 };
 
 export default COMPONENTS;

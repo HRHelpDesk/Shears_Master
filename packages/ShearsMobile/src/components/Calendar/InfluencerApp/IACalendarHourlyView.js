@@ -36,6 +36,7 @@ const HOUR_HEIGHT = 120;
 const TIME_COLUMN_WIDTH = 60;
 const DAY_HEIGHT = HOUR_HEIGHT * 24;
 const DATE_BUTTON_WIDTH = 60;
+const MIN_EVENT_WIDTH = 200; // Minimum width for each event card
 
 const QUARTER_HOURS = Array.from({ length: 96 }, (_, i) => {
   const hour = Math.floor(i / 4);
@@ -113,6 +114,7 @@ export default function IACalendarHourlyView(props) {
 
   const scrollRef = useRef(null);
   const dateScrollRef = useRef(null);
+  const horizontalScrollRef = useRef(null);
 
   const merged = { ...(route?.params ?? {}), ...props };
   const { data: propData = [], appConfig, name = 'Calendar' } = merged;
@@ -223,12 +225,27 @@ export default function IACalendarHourlyView(props) {
             recordType: item.recordType,
             subscriberId: item.subscriberId,
           },
+           flashSales: fd.flashSales || "",
         };
       })
       .filter(Boolean);
 
     return layoutOverlaps(normalized);
   }, [localData, selectedDate, user]);
+
+  /* ------------------------------------------------------------
+     Calculate content width for horizontal scrolling
+  ------------------------------------------------------------ */
+  const contentWidth = useMemo(() => {
+    if (dayAppointments.length === 0) return width - TIME_COLUMN_WIDTH - 20;
+    
+    const maxCols = Math.max(...dayAppointments.map(a => a._cols), 1);
+    const calculatedWidth = maxCols * MIN_EVENT_WIDTH;
+    const availableWidth = width - TIME_COLUMN_WIDTH - 20;
+    
+    // Use the larger of calculated or available width
+    return Math.max(calculatedWidth, availableWidth);
+  }, [dayAppointments]);
 
   /* ------------------------------------------------------------
      Scroll to now
@@ -385,135 +402,154 @@ export default function IACalendarHourlyView(props) {
         </ScrollView>
       )}
 
-      {/* Grid */}
+      {/* Grid with Horizontal Scroll */}
       <ScrollView ref={scrollRef}>
         <View style={{ height: DAY_HEIGHT }}>
           {QUARTER_HOURS.map(renderQuarterHourRow)}
           {renderNowLine()}
 
-          <View
+          {/* Horizontal ScrollView for appointments */}
+          <ScrollView
+            ref={horizontalScrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={true}
             style={[
-              styles.appointments,
-              { left: TIME_COLUMN_WIDTH, width: width - TIME_COLUMN_WIDTH - 20 },
+              styles.horizontalScroll,
+              { left: TIME_COLUMN_WIDTH }
             ]}
+            contentContainerStyle={{ width: contentWidth }}
           >
-            {dayAppointments.map((appt) => {
-              const { top, height } = calculatePosition(
-                appt.startTime,
-                appt.endTime
-              );
-              const colWidth =
-                (width - TIME_COLUMN_WIDTH - 24) / appt._cols;
+            <View
+              style={[
+                styles.appointments,
+                { width: contentWidth, height: DAY_HEIGHT }
+              ]}
+            >
+              {dayAppointments.map((appt) => {
+                const { top, height } = calculatePosition(
+                  appt.startTime,
+                  appt.endTime
+                );
+                const colWidth = contentWidth / appt._cols;
 
-              return (
-                <TouchableOpacity
-                  key={appt._id}
-                  style={[
-                    styles.event,
-                    {
-                      top,
-                      height,
-                      width: colWidth - 6,
-                      left: appt._col * colWidth,
-                      backgroundColor: theme.colors.primaryContainer,
-                      borderLeftColor: theme.colors.primary,
-                    },
-                  ]}
-                  onPress={() =>
-                    navigation.navigate('ListItemDetail', {
-                      item: appt.flatItem,
-                      name,
-                      appConfig,
-                      fields: mapFields(
-                        appConfig?.mainNavigation?.find(
-                          r => r.name === 'Calendar'
-                        )?.fields || []
-                      ),
-                      mode: 'read',
-                      modes: props.modes || ['read', 'add', 'edit'],
-                    })
-                  }
-                >
-                  <Text style={[
-                    styles.eventTime,
-                    { color: theme.colors.onPrimaryContainer }
-                  ]}>
-                    {formatTime12(appt.startTime)} – {formatTime12(appt.endTime)}
-                  </Text>
-                  <Text style={[
-                    styles.eventTitle,
-                    { color: theme.colors.onPrimaryContainer }
-                  ]}>
-                    {appt.contactName}
-                  </Text>
-                  <Text style={[
-                    styles.eventSub,
-                    { color: theme.colors.onPrimaryContainer }
-                  ]}>
-                    {appt.serviceName}
-                  </Text>
+                return (
+                  <TouchableOpacity
+                    key={appt._id}
+                    style={[
+                      styles.event,
+                      {
+                        top,
+                        height,
+                        width: colWidth - 6,
+                        left: appt._col * colWidth,
+                        backgroundColor: theme.colors.primaryContainer,
+                        borderLeftColor: theme.colors.primary,
+                      },
+                    ]}
+                    onPress={() =>
+                      navigation.navigate('ListItemDetail', {
+                        item: appt.flatItem,
+                        name,
+                        appConfig,
+                        fields: mapFields(
+                          appConfig?.mainNavigation?.find(
+                            r => r.name === 'Calendar'
+                          )?.fields || []
+                        ),
+                        mode: 'read',
+                        modes: props.modes || ['read', 'add', 'edit'],
+                      })
+                    }
+                  >
+                    <Text style={[
+                      styles.eventTime,
+                      { color: theme.colors.onPrimaryContainer }
+                    ]}>
+                      {formatTime12(appt.startTime)} – {formatTime12(appt.endTime)}
+                    </Text>
+                    <Text style={[
+                      styles.eventTitle,
+                      { color: theme.colors.onPrimaryContainer }
+                    ]}>
+                      {appt.contactName}
+                    </Text>
+                    <Text style={[
+                      styles.eventSub,
+                      { color: theme.colors.onPrimaryContainer }
+                    ]}>
+                      {appt.serviceName}
+                    </Text>
+                       {appt.flashSales &&(
+                        <Text style={[
+                      styles.eventSub,
+                      { color: appt.flashSales === true ? '#019506' : '#FF9800', fontWeight:'bold'  }
+                    ]}>
+                      {appt.flashSales === true ? "Flash Sales Set" : "Flash Sales Pending"}
+                    </Text>
+                      )}
 
-                  {/* ────────────────────────────────────────────────
-                      PRODUCTS – text list with truncation
-                  ──────────────────────────────────────────────── */}
-                  {appt.flatItem?.products?.length > 0 && (
-                    <View
-                      style={{
-                        marginTop: 6,
-                        paddingTop: 4,
-                        borderTopWidth: RNStyleSheet.hairlineWidth,
-                        borderTopColor: theme.colors.outline + '60',
-                      }}
-                    >
-                      {(() => {
-                        // Estimate remaining space after time + name + platform + padding
-                        const availablePx = height - 75;
-                        const pixelsPerLine = 15; // fontSize 11 + lineHeight 14 + margin
-                        const maxFit = Math.max(0, Math.floor(availablePx / pixelsPerLine));
+                    {/* ────────────────────────────────────────────────
+                        PRODUCTS – text list with truncation
+                    ──────────────────────────────────────────────── */}
+                    {appt.flatItem?.products?.length > 0 && (
+                      <View
+                        style={{
+                          marginTop: 6,
+                          paddingTop: 4,
+                          borderTopWidth: RNStyleSheet.hairlineWidth,
+                          borderTopColor: theme.colors.outline + '60',
+                        }}
+                      >
+                        {(() => {
+                          // Estimate remaining space after time + name + platform + padding
+                          const availablePx = height - 75;
+                          const pixelsPerLine = 15; // fontSize 11 + lineHeight 14 + margin
+                          const maxFit = Math.max(0, Math.floor(availablePx / pixelsPerLine));
 
-                        const shown = appt.flatItem.products.slice(0, maxFit);
-                        const remaining = appt.flatItem.products.length - shown.length;
+                          const shown = appt.flatItem.products.slice(0, maxFit);
+                          const remaining = appt.flatItem.products.length - shown.length;
 
-                        return (
-                          <>
-                            {shown.map((prod, idx) => (
-                              <Text
-                                key={prod._id || idx}
-                                style={{
-                                  fontSize: 11,
-                                  lineHeight: 14,
-                                  color: theme.colors.onPrimaryContainer,
-                                  opacity: 0.85,
-                                  marginBottom: 1,
-                                }}
-                                numberOfLines={1}
-                                ellipsizeMode="tail"
-                              >
-                                • {prod.productName || prod.name || 'Product'}
-                              </Text>
-                            ))}
+                          return (
+                            <>
+                              {shown.map((prod, idx) => (
+                                <Text
+                                  key={prod._id || idx}
+                                  style={{
+                                    fontSize: 11,
+                                    lineHeight: 14,
+                                    color: theme.colors.onPrimaryContainer,
+                                    opacity: 0.85,
+                                    marginBottom: 1,
+                                  }}
+                                  numberOfLines={1}
+                                  ellipsizeMode="tail"
+                                >
+                                  • {prod.productName || prod.name || 'Product'}
+                                </Text>
+                              ))}
 
-                            {remaining > 0 && (
-                              <Text
-                                style={{
-                                  fontSize: 11,
-                                  color: theme.colors.primary,
-                                  fontWeight: '500',
-                                  marginTop: 2,
-                                }}
-                              >
-                                +{remaining} more
-                              </Text>
-                            )}
-                          </>
-                        );
-                      })()}
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+                              {remaining > 0 && (
+                                <Text
+                                  style={{
+                                    fontSize: 11,
+                                    color: theme.colors.primary,
+                                    fontWeight: '500',
+                                    marginTop: 2,
+                                  }}
+                                >
+                                  +{remaining} more
+                                </Text>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </ScrollView>
         </View>
       </ScrollView>
 
@@ -603,10 +639,15 @@ const styles = StyleSheet.create({
     borderTopWidth: 0.5,
   },
 
-  appointments: {
+  horizontalScroll: {
     position: 'absolute',
     top: 0,
+    right: 0,
     height: DAY_HEIGHT,
+  },
+
+  appointments: {
+    position: 'relative',
   },
 
   event: {
@@ -652,6 +693,6 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: 20,
-    bottom: 20,
+    bottom: 100,
   },
 });

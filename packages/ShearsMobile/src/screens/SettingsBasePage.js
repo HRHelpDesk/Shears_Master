@@ -1,7 +1,8 @@
 // src/components/BaseUI/SettingsBasePage.js
 import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, KeyboardAvoidingView, TouchableOpacity } from 'react-native';
-import { useTheme, Divider, Icon } from 'react-native-paper';
+import { useTheme, Divider, Icon, Portal } from 'react-native-paper';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { useIsFocused } from '@react-navigation/native';
 import PageHeader from '../components/UI/PageHeader';
 import COMPONENTS from '../config/component-mapping/ComponentMap';
@@ -112,39 +113,43 @@ console.log("SettingsBasePage mappedFields:", mappedFields);
   const ActiveComponent = activeViews[activeTab]?.component || FallbackComponent;
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-    >
-         <View style={styles.headerRow}>
-        <Text style={[styles.pageTitle, { color: theme.colors.primary }]}>{name}</Text>
-        
-        <TouchableOpacity
-          style={styles.editButton} // absolute positioning
-          onPress={() => navigation.goBack()}
+    <BottomSheetModalProvider>
+      <Portal.Host>
+        <KeyboardAvoidingView
+          style={[styles.container, { backgroundColor: theme.colors.background }]}
         >
-          <LiquidGlassView
-            style={styles.editButtonGlass} // your glass styling
-            tintColor="rgba(255,255,255,0.1)"
-            effect="clear"
-            interactive
-          >
-            <Icon source="close" size={28} color={theme.colors.primary} />
-          </LiquidGlassView>
-        </TouchableOpacity>
-      </View>
-      <Divider />
+          <View style={styles.headerRow}>
+            <Text style={[styles.pageTitle, { color: theme.colors.primary }]}>{displayName}</Text>
+            
+            <TouchableOpacity
+              style={styles.editButton} // absolute positioning
+              onPress={() => navigation.goBack()}
+            >
+              <LiquidGlassView
+                style={styles.editButtonGlass} // your glass styling
+                tintColor="rgba(255,255,255,0.1)"
+                effect="clear"
+                interactive
+              >
+                <Icon source="close" size={28} color={theme.colors.primary} />
+              </LiquidGlassView>
+            </TouchableOpacity>
+          </View>
+          <Divider />
 
-      {activeViews.length > 1 ? (
-        <TabBar
-          views={activeViews}
-          dynamicProps={dynamicProps}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-        />
-      ) : (
-        <ActiveComponent {...dynamicProps} />
-      )}
-    </KeyboardAvoidingView>
+          {activeViews.length > 1 ? (
+            <TabBar
+              views={activeViews}
+              dynamicProps={dynamicProps}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+            />
+          ) : (
+            <ActiveComponent {...dynamicProps} />
+          )}
+        </KeyboardAvoidingView>
+      </Portal.Host>
+    </BottomSheetModalProvider>
   );
 }
 

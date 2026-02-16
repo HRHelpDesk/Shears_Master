@@ -1,20 +1,31 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useCallback
+} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { login as loginService } from 'shears-shared/src/Services/Authentication';
+import {
+  login as loginService,
+  getCurrentUser
+} from 'shears-shared/src/Services/Authentication';
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
-  const [loading, setLoading] = useState(true); // loading initial storage
+  const [loading, setLoading] = useState(true);
 
+  /* ---------------------------------------
+     LOAD FROM STORAGE ON APP START
+  --------------------------------------- */
   useEffect(() => {
-    // Load user & token from AsyncStorage on app start
     const loadStorage = async () => {
       try {
         const storedUser = await AsyncStorage.getItem('user');
         const storedToken = await AsyncStorage.getItem('token');
+
         if (storedUser && storedToken) {
           setUser(JSON.parse(storedUser));
           setToken(storedToken);
@@ -25,20 +36,23 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
       }
     };
+
     loadStorage();
   }, []);
 
   const isLoggedIn = !!user && !!token;
 
+  /* ---------------------------------------
+     LOGIN
+  --------------------------------------- */
   const login = async (email, password) => {
     try {
-      const { user: loggedInUser, token: authToken } = await loginService(email, password);
+      const { user: loggedInUser, token: authToken } =
+        await loginService(email, password);
 
-      // Save in state
       setUser(loggedInUser);
       setToken(authToken);
 
-      // Persist in AsyncStorage
       await AsyncStorage.setItem('user', JSON.stringify(loggedInUser));
       await AsyncStorage.setItem('token', authToken);
 
@@ -48,6 +62,34 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  /* ---------------------------------------
+     REFRESH USER FROM SERVER
+  --------------------------------------- */
+  const refreshUser = useCallback(async () => {
+    if (!token) return;
+
+    try {
+      const updatedUser = await getCurrentUser(token);
+
+      setUser(updatedUser);
+      await AsyncStorage.setItem(
+        'user',
+        JSON.stringify(updatedUser)
+      );
+
+      return updatedUser;
+
+    } catch (err) {
+      console.error('Refresh user failed:', err.message);
+
+      // If token expired or invalid → logout
+      await logout();
+    }
+  }, [token]);
+
+  /* ---------------------------------------
+     LOGOUT
+  --------------------------------------- */
   const logout = async () => {
     setUser(null);
     setToken(null);
@@ -56,7 +98,18 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isLoggedIn, loading, setUser }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        login,
+        logout,
+        refreshUser, // 👈 added here
+        isLoggedIn,
+        loading,
+        setUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
