@@ -547,7 +547,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = BossCrownsIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = ShearsMobile/ShearsMobile.entitlements;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 13;
 				DEVELOPMENT_TEAM = 2USCSV8NZ9;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = ShearsMobile/Info.plist;
@@ -560,7 +560,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.0010;
+				MARKETING_VERSION = 0.0013;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -585,7 +585,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = BossCrownsIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = ShearsMobile/ShearsMobile.entitlements;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 13;
 				DEVELOPMENT_TEAM = 2USCSV8NZ9;
 				INFOPLIST_FILE = ShearsMobile/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Boss Crowns Influencer App";
@@ -597,7 +597,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.0010;
+				MARKETING_VERSION = 0.0013;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",

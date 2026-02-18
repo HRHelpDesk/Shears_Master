@@ -18,6 +18,7 @@ import PlainTextInput from "../../SmartInputs/PlainTextInput";
 import { AuthContext } from "../../../context/AuthContext";
 import { FieldMap } from "../../../config/component-mapping/FieldMap";
 import { updateRecord } from "shears-shared/src/Services/Authentication";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 /* ============================================================
    Utility
@@ -104,7 +105,6 @@ const RenderField = ({
   const nestedFields =
     fieldDef.objectConfig || fieldDef.arrayConfig?.object || [];
   const FieldComponent = FieldMap[inputType] || PlainTextInput;
-
   const actualField = fieldDef.override?.field || fieldDef.field;
   const fieldPath = parentPath
     ? `${parentPath}.${actualField}`
@@ -352,6 +352,7 @@ const RenderField = ({
 export const SmartEditProfileView = ({ fields = [] }) => {
   const theme = useTheme();
   const { token, user, setUser, refreshUser } = useContext(AuthContext);
+const insets = useSafeAreaInsets();
 
   const [localItem, setLocalItem] = useState({ ...user });
   const [saving, setSaving] = useState(false);
@@ -422,13 +423,17 @@ export const SmartEditProfileView = ({ fields = [] }) => {
               <View style={{ height: 100 }} />
             </ScrollView>
 
-            <View style={styles.saveButtonContainer}>
+            <View style={[styles.saveButtonContainer, {
+              paddingBottom: insets.bottom + 20,
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.outlineVariant,
+            }]}>
               <Button
                 mode="contained"
                 onPress={handleSave}
                 disabled={saving}
                 loading={saving}
-                style={{ borderRadius: 8 }}
+                style={{ borderRadius: 5 }}  // match SmartStatusWidget's borderRadius
               >
                 Save Profile
               </Button>
@@ -491,16 +496,16 @@ const styles = StyleSheet.create({
   columnItem: {
     marginBottom: 8,
   },
-  saveButtonContainer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 16,
-    backgroundColor: "transparent", // allows theme background to show through
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(150,150,150,0.2)",
-  },
+ saveButtonContainer: {
+  position: "absolute",
+  bottom: 0,
+  left: 0,
+  right: 0,
+  paddingHorizontal: 20,
+  paddingTop: 12,
+  borderTopWidth: 1,
+  borderColor: "rgba(0,0,0,0.08)",
+},
 });
 
 export default SmartEditProfileView;

@@ -66,6 +66,7 @@ export default function SmartDialogLinkSelectInput({
   mode = "edit",
   showQuantity = false,
   useUserId = true,
+  recordType,
 
 }) {
   const theme = useTheme();
@@ -348,6 +349,7 @@ export default function SmartDialogLinkSelectInput({
         data={records}
         loading={loading}
         onSelect={(record) => handleSelect(record)}
+        recordType={recordTypeName.toLowerCase()}
       />
     </Box>
   );

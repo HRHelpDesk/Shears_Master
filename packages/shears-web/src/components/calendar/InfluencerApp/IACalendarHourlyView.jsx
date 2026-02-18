@@ -237,6 +237,7 @@ export default function IACalendarHourlyViewWeb({
             recordType: item.recordType,
             subscriberId: item.subscriberId,
           },
+          flashSales: fd.flashSales || "",
         };
       })
       .filter(Boolean);
@@ -685,6 +686,12 @@ export default function IACalendarHourlyViewWeb({
                     <Typography variant="caption" noWrap>
                       {appt.serviceName}
                     </Typography>
+                     <br/>
+                    { appt.flashSales && (
+                      <Typography sx={{ color: appt.flashSales === true ? '#019506' : '#FF9800', fontWeight:'bold'  }} variant="caption" noWrap>
+                      {appt.flashSales ? 'Flash Sales Set' : 'Flash Sales Pending...'}
+                    </Typography>
+                    )}
 
                     {/* PRODUCTS LIST */}
                     {appt.flatItem?.products?.length > 0 && (

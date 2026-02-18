@@ -324,49 +324,54 @@ export default function ListView({
   }, [filteredData, sortBy]);
 
   const buildSubText = (item) => {
-    const lines = [];
+  const lines = [];
 
-    // Date range (already shown in overline, but can reinforce if needed)
-    // const dateStr = resolveDate(item);
-    // if (dateStr) {
-    //   lines.push({ text: dateStr, isBold: true, color: theme.colors.primary });
-    // }
+  // Time + Duration
+  const timeStr = formatValueForList(item.startTimeWithZone);
+  const durationStr = formatValueForList(item.duration);
+  if (timeStr || durationStr) {
+    lines.push({
+      text: [timeStr, durationStr].filter(Boolean).join(" • "),
+    });
+  }
 
-    // Time + Duration
-    const timeStr = formatValueForList(item.startTimeWithZone);
-    const durationStr = formatValueForList(item.duration);
-    if (timeStr || durationStr) {
-      lines.push({
-        text: [timeStr, durationStr].filter(Boolean).join(" • "),
-      });
-    }
+  // Other fields (skip name/date/time/duration)
+  const ordered = displayFields.filter(
+    (f) =>
+      !["firstName", "lastName", "influencerName", "date", "startTimeWithZone", "duration"].includes(f.field) &&
+      !f.field.toLowerCase().includes("name")
+  );
 
-    // Other fields (skip name/date/time/duration)
-    const ordered = displayFields.filter(
-      (f) =>
-        !["firstName", "lastName", "influencerName", "date", "startTimeWithZone", "duration"].includes(f.field) &&
-        !f.field.toLowerCase().includes("name")
-    );
+  for (const field of ordered) {
+    const raw = item[field.field];
+    if (raw == null || raw === "") continue;
 
-    for (const field of ordered) {
-      const raw = item[field.field];
-      if (raw == null || raw === "") continue;
-      const formatted = formatValueForList(raw);
-      if (!formatted) continue;
+    // Boolean fields (e.g. isActive) → "Active" / "Not Active"
+  if (typeof raw === "boolean") {
+  lines.push({
+    text: raw ? "Active" : "Inactive",
+    color: raw ? "#4CAF50" : "#FF6347",
+    isBold: true,
+  });
+  continue;
+}
 
-      const label = field.label || field.field;
-      const statusColor =
-        field.field.toLowerCase() === "status" ? getStatusColor(formatted) : null;
+    const formatted = formatValueForList(raw);
+    if (!formatted) continue;
 
-      lines.push({
-        text: `${label}: ${formatted}`,
-        color: statusColor,
-        isBold: !!statusColor,
-      });
-    }
+    const label = field.label || field.field;
+    const statusColor =
+      field.field.toLowerCase() === "status" ? getStatusColor(formatted) : null;
 
-    return lines;
-  };
+    lines.push({
+      text: `${label}: ${formatted}`,
+      color: statusColor,
+      isBold: !!statusColor,
+    });
+  }
+
+  return lines;
+};
 
   const handleDelete = async (item) => {
     Alert.alert(

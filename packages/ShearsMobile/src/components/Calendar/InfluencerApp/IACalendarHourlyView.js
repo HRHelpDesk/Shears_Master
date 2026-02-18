@@ -129,6 +129,7 @@ export default function IACalendarHourlyView(props) {
   useFocusEffect(
     React.useCallback(() => {
       let active = true;
+    console.log(props.recordType)
 
       const load = async () => {
         const res = await getRecords({
@@ -552,7 +553,7 @@ export default function IACalendarHourlyView(props) {
           </ScrollView>
         </View>
       </ScrollView>
-
+       {props.modes.includes('add') && (
       <FAB
         icon="plus"
         style={[
@@ -564,12 +565,19 @@ export default function IACalendarHourlyView(props) {
           navigation.navigate('ListItemDetail', {
             item: { date: DateTime.fromJSDate(selectedDate).toISODate() },
             name,
+            recordType: 'calendar',
             appConfig,
             mode: 'add',
             modes: props.modes || ['read', 'add', 'edit'],
+            fields: mapFields(
+            appConfig?.mainNavigation?.find(
+              r => r.name === 'Calendar'  // ← case-sensitive, might not match
+            )?.fields || []
+          ),
           })
         }
       />
+      )}
     </View>
   );
 }

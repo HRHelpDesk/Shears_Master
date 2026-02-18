@@ -101,6 +101,7 @@ export default function SmartDialogLinkSelectInput({
   helperText,
   useUserId = true,
   showQuantity = false,
+  inputConfig,
 }) {
   const { token, user } = useContext(AuthContext);
   const theme = useTheme();
@@ -376,6 +377,8 @@ const handleSelect = (record) => {
         name={recordTypeName}
         loading={loading}
         onSelect={(record) => handleSelect(record)}
+        inputConfig={inputConfig}
+        recordType={recordTypeName}
       />
     </View>
   );

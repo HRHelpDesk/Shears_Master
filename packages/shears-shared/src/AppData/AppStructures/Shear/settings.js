@@ -190,7 +190,7 @@ export const shearSettings = [
     name: 'Users',
     recordType: 'users',       // ⭐ ADDED
     displayName: 'Add Users',
-    permissions: ['owner', 'admin'],
+    permissions: ['influencer', 'admin'],
     icon: { ios: 'people', android: 'account-group', web: 'fa fa-users' },
     views: [Users],
 

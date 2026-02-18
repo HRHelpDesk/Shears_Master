@@ -133,13 +133,13 @@ const RenderField = ({
   const value = getValue(item, fieldPath);
 
   /* Auto-init object/array */
-  if (fieldDef.arrayConfig?.object && !Array.isArray(value))
-    handleChange(fieldPath, []);
-  else if (
-    fieldDef.objectConfig &&
-    (value === undefined || typeof value !== "object")
-  )
-    handleChange(fieldPath, {});
+  useEffect(() => {
+    if (fieldDef.arrayConfig?.object && !Array.isArray(value)) {
+      handleChange(fieldPath, []);
+    } else if (fieldDef.objectConfig && (value === undefined || typeof value !== "object")) {
+      handleChange(fieldPath, {});
+    }
+  }, [fieldPath]);
 
   /* IMAGE FIELD */
   if (inputType === "image") {

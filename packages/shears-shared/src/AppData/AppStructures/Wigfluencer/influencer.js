@@ -5,7 +5,7 @@ import { InfluencerSettings } from "./settings";
 import { ProfileView } from "../../view-schema/profile-view";
 import { influencerWhitelabels } from "./influencer-whitelabels";
 import { AdminDashboardView, InfluencerDashboardView } from "../../view-schema/dashboard-view";
-import { AnnouncementsInfluencer } from "./view-schema/Announcements";
+import { AnnouncementsInfluencer, MessageBoard } from "./view-schema/Announcements";
 import { RequestsAdminView, RequestsInfluencerView } from "./view-schema/Requests";
 import { NotificationsView } from "./view-schema/Notifications";
 import { CalendarScreenAdmin, CalendarMonthView, CalendarMonthAdminView, CalendarScreen } from "./view-schema/Calendar";
@@ -132,7 +132,7 @@ export const InfluencerApp = [
         permissions: ["admin"],
         displayName: "Dashboard",
         recordType: "dashboard",
-        icon: { ios: "rectangle.grid.2x2", android: "view-dashboard", web: "fa fa-th-large" },
+        icon: { ios: "gauge", android: "gauge", web: "fa-solid fa-gauge" },
         views: [AdminDashboardView],
         fields: [
           {
@@ -540,6 +540,127 @@ export const InfluencerApp = [
         ]
       },
 
+      /* -------------------------------------------------------------------
+   📋 MESSAGE BOARD FIELDS & NAVIGATION ENTRY
+------------------------------------------------------------------- */
+
+// Add this to your mainNavigation array (e.g. after announcements)
+
+{
+  name: "MessageBoard",
+  permissions: ["admin"],   // admin posts, both can view & reply
+  recordType: "messageBoard",
+  displayName: "Message Board",
+  icon: { ios: "bubble.left.and.bubble.right.fill", android: "forum", web: "fa fa-comments" },
+  views: [MessageBoard],             // 👈 you'll need to create this view schema
+  fields: [
+  {
+      field: "comments",
+      label: "Replies",
+      input: "array",
+      displayInList: false,
+      display: { order: 7 },
+      arrayConfig: {
+        object: [
+          {
+            field: "user",
+            label: "User",
+            input: "autoUser"
+          },
+          {
+            field: "text",
+            label: "Comment",
+            input: "textarea"
+          },
+          {
+            field: "date",
+            label: "Date",
+            input: "datetime"
+          }
+        ]
+      }
+    },
+
+
+    // ── Title ───────────────────────────────────────────────────
+    {
+      field: "name",
+      override: {
+        field: "messageName",
+        label: "Title",
+      },
+      input: "text",
+      required: true,
+      display: { order: 1 }
+    },
+
+    // ── Category / Tag ──────────────────────────────────────────
+    {
+      field: "category",
+      label: "Category",
+      type: "string",
+      input: "select",
+      required: true,
+      display: { order: 2 },
+      override:{
+        inputConfig: {
+        options: ["General", "Announcements", "Tips & Tricks", "Product Updates", "Q&A"],
+        defaultValue: "General"
+      }
+      }
+     
+    },
+
+    // ── Body ────────────────────────────────────────────────────
+    {
+      field: "description",
+      override: {
+        field: "messageBody",
+        label: "Message",
+      },
+      input: "textarea",
+      required: true,
+      display: { order: 3 }
+    },
+
+    // ── Image Attachment ─────────────────────────────────────────
+    {
+      field: "image",
+      override: {
+        field: "messageImage",
+        label: "Image Attachment",
+      },
+      input: "image",
+      displayInList: false,
+      display: { order: 4 }
+    },
+
+    // ── Posted Date ──────────────────────────────────────────────
+    {
+      field: "date",
+      label: "Date Posted",
+      type: "string",
+      input: "date",
+      required: true,
+      display: { order: 5 }
+    },
+
+    // ── Author (auto-filled) ─────────────────────────────────────
+    {
+      field: "postedBy",
+      label: "Posted By",
+      input: "autoUser",
+      required: true,
+      displayInList: true,
+      display: { order: 6 }
+    },
+
+    // ── Threaded Replies ─────────────────────────────────────────
+   
+
+  ]
+},
+
      
 
       /* ----------------------------------------------------------
@@ -611,7 +732,7 @@ export const InfluencerApp = [
        🏠 DEFAULT ROUTE
     ---------------------------------------------------------- */
     defaultRoute: (user) => {
-      return user.role === "admin" ? "AdminCalendar" : "Calendar";
+      return user.role === "admin" ? "AdminDashboard" : "Calendar";
     }
   }
 ];

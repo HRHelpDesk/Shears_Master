@@ -218,9 +218,11 @@ const matchesSearch = (item, search) => {
 export default function SelectableListView({
   data = [],
   name = 'Item',
+  inputConfig,
   onSelect,
   fields = null,
   onRefresh,
+  recordType,
   refreshing = false,
   loading = false,
   mode = 'basic', // 'basic' or 'expanded'
@@ -321,8 +323,13 @@ export default function SelectableListView({
      Filtered & Sectioned Data
   --------------------------------------------------------- */
   const filtered = useMemo(() => {
-    return normalizedData.filter((item) => matchesSearch(item, search));
-  }, [normalizedData, search]);
+
+  return normalizedData.filter((item) => {
+
+    if (recordType?.toLowerCase() === 'products' && item.isActive === false) return false;
+    return matchesSearch(item, search);
+  });
+}, [normalizedData, search]);
 
   const sections = useMemo(() => {
     if (!filtered.length) return [{ title: "", data: [] }];
@@ -354,6 +361,7 @@ export default function SelectableListView({
       raw: item.raw || item,
       fieldsData: item.fieldsData || item,
       recordType: item.recordType,
+
       ...item // Preserve all original properties
     };
     

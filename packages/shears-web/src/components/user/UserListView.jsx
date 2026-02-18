@@ -15,6 +15,7 @@ import {
   InputAdornment,
   Button,
   Grid,
+  capitalize,
 } from '@mui/material';
 import { Search as SearchIcon, Add as AddIcon } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
@@ -254,7 +255,7 @@ export default function UserListView({ fields, appConfig }) {
                   <TableCell>{u.fullName}</TableCell>
                   <TableCell>{u.email}</TableCell>
                   <TableCell>{u.phone}</TableCell>
-                  <TableCell>{u.role}</TableCell>
+                  <TableCell>{capitalize(u.role)}</TableCell>
                 </TableRow>
               );
             })}

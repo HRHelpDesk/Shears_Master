@@ -23,6 +23,7 @@ import {
   useTheme,
 } from 'react-native-paper';
 import { useNavigationState } from '@react-navigation/native';
+import { capitalizeFirstLetter } from 'shears-shared/src/utils/stringHelpers';
 
 // ✅ Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -174,7 +175,7 @@ useEffect(() => {
       {options.map((opt, i) => (
         <List.Item
           key={i}
-          title={String(opt)}
+          title={String(capitalizeFirstLetter(opt))}
           onPress={() => handleSelect(opt)}
           style={{
             borderBottomWidth: 0.4,

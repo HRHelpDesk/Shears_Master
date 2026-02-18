@@ -1,8 +1,8 @@
 // src/components/Dashboard/SmartDashboardWeeklySnapshot.jsx
-
 import React, { useContext, useEffect, useState } from "react";
 import { View, StyleSheet, ActivityIndicator, Dimensions } from "react-native";
 import { Text, useTheme, Card } from "react-native-paper";
+import { DateTime } from "luxon";
 import { AuthContext } from "../../../context/AuthContext";
 import { getRecords } from "shears-shared/src/Services/Authentication";
 import { useRefreshVersion } from "../../../context/RefreshContext";
@@ -18,7 +18,9 @@ export default function SmartDashboardWeeklySnapshot() {
   const [totalScheduled, setTotalScheduled] = useState(0);
   const [completedCount, setCompletedCount] = useState(0);
   const [outstandingCount, setOutstandingCount] = useState(0);
-const refreshVersion = useRefreshVersion('dashboard-data');
+
+  const refreshVersion = useRefreshVersion('dashboard-data');
+
   useEffect(() => {
     if (!user || !token) return;
     fetchWeeklyData();
@@ -33,7 +35,6 @@ const refreshVersion = useRefreshVersion('dashboard-data');
       const raw = await getRecords({
         recordType: "calendar",
         subscriberId: user.subscriberId,
-      
         page: 1,
         limit: 300,
         token,
@@ -64,12 +65,10 @@ const refreshVersion = useRefreshVersion('dashboard-data');
   const getStartAndEndOfWeek = () => {
     const today = new Date();
 
-    // Sunday start
     const start = new Date(today);
     start.setDate(today.getDate() - today.getDay());
     start.setHours(0, 0, 0, 0);
 
-    // Saturday end
     const end = new Date(start);
     end.setDate(start.getDate() + 6);
     end.setHours(23, 59, 59, 999);
@@ -79,12 +78,9 @@ const refreshVersion = useRefreshVersion('dashboard-data');
 
   const getRecordDate = (rec) => {
     const rawDate = rec?.fieldsData?.date;
-
     if (!rawDate) return null;
 
-    // Your schema stores date as array: ["2026-02-16"]
     const dateStr = Array.isArray(rawDate) ? rawDate[0] : rawDate;
-
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return null;
 
@@ -92,13 +88,38 @@ const refreshVersion = useRefreshVersion('dashboard-data');
   };
 
   const isCompleted = (rec) => {
-    const status =
-      rec?.fieldsData?.status ||
-      rec?.fieldsData?.appointmentStatus ||
-      rec?.status;
+    const fd = rec?.fieldsData;
+    if (!fd) return false;
 
-    if (!status) return false;
-    return String(status).toLowerCase() === "completed";
+    // Respect an explicit completed status if present
+    const status = fd.status || fd.appointmentStatus || rec?.status;
+    if (status && String(status).toLowerCase() === "completed") return true;
+
+    // Otherwise check if the scheduled end time has passed
+    const date = fd.date;
+    const timeZoneTime = fd.timeZoneTime;
+
+    if (!date || !timeZoneTime?.end || !timeZoneTime?.timezone) return false;
+
+    try {
+      const dateStr = Array.isArray(date) ? date[0] : date;
+      const [endHour, endMin] = timeZoneTime.end.split(":").map(Number);
+
+      const endDateTime = DateTime.fromObject(
+        {
+          year:   parseInt(dateStr.slice(0, 4)),
+          month:  parseInt(dateStr.slice(5, 7)),
+          day:    parseInt(dateStr.slice(8, 10)),
+          hour:   endHour,
+          minute: endMin,
+        },
+        { zone: timeZoneTime.timezone }
+      );
+
+      return endDateTime.isValid && endDateTime < DateTime.now();
+    } catch {
+      return false;
+    }
   };
 
   const computeWeeklyStats = (records) => {
@@ -116,10 +137,7 @@ const refreshVersion = useRefreshVersion('dashboard-data');
 
       if (date >= start && date <= end) {
         totalScheduled++;
-
-        if (isCompleted(rec)) {
-          completedCount++;
-        }
+        if (isCompleted(rec)) completedCount++;
       }
     }
 
@@ -175,16 +193,13 @@ const refreshVersion = useRefreshVersion('dashboard-data');
       <View style={styles.row}>
         <Card style={[styles.card, { backgroundColor: theme.colors.surface }]} elevation={1}>
           <Card.Content style={styles.cardContent}>
-            <Text 
-              variant={isSmallScreen ? "headlineLarge" : "displaySmall"} 
+            <Text
+              variant={isSmallScreen ? "headlineLarge" : "displaySmall"}
               style={[styles.count, { color: theme.colors.primary }]}
             >
               {totalScheduled}
             </Text>
-            <Text 
-              variant="labelMedium" 
-              style={[styles.label, { color: theme.colors.onSurfaceVariant }]}
-            >
+            <Text variant="labelMedium" style={[styles.label, { color: theme.colors.onSurfaceVariant }]}>
               Scheduled
             </Text>
           </Card.Content>
@@ -192,16 +207,13 @@ const refreshVersion = useRefreshVersion('dashboard-data');
 
         <Card style={[styles.card, { backgroundColor: theme.colors.surface }]} elevation={1}>
           <Card.Content style={styles.cardContent}>
-            <Text 
-              variant={isSmallScreen ? "headlineLarge" : "displaySmall"} 
+            <Text
+              variant={isSmallScreen ? "headlineLarge" : "displaySmall"}
               style={[styles.count, { color: theme.colors.primary }]}
             >
               {completedCount}
             </Text>
-            <Text 
-              variant="labelMedium" 
-              style={[styles.label, { color: theme.colors.onSurfaceVariant }]}
-            >
+            <Text variant="labelMedium" style={[styles.label, { color: theme.colors.onSurfaceVariant }]}>
               Completed
             </Text>
           </Card.Content>
@@ -209,16 +221,13 @@ const refreshVersion = useRefreshVersion('dashboard-data');
 
         <Card style={[styles.card, { backgroundColor: theme.colors.surface }]} elevation={1}>
           <Card.Content style={styles.cardContent}>
-            <Text 
-              variant={isSmallScreen ? "headlineLarge" : "displaySmall"} 
+            <Text
+              variant={isSmallScreen ? "headlineLarge" : "displaySmall"}
               style={[styles.count, { color: theme.colors.primary }]}
             >
               {outstandingCount}
             </Text>
-            <Text 
-              variant="labelMedium" 
-              style={[styles.label, { color: theme.colors.onSurfaceVariant }]}
-            >
+            <Text variant="labelMedium" style={[styles.label, { color: theme.colors.onSurfaceVariant }]}>
               Upcoming
             </Text>
           </Card.Content>
@@ -239,7 +248,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerContainer: {
-    // alignItems: "flex-end",
     marginBottom: 16,
   },
   weekLabel: {

@@ -308,6 +308,7 @@ const dayHeight = Math.floor(daySize * 1.15);
       </ScrollView>
 
       {/* FAB */}
+         {modes.includes('add') && (
       <FAB
         icon="plus"
         style={[styles.fab, { backgroundColor: theme.colors.primary }]}
@@ -323,7 +324,7 @@ const dayHeight = Math.floor(daySize * 1.15);
           })
         }
       />
-
+         )}
       {/* Modal - now fully theme-aware */}
       <Modal
         visible={modalVisible}

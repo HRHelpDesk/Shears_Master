@@ -155,11 +155,11 @@ export default function MainNavigator({ appConfig, logo }) {
               </IconButton>
             </Tooltip>
 
-            <Tooltip title="Profile">
+            {/* <Tooltip title="Profile">
               <IconButton color="inherit" component={Link} to="/profile">
                 <i className="fa fa-user-circle" />
               </IconButton>
-            </Tooltip>
+            </Tooltip> */}
           </Box>
         </Toolbar>
       </AppBar>

@@ -226,11 +226,11 @@ console.log("📅 CalendarTimeZoneInput rendering:", { label, value, mode });
             onDismiss={() => setVisible(false)}
             contentContainerStyle={[
               styles.modalContainer,
-              { backgroundColor: theme.colors.surface }
+              { backgroundColor: theme.colors.surface, borderRadius: 2 }
             ]}
           >
             <Card>
-              <Card.Title title="Select Timezone" />
+              <Card.Title title="Select Timezon" />
               <Card.Content>{timezoneList}</Card.Content>
               <Card.Actions>
                 <Button onPress={() => setVisible(false)}>Close</Button>
@@ -241,7 +241,7 @@ console.log("📅 CalendarTimeZoneInput rendering:", { label, value, mode });
           <Dialog
             visible={visible}
             onDismiss={() => setVisible(false)}
-            style={{ backgroundColor: theme.colors.surface }}
+            style={{ backgroundColor: theme.colors.surface, borderRadius: 2 }}
           >
             <Dialog.Title>Select Timezone</Dialog.Title>
             <Dialog.ScrollArea style={{ maxHeight: 380 }}>

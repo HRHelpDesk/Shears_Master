@@ -13,6 +13,7 @@ import {
   ListItemText,
   TextField,
   Divider,
+  capitalize,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
@@ -96,12 +97,12 @@ if(defaultValue != null && (value == null || value === "")){
       <Box sx={{ mb: 1 }}>
           <Typography variant="subtitle1" sx={{ color: theme.palette.primary.main, fontWeight: 500 }}>    
         
-          {label}
+          {capitalize(label)}
         </Typography>
 
         <Typography variant="body1">
           {displayText ? (
-            displayText
+            capitalize(displayText)
           ) : (
             <em style={{ color: theme.palette.text.disabled }}>Not set</em>
           )}
@@ -195,7 +196,7 @@ if(defaultValue != null && (value == null || value === "")){
                 return (
                   <ListItemButton
                     key={idx}
-                    onClick={() => handleSelect(optValue)}
+                    onClick={() => handleSelect(optValue)}  // original value saved
                     selected={isSelected}
                     sx={{
                       "&.Mui-selected": {
@@ -206,7 +207,7 @@ if(defaultValue != null && (value == null || value === "")){
                       },
                     }}
                   >
-                    <ListItemText primary={optLabel} />
+                    <ListItemText primary={capitalize(optLabel)} />
                   </ListItemButton>
                 );
               })}

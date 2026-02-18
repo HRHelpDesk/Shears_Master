@@ -24,6 +24,7 @@ import TransactionsListView from '../../components//Payment/TransactionsListView
 import NotificationListView from '../../components/BaseUI/SmartLists/NotificationListView';
 import SmartImportContactView from '../../components/BaseUI/SmartViews/SmartImportContactView';
 import SmartEditProfileView from '../../components/BaseUI/SmartViews/SmartEditProfileView';
+import MessageBoardView from '../../components/BaseUI/SmartViews/InfluencerApp/MessageBoardView';
 
 const COMPONENTS = {
   ListView,
@@ -45,6 +46,7 @@ const COMPONENTS = {
   NotificationListView,
   SmartImportContactView,
   SmartEditProfileView, // Reusing the same component for editing profile
+  MessageBoardView
 };
 
 export default COMPONENTS;

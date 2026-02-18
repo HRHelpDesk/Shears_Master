@@ -478,34 +478,45 @@ export default function ListView({
 
                   {displayFields.map((field) => {
                     const rawValue = item.fieldsData?.[field.field] ?? item[field.field];
-                    const formatted = formatFieldValue(rawValue, field);
-                    const isStatus = field.field.toLowerCase() === "status";
-                    const isDate = field.field.toLowerCase() === "date";
-                    const statusColor = isStatus ? getStatusColor(formatted) : null;
+                  const formatted = formatFieldValue(rawValue, field);
+                  const isStatus = field.field.toLowerCase() === "status";
+                  const isDate = field.field.toLowerCase() === "date";
+                  const isActive = field.field === "isActive";
+                  const statusColor = isStatus ? getStatusColor(formatted) : null;
 
-                    return (
-                      <TableCell key={field.field}>
-                        {isStatus && statusColor ? (
-                          <StatusChip
-                            label={formatted}
-                            statuscolor={statusColor}
-                            size="small"
-                          />
-                        ) : isDate ? (
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              fontWeight: 500,
-                              color: "primary.main",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {formatted || "—"}
-                          </Typography>
-                        ) : (
-                          formatted || "—"
-                        )}
-                      </TableCell>
+                  return (
+                    <TableCell key={field.field}>
+                      {isActive ? (
+                        <Chip
+                          label={rawValue ? "Active" : "Inactive"}
+                          size="small"
+                          sx={{
+                            backgroundColor: rawValue ? "#4CAF50" : "#F44336",
+                            color: "#ffffff",
+                            fontWeight: 700,
+                          }}
+                        />
+                      ) : isStatus && statusColor ? (
+                        <StatusChip
+                          label={formatted}
+                          statuscolor={statusColor}
+                          size="small"
+                        />
+                      ) : isDate ? (
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontWeight: 500,
+                            color: "primary.main",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {formatted || "—"}
+                        </Typography>
+                      ) : (
+                        formatted || "—"
+                      )}
+                    </TableCell>
                     );
                   })}
                 </TableRow>

@@ -9,6 +9,7 @@ import { AuthContext } from '../context/AuthContext';
 import {
   DrawerContentScrollView,
   DrawerItemList,
+  DrawerItem,
 } from "@react-navigation/drawer";
 import SmartProfileCard from "../components/SmartWidgets/SmartProfileCard";
 import { View } from 'react-native';
@@ -16,7 +17,7 @@ import { View } from 'react-native';
 const Drawer = createDrawerNavigator();
 
 function CustomDrawerContent(props) {
-  const { user } = useContext(AuthContext);
+  const { user, logout } = useContext(AuthContext);
   const theme = useTheme();
 
   return (
@@ -39,13 +40,32 @@ function CustomDrawerContent(props) {
           marginVertical: 2,
         }}
       />
+
+      {/* Logout as a DrawerItem instead of a Screen — avoids Android null component crash */}
+      <DrawerItem
+        label="Logout"
+        onPress={logout}
+        icon={({ size }) => (
+          <Icon source="logout" color={theme.colors.error} size={size} />
+        )}
+        labelStyle={{
+          color: theme.colors.error,
+          fontWeight: '600',
+          marginLeft: -4,
+        }}
+        style={{
+          marginTop: 32,
+          marginHorizontal: 8,
+          borderRadius: 8,
+        }}
+      />
     </DrawerContentScrollView>
   );
 }
 
 export default function RootDrawer({ appConfig }) {
   const theme = useTheme();
-  const { logout, user } = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
 
   useEffect(() => {
     console.log("RootDrawer appConfig:", appConfig);
@@ -229,34 +249,6 @@ export default function RootDrawer({ appConfig }) {
           {() => <SettingsStack appConfig={appConfig} />}
         </Drawer.Screen>
       )}
-
-      {/* =======================================================
-         LOGOUT
-      ======================================================= */}
-      <Drawer.Screen
-        name="Logout"
-        component={() => null}
-        listeners={{ focus: () => logout() }}
-        options={{
-          drawerLabel: 'Logout',
-          drawerIcon: ({ color, size }) => (
-            <Icon source="logout" color={color} size={size} />
-          ),
-          drawerActiveTintColor: theme.colors.error,
-          drawerInactiveTintColor: theme.colors.error,
-          drawerLabelStyle: {
-            color: theme.colors.error,
-            fontWeight: '600',
-            marginLeft: -4,
-          },
-          drawerItemStyle: {
-            marginTop: 32,
-            marginHorizontal: 8,
-            borderRadius: 8,
-          },
-          unmountOnBlur: true,
-        }}
-      />
 
     </Drawer.Navigator>
   );

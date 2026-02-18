@@ -186,6 +186,7 @@ export default function SelectableListViewWeb({
   name = "Item",
   fields = null,
   appConfig,
+  recordType,
   loading = false,
   mode = "basic", // "basic" or "expanded"
 }) {
@@ -207,10 +208,14 @@ export default function SelectableListViewWeb({
     [data]
   );
 
-  const filtered = useMemo(() => 
-    normalizedData.filter((item) => matchesSearch(item, search)),
-    [normalizedData, search]
-  );
+  const filtered = useMemo(() => {
+
+  return normalizedData.filter((item) => {
+console.log(recordType)
+    if (recordType?.toLowerCase() === 'products' && item.isActive === false) return false;
+    return matchesSearch(item, search);
+  });
+}, [normalizedData, search]);
 
   const initials = (str) => {
     if (!str) return "?";

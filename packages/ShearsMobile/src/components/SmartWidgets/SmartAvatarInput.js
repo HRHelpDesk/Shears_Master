@@ -5,6 +5,7 @@ import { launchImageLibrary } from "react-native-image-picker";
 import { capitalizeFirstLetter } from "shears-shared/src/utils/stringHelpers";
 import { AuthContext } from "../../context/AuthContext";
 import { uploadUserAvatar } from "shears-shared/src/Services/Authentication";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 
 export default function SmartAvatarInput({
   label,
@@ -164,26 +165,51 @@ export default function SmartAvatarInput({
 
       <View style={{ marginBottom: 20 }}>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <TouchableOpacity onPress={pickImage} activeOpacity={0.7}>
-            {avatarSource ? (
-              <Image
-                source={avatarSource}
-                style={{
-                  width: 80,
-                  height: 80,
-                  borderRadius: 40,
-                  backgroundColor: "#ddd",
-                }}
-              />
-            ) : (
-              <Avatar.Text
-                size={80}
-                label={initials}
-                style={{ backgroundColor: theme.colors.primary }}
-                color={theme.colors.onPrimary}
-              />
-            )}
-          </TouchableOpacity>
+         <TouchableOpacity onPress={pickImage} activeOpacity={0.7}>
+              <View style={{ position: "relative" }}>
+                {avatarSource ? (
+                  <Image
+                    source={avatarSource}
+                    style={{
+                      width: 80,
+                      height: 80,
+                      borderRadius: 40,
+                      backgroundColor: "#ddd",
+                    }}
+                  />
+                ) : (
+                  <Avatar.Text
+                    size={80}
+                    label={initials}
+                    style={{ backgroundColor: theme.colors.primary }}
+                    color={theme.colors.onPrimary}
+                  />
+                )}
+
+                {/* Camera badge — mirrors web IconButton overlay */}
+                <View
+                  style={{
+                    position: "absolute",
+                    bottom: 0,
+                    right: 0,
+                    backgroundColor: theme.colors.surface,
+                    borderRadius: 12,
+                    width: 24,
+                    height: 24,
+                    justifyContent: "center",
+                    alignItems: "center",
+                    elevation: 3,
+                    shadowColor: "#000",
+                    shadowOpacity: 0.15,
+                    shadowRadius: 4,
+                    shadowOffset: { width: 0, height: 1 },
+                  }}
+                >
+                  <Icon name="camera" size={14} color={theme.colors.onSurface} />
+
+                </View>
+              </View>
+            </TouchableOpacity>
 
           <View style={{ marginLeft: 18, justifyContent: "center" }}>
             <Text

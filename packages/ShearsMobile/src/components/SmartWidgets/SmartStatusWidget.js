@@ -11,7 +11,6 @@ import {
   Button,
   Switch,
   useTheme,
-  List,
   Divider,
   ActivityIndicator,
 } from "react-native-paper";
@@ -30,6 +29,17 @@ import {
 import { formatDateValue } from "shears-shared/src/utils/stringHelpers";
 
 const STATUS_OPTIONS = ["Pending", "Approved", "Rejected", "Completed"];
+
+const STATUS_COLORS = {
+  Approved:  { bg: "#E8F5E9", border: "#4CAF50", text: "#2E7D32" },
+  Rejected:  { bg: "#FFEBEE", border: "#F44336", text: "#C62828" },
+  Completed: { bg: "#F3E5F5", border: "#9C27B0", text: "#6A1B9A" },
+  Pending:   { bg: "#FFF3E0", border: "#FF9800", text: "#E65100" },
+};
+
+function getStatusColors(status) {
+  return STATUS_COLORS[status] || STATUS_COLORS.Pending;
+}
 
 export default function SmartStatusWidget({
   label = "Status",
@@ -51,7 +61,6 @@ export default function SmartStatusWidget({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    console.log(item)
     if (value && value !== selectedStatus) {
       setSelectedStatus(value);
     }
@@ -67,12 +76,7 @@ export default function SmartStatusWidget({
 
       if (selectedStatus === "Rejected" && rejectionMessage.trim() !== "") {
         updatedItem.rejectionMessage = rejectionMessage.trim();
-        await sendRejectionNotification(
-          item,
-          user,
-          token,
-          rejectionMessage.trim()
-        );
+        await sendRejectionNotification(item, user, token, rejectionMessage.trim());
       }
 
       await updateRecord(item._id, updatedItem, token);
@@ -85,13 +89,7 @@ export default function SmartStatusWidget({
           .map((d) => formatDateValue(d))
           .join(", ")} has been approved. Please check your calendar for the details.`;
 
-        await saveCalendarAndNotification(
-          item,
-          user,
-          token,
-          notify,
-          message
-        );
+        await saveCalendarAndNotification(item, user, token, notify, message);
       }
 
       bottomSheetRef.current?.dismiss();
@@ -102,53 +100,33 @@ export default function SmartStatusWidget({
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "Approved":
-        return theme.colors.success || "#4CAF50";
-      case "Rejected":
-        return theme.colors.error || "#F44336";
-      case "Completed":
-        return theme.colors.tertiary || "#9C27B0";
-      default:
-        return theme.colors.warning || "#FF9800";
-    }
-  };
+  const triggerColors = getStatusColors(selectedStatus);
 
   return (
     <View style={styles.container}>
       <Text
         variant="labelMedium"
-        style={{
-          marginBottom: 6,
-          fontWeight: "500",
-          color: theme.colors.text,
-        }}
+        style={{ marginBottom: 6, fontWeight: "500", color: theme.colors.text }}
       >
         {label}
       </Text>
 
+      {/* ── Trigger Button ── */}
       <TouchableOpacity
         activeOpacity={0.8}
         onPress={() => bottomSheetRef.current?.present()}
         style={[
           styles.selectorContainer,
-          { borderColor: theme.colors.outlineVariant || theme.colors.border },
+          {
+            borderColor: triggerColors.border,
+            backgroundColor: triggerColors.bg,
+          },
         ]}
       >
-        <Text
-          style={[
-            styles.selectorText,
-            {
-              color: selectedStatus
-                ? getStatusColor(selectedStatus)
-                : theme.colors.onSurfaceVariant,
-            },
-          ]}
-        >
+        <Text style={[styles.selectorText, { color: triggerColors.text }]}>
           {selectedStatus || "Select status..."}
         </Text>
-        <Text style={styles.dropdownIcon}>⌄</Text>
+        <Text style={[styles.dropdownIcon, { color: triggerColors.text }]}>⌄</Text>
       </TouchableOpacity>
 
       <BottomSheetModal
@@ -166,28 +144,40 @@ export default function SmartStatusWidget({
           <Text style={styles.sheetTitle}>Update Status</Text>
           <Divider style={{ marginVertical: 12 }} />
 
-          <BottomSheetScrollView
-            contentContainerStyle={{ paddingBottom: 140 }}
-          >
-            {STATUS_OPTIONS.map((status) => (
-              <List.Item
-                key={status}
-                title={status}
-                onPress={() => setSelectedStatus(status)}
-                titleStyle={{
-                  color:
-                    status === selectedStatus
-                      ? theme.colors.primary
-                      : theme.colors.onSurface,
-                  fontWeight: status === selectedStatus ? "600" : "400",
-                }}
-                style={{
-                  borderBottomWidth: 0.5,
-                  borderBottomColor: theme.colors.outline,
-                }}
-              />
-            ))}
+          <BottomSheetScrollView contentContainerStyle={{ paddingBottom: 140 }}>
 
+            {/* ── Status Options ── */}
+            {STATUS_OPTIONS.map((opt) => {
+              const colors     = getStatusColors(opt);
+              const isSelected = opt === selectedStatus;
+              return (
+                <TouchableOpacity
+                  key={opt}
+                  onPress={() => setSelectedStatus(opt)}
+                  style={[
+                    styles.statusOption,
+                    {
+                      borderColor: isSelected ? colors.border : theme.colors.outlineVariant || "#E0E0E0",
+                      backgroundColor: isSelected ? colors.bg : "transparent",
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.statusOptionText,
+                      {
+                        color: isSelected ? colors.text : theme.colors.onSurface,
+                        fontWeight: isSelected ? "700" : "400",
+                      },
+                    ]}
+                  >
+                    {opt}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+
+            {/* ── Rejection Message ── */}
             {selectedStatus === "Rejected" && (
               <View style={{ marginTop: 16 }}>
                 <Text style={{ marginBottom: 6, fontWeight: "500" }}>
@@ -212,6 +202,7 @@ export default function SmartStatusWidget({
               </View>
             )}
 
+            {/* ── Notification Toggle ── */}
             <View style={styles.switchRow}>
               <Text style={{ flex: 1 }}>Send notification?</Text>
               <Switch
@@ -223,12 +214,15 @@ export default function SmartStatusWidget({
             </View>
           </BottomSheetScrollView>
 
-          <View
-            style={[
-              styles.sheetActions,
-              { paddingBottom: insets.bottom + 20 },
-            ]}
-          >
+          {/* ── Actions ── */}
+          <View  style={[
+          styles.sheetActions,
+          {
+            paddingBottom: insets.bottom + 20,
+            backgroundColor: theme.colors.surface,
+            borderColor: theme.colors.outlineVariant,
+          },
+        ]}>
             <Button
               mode="outlined"
               style={styles.actionButton}
@@ -237,7 +231,6 @@ export default function SmartStatusWidget({
             >
               Cancel
             </Button>
-
             <Button
               mode="contained"
               style={styles.actionButton}
@@ -248,7 +241,7 @@ export default function SmartStatusWidget({
             </Button>
           </View>
 
-          {/* SPLASH LOADER OVERLAY */}
+          {/* ── Loading Overlay ── */}
           {loading && (
             <View style={styles.loadingOverlay}>
               <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -278,7 +271,7 @@ const styles = StyleSheet.create({
 
   selectorText: { fontSize: 16 },
 
-  dropdownIcon: { fontSize: 18, color: "#999" },
+  dropdownIcon: { fontSize: 18 },
 
   sheetContainer: { flex: 1, paddingHorizontal: 20 },
 
@@ -286,6 +279,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     textAlign: "center",
+  },
+
+  statusOption: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+
+  statusOptionText: {
+    fontSize: 16,
   },
 
   switchRow: {
@@ -305,9 +310,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingHorizontal: 20,
     paddingTop: 12,
-    backgroundColor: "white",
-    borderTopWidth: 1,
-    borderColor: "rgba(0,0,0,0.08)",
+   
     gap: 12,
   },
 

@@ -13,3 +13,11 @@ export const AnnouncementsInfluencer = {
     mobileComponent:'AnnouncementListView',
     display:3
 }
+
+export const MessageBoard = {
+       name: 'message-board',
+    displayName: 'Message',
+    component: 'BaseUI/ListView',
+    mobileComponent:'MessageBoardView',
+    display:3
+}

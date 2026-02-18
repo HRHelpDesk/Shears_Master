@@ -143,6 +143,7 @@ export default function HourlyView({
             recordType: item.recordType,
             subscriberId: item.subscriberId,
           },
+          flashSales: fd.flashSales || "",
         };
       })
       .filter(Boolean);
@@ -468,6 +469,12 @@ export default function HourlyView({
                     <Typography variant="caption" noWrap>
                       {appt.serviceName}
                     </Typography>
+                    <br/>
+                    { appt.flashSales && (
+                      <Typography sx={{ color: appt.flashSales === true ? '#019506' : '#FF9800', fontWeight:'bold'  }} variant="caption" noWrap>
+                      {appt.flashSales ? 'Flash Sales Set' : 'Flash Sales Pending...'}
+                    </Typography>
+                    )}
 
                     {/* ────────────────────────────────────────────────
                         PRODUCTS LIST – only text, truncate with +more

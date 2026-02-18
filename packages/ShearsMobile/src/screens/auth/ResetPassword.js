@@ -125,12 +125,22 @@ export default function ResetPasswordScreen({ appConfig, logo }) {
             onPress={() => navigation.goBack()}
             style={styles.backButton}
           >
-            <Text style={styles.backButtonText}>← Back</Text>
+            <Text style={[styles.backButtonText, { color: '#fff' }]}>← Back</Text>
           </TouchableOpacity>
 
           {/* Card wrapper */}
           <View style={styles.cardWrapper}>
-            <Card style={styles.card} elevation={8}>
+            <Card
+              style={[
+                styles.card,
+                {
+                  backgroundColor: theme.dark
+                    ? theme.colors.elevation.level3
+                    : theme.colors.surface,
+                },
+              ]}
+              elevation={theme.dark ? 0 : 8}
+            >
               <Card.Content style={styles.cardContent}>
                 {/* Logo inside card */}
                 <View style={styles.logoContainer}>
@@ -144,16 +154,22 @@ export default function ResetPasswordScreen({ appConfig, logo }) {
                       key={num}
                       style={[
                         styles.progressDot,
-                        step >= num && styles.progressDotActive,
+                        step >= num && { backgroundColor: theme.colors.primary, width: 24 },
                       ]}
                     />
                   ))}
                 </View>
 
-                <Text variant="headlineMedium" style={styles.title}>
+                <Text
+                  variant="headlineMedium"
+                  style={[styles.title, { color: theme.colors.onSurface }]}
+                >
                   {getStepTitle()}
                 </Text>
-                <Text variant="bodyMedium" style={styles.subtitle}>
+                <Text
+                  variant="bodyMedium"
+                  style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}
+                >
                   {getStepSubtitle()}
                 </Text>
 
@@ -165,9 +181,12 @@ export default function ResetPasswordScreen({ appConfig, logo }) {
                       value={email}
                       onChangeText={setEmail}
                       mode="outlined"
-                      style={styles.input}
+                      style={[styles.input, { backgroundColor: theme.colors.surface }]}
                       keyboardType="email-address"
                       autoCapitalize="none"
+                      textColor={theme.colors.onSurface}
+                      outlineColor={theme.colors.outline}
+                      activeOutlineColor={theme.colors.primary}
                       left={<TextInput.Icon icon="email-outline" />}
                       outlineStyle={styles.inputOutline}
                     />
@@ -194,9 +213,12 @@ export default function ResetPasswordScreen({ appConfig, logo }) {
                       value={otp}
                       onChangeText={setOtp}
                       mode="outlined"
-                      style={styles.input}
+                      style={[styles.input, { backgroundColor: theme.colors.surface }]}
                       keyboardType="number-pad"
                       maxLength={6}
+                      textColor={theme.colors.onSurface}
+                      outlineColor={theme.colors.outline}
+                      activeOutlineColor={theme.colors.primary}
                       left={<TextInput.Icon icon="shield-key-outline" />}
                       outlineStyle={styles.inputOutline}
                     />
@@ -218,7 +240,9 @@ export default function ResetPasswordScreen({ appConfig, logo }) {
                       style={styles.resendButton}
                       disabled={loading}
                     >
-                      <Text style={styles.resendText}>Resend Code</Text>
+                      <Text style={[styles.resendText, { color: theme.colors.onSurfaceVariant }]}>
+                        Resend Code
+                      </Text>
                     </TouchableOpacity>
                   </>
                 )}
@@ -232,7 +256,10 @@ export default function ResetPasswordScreen({ appConfig, logo }) {
                       onChangeText={setNewPassword}
                       mode="outlined"
                       secureTextEntry
-                      style={styles.input}
+                      style={[styles.input, { backgroundColor: theme.colors.surface }]}
+                      textColor={theme.colors.onSurface}
+                      outlineColor={theme.colors.outline}
+                      activeOutlineColor={theme.colors.primary}
                       left={<TextInput.Icon icon="lock-outline" />}
                       outlineStyle={styles.inputOutline}
                     />
@@ -243,7 +270,10 @@ export default function ResetPasswordScreen({ appConfig, logo }) {
                       onChangeText={setConfirmPassword}
                       mode="outlined"
                       secureTextEntry
-                      style={styles.input}
+                      style={[styles.input, { backgroundColor: theme.colors.surface }]}
+                      textColor={theme.colors.onSurface}
+                      outlineColor={theme.colors.outline}
+                      activeOutlineColor={theme.colors.primary}
                       left={<TextInput.Icon icon="lock-check-outline" />}
                       outlineStyle={styles.inputOutline}
                     />
@@ -302,7 +332,6 @@ const styles = StyleSheet.create({
   },
 
   backButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -325,7 +354,6 @@ const styles = StyleSheet.create({
 
   card: {
     borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.98)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
@@ -351,28 +379,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#e0e0e0',
   },
 
-  progressDotActive: {
-    backgroundColor: '#666',
-    width: 24,
-  },
-
   title: {
     textAlign: 'center',
     marginBottom: 8,
     fontWeight: '700',
-    color: '#1a1a1a',
   },
 
   subtitle: {
     textAlign: 'center',
     marginBottom: 32,
-    color: '#666',
     fontSize: 15,
   },
 
   input: {
     marginBottom: 16,
-    backgroundColor: '#fff',
   },
 
   inputOutline: {
@@ -402,7 +422,6 @@ const styles = StyleSheet.create({
   },
 
   resendText: {
-    color: '#666',
     fontSize: 14,
     fontWeight: '600',
   },

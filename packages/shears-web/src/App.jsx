@@ -7,6 +7,7 @@ import { getAppConfig } from 'shears-shared/src/config/getAppConfig';
 import { CURRENT_APP, CURRENT_WHITE_LABEL } from 'shears-shared/src/config/currentapp';
 import './App.css';
 import StripeProvider from './stripe/StripeProvider';
+import { RefreshProvider } from './context/RefreshContext';
 
 const appConfig = getAppConfig(CURRENT_APP, CURRENT_WHITE_LABEL);
 
@@ -27,7 +28,9 @@ export default function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <StripeProvider>
+        <RefreshProvider>
       <AppNavigator />
+      </RefreshProvider>
       </StripeProvider>
     </ThemeProvider>
   );
