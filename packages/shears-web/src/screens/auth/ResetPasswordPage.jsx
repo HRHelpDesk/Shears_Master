@@ -118,6 +118,54 @@ export default function ResetPasswordPage({ appConfig, logo }) {
     }
   };
 
+  // Use theme-aware surface color — in dark mode this will be a dark elevated surface,
+  // in light mode it will be near-white.
+  const cardBg = theme.palette.mode === 'dark'
+    ? theme.palette.background.paper
+    : 'rgba(255, 255, 255, 0.98)';
+
+  const iconColor = theme.palette.text.secondary;
+
+  const sharedInputSx = {
+    mb: 2,
+    '& .MuiOutlinedInput-root': {
+      borderRadius: 1.5,
+      backgroundColor: theme.palette.background.paper,
+      '& fieldset': {
+        borderWidth: 1.5,
+        borderColor: theme.palette.divider,
+      },
+      '&:hover fieldset': {
+        borderColor: theme.palette.text.secondary,
+      },
+      '&.Mui-focused fieldset': {
+        borderColor: theme.palette.primary.main,
+      },
+    },
+    '& .MuiInputLabel-root': {
+      color: theme.palette.text.secondary,
+    },
+    '& .MuiInputBase-input': {
+      color: theme.palette.text.primary,
+    },
+  };
+
+  const sharedButtonSx = {
+    mt: 1,
+    py: 1.75,
+    fontWeight: 600,
+    fontSize: 16,
+    borderRadius: 1.5,
+    textTransform: 'none',
+    letterSpacing: 0.5,
+    boxShadow: 2,
+    backgroundColor: theme.palette.primary.main,
+    '&:hover': {
+      backgroundColor: theme.palette.primary.dark,
+      boxShadow: 4,
+    },
+  };
+
   return (
     <Box
       sx={{
@@ -152,7 +200,7 @@ export default function ResetPasswordPage({ appConfig, logo }) {
         <ArrowBackIcon />
       </IconButton>
 
-      {/* Card wrapper with max width */}
+      {/* Card */}
       <Paper
         elevation={8}
         sx={{
@@ -160,39 +208,17 @@ export default function ResetPasswordPage({ appConfig, logo }) {
           width: '100%',
           maxWidth: 400,
           borderRadius: 3,
-          backgroundColor: 'rgba(255, 255, 255, 0.98)',
+          backgroundColor: cardBg,
           boxShadow: '0px 8px 32px rgba(0, 0, 0, 0.15)',
         }}
       >
-        {/* Logo inside card */}
-        <Box 
-          sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center',
-            mb: 3,
-          }}
-        >
-          <img
-            src={logo}
-            alt="App Logo"
-            style={{ 
-              width: 120, 
-              height: 120, 
-              objectFit: 'contain' 
-            }}
-          />
+        {/* Logo */}
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 3 }}>
+          <img src={logo} alt="App Logo" style={{ width: 200, height: 120, objectFit: 'contain' }} />
         </Box>
 
         {/* Progress indicator */}
-        <Box 
-          sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            gap: 1,
-            mb: 3,
-          }}
-        >
+        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 3 }}>
           {[1, 2, 3].map((num) => (
             <Box
               key={num}
@@ -200,34 +226,28 @@ export default function ResetPasswordPage({ appConfig, logo }) {
                 width: step >= num ? 24 : 8,
                 height: 8,
                 borderRadius: 1,
-                backgroundColor: step >= num ? '#666' : '#e0e0e0',
+                backgroundColor: step >= num ? theme.palette.primary.main : theme.palette.divider,
                 transition: 'all 0.3s ease',
               }}
             />
           ))}
         </Box>
 
-        {/* Title and subtitle matching mobile */}
+        {/* Title */}
         <Typography
           variant="h4"
           fontWeight={700}
           textAlign="center"
-          sx={{ 
-            color: '#1a1a1a',
-            mb: 1,
-          }}
+          sx={{ color: theme.palette.text.primary, mb: 1 }}
         >
           {getStepTitle()}
         </Typography>
-        
+
+        {/* Subtitle */}
         <Typography
           variant="body1"
           textAlign="center"
-          sx={{ 
-            color: '#666',
-            mb: 4,
-            fontSize: 15,
-          }}
+          sx={{ color: theme.palette.text.secondary, mb: 4, fontSize: 15 }}
         >
           {getStepSubtitle()}
         </Typography>
@@ -248,20 +268,11 @@ export default function ResetPasswordPage({ appConfig, logo }) {
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <EmailOutlinedIcon sx={{ color: '#666' }} />
+                    <EmailOutlinedIcon sx={{ color: iconColor }} />
                   </InputAdornment>
                 ),
               }}
-              sx={{
-                mb: 2,
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                  backgroundColor: '#fff',
-                  '& fieldset': {
-                    borderWidth: 1.5,
-                  },
-                },
-              }}
+              sx={sharedInputSx}
             />
 
             <Button
@@ -269,21 +280,7 @@ export default function ResetPasswordPage({ appConfig, logo }) {
               variant="contained"
               onClick={sendOtp}
               disabled={loading}
-              sx={{
-                mt: 1,
-                py: 1.75,
-                fontWeight: 600,
-                fontSize: 16,
-                borderRadius: 1.5,
-                textTransform: 'none',
-                letterSpacing: 0.5,
-                boxShadow: 2,
-                backgroundColor: theme.palette.primary.main,
-                '&:hover': {
-                  backgroundColor: theme.palette.primary.dark,
-                  boxShadow: 4,
-                },
-              }}
+              sx={sharedButtonSx}
             >
               {loading ? 'Sending...' : 'Send Reset Code'}
             </Button>
@@ -305,20 +302,11 @@ export default function ResetPasswordPage({ appConfig, logo }) {
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <ShieldOutlinedIcon sx={{ color: '#666' }} />
+                    <ShieldOutlinedIcon sx={{ color: iconColor }} />
                   </InputAdornment>
                 ),
               }}
-              sx={{
-                mb: 2,
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                  backgroundColor: '#fff',
-                  '& fieldset': {
-                    borderWidth: 1.5,
-                  },
-                },
-              }}
+              sx={sharedInputSx}
             />
 
             <Button
@@ -326,21 +314,7 @@ export default function ResetPasswordPage({ appConfig, logo }) {
               variant="contained"
               onClick={verifyOtpCode}
               disabled={loading}
-              sx={{
-                mt: 1,
-                py: 1.75,
-                fontWeight: 600,
-                fontSize: 16,
-                borderRadius: 1.5,
-                textTransform: 'none',
-                letterSpacing: 0.5,
-                boxShadow: 2,
-                backgroundColor: theme.palette.primary.main,
-                '&:hover': {
-                  backgroundColor: theme.palette.primary.dark,
-                  boxShadow: 4,
-                },
-              }}
+              sx={sharedButtonSx}
             >
               {loading ? 'Verifying...' : 'Verify Code'}
             </Button>
@@ -352,7 +326,7 @@ export default function ResetPasswordPage({ appConfig, logo }) {
                 disabled={loading}
                 underline="none"
                 sx={{
-                  color: '#666',
+                  color: theme.palette.text.secondary,
                   fontSize: 14,
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -383,20 +357,11 @@ export default function ResetPasswordPage({ appConfig, logo }) {
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <LockOutlinedIcon sx={{ color: '#666' }} />
+                    <LockOutlinedIcon sx={{ color: iconColor }} />
                   </InputAdornment>
                 ),
               }}
-              sx={{
-                mb: 2,
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                  backgroundColor: '#fff',
-                  '& fieldset': {
-                    borderWidth: 1.5,
-                  },
-                },
-              }}
+              sx={sharedInputSx}
             />
 
             <TextField
@@ -412,20 +377,11 @@ export default function ResetPasswordPage({ appConfig, logo }) {
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <LockOpenOutlinedIcon sx={{ color: '#666' }} />
+                    <LockOpenOutlinedIcon sx={{ color: iconColor }} />
                   </InputAdornment>
                 ),
               }}
-              sx={{
-                mb: 2,
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                  backgroundColor: '#fff',
-                  '& fieldset': {
-                    borderWidth: 1.5,
-                  },
-                },
-              }}
+              sx={sharedInputSx}
             />
 
             <Button
@@ -433,21 +389,7 @@ export default function ResetPasswordPage({ appConfig, logo }) {
               variant="contained"
               onClick={handleResetPassword}
               disabled={loading}
-              sx={{
-                mt: 1,
-                py: 1.75,
-                fontWeight: 600,
-                fontSize: 16,
-                borderRadius: 1.5,
-                textTransform: 'none',
-                letterSpacing: 0.5,
-                boxShadow: 2,
-                backgroundColor: theme.palette.primary.main,
-                '&:hover': {
-                  backgroundColor: theme.palette.primary.dark,
-                  boxShadow: 4,
-                },
-              }}
+              sx={sharedButtonSx}
             >
               {loading ? 'Resetting...' : 'Reset Password'}
             </Button>
@@ -455,15 +397,11 @@ export default function ResetPasswordPage({ appConfig, logo }) {
         )}
       </Paper>
 
-      {/* Footer text */}
+      {/* Footer */}
       <Box sx={{ mt: 4, textAlign: 'center' }}>
         <Typography
           variant="caption"
-          sx={{
-            color: 'rgba(255, 255, 255, 0.8)',
-            fontSize: 12,
-            fontWeight: 500,
-          }}
+          sx={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 12, fontWeight: 500 }}
         >
           Secure password reset • Protected by encryption
         </Typography>

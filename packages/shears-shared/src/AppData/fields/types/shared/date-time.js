@@ -15,6 +15,21 @@ export const TimeDateFields = [
     layout: { row: 1, span: 3 }, // full-width single column row
   },
    {
+    field: 'autoDateTime',
+    type: 'string',
+    label: 'Date',
+    displayInList: true,
+    required: true,
+    validations: {
+      minLength: 2,
+      maxLength: 50,
+      pattern: /^[A-Za-z\s-]+$/,
+    },
+    display: { placeholder: 'Enter date', order: 1 },
+    input: 'autoDateTime',
+    layout: { row: 1, span: 3 }, // full-width single column row
+  },
+   {
     field: 'dateRange',
     type: 'string',
     label: 'Date',

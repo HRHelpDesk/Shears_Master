@@ -110,7 +110,7 @@ export default function LoginScreen({ appConfig, logo }) {
               textColor={theme.colors.onSurface}
               outlineColor={theme.colors.outline}
               activeOutlineColor={theme.colors.primary}
-              left={<TextInput.Icon icon="email-outline" />}
+              left={<TextInput.Icon icon="lock" />}
               outlineStyle={styles.inputOutline}
               />
 

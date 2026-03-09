@@ -7,6 +7,25 @@ import { AuthContext } from "../../../context/AuthContext";
 import { getRecords } from "shears-shared/src/Services/Authentication";
 import { useRefreshVersion } from "../../../context/RefreshContext";
 
+const getStartAndEndOfWeek = () => {
+  const today = new Date();
+
+  const start = new Date(today);
+  start.setDate(today.getDate() - today.getDay());
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+
+  return { start, end };
+};
+
+const toYMD = (date) => date.toISOString().split("T")[0];
+
+const formatLabel = (d) =>
+  `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
+
 export default function SmartDashboardWeeklySnapshot() {
   const theme = useTheme();
   const { user, token } = useContext(AuthContext);
@@ -19,7 +38,7 @@ export default function SmartDashboardWeeklySnapshot() {
   const [completedCount, setCompletedCount] = useState(0);
   const [outstandingCount, setOutstandingCount] = useState(0);
 
-  const refreshVersion = useRefreshVersion('dashboard-data');
+  const refreshVersion = useRefreshVersion("dashboard-data");
 
   useEffect(() => {
     if (!user || !token) return;
@@ -32,11 +51,15 @@ export default function SmartDashboardWeeklySnapshot() {
       setLoading(true);
       setError(null);
 
+      const { start, end } = getStartAndEndOfWeek();
+
+      // Let the DB filter to this week — no more fetching 300 and slicing
       const raw = await getRecords({
         recordType: "calendar",
         subscriberId: user.subscriberId,
-        page: 1,
-        limit: 300,
+        startDate: toYMD(start),
+        endDate: toYMD(end),
+        limit: 200,
         token,
       });
 
@@ -44,7 +67,7 @@ export default function SmartDashboardWeeklySnapshot() {
         ? raw
         : raw?.records || raw?.items || raw?.data || [];
 
-      const results = computeWeeklyStats(records);
+      const results = computeWeeklyStats(records, start, end);
 
       setWeekLabel(results.weekLabel);
       setTotalScheduled(results.totalScheduled);
@@ -62,20 +85,6 @@ export default function SmartDashboardWeeklySnapshot() {
      HELPERS
   -------------------------------------------------------- */
 
-  const getStartAndEndOfWeek = () => {
-    const today = new Date();
-
-    const start = new Date(today);
-    start.setDate(today.getDate() - today.getDay());
-    start.setHours(0, 0, 0, 0);
-
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
-    end.setHours(23, 59, 59, 999);
-
-    return { start, end };
-  };
-
   const getRecordDate = (rec) => {
     const rawDate = rec?.fieldsData?.date;
     if (!rawDate) return null;
@@ -91,11 +100,9 @@ export default function SmartDashboardWeeklySnapshot() {
     const fd = rec?.fieldsData;
     if (!fd) return false;
 
-    // Respect an explicit completed status if present
     const status = fd.status || fd.appointmentStatus || rec?.status;
     if (status && String(status).toLowerCase() === "completed") return true;
 
-    // Otherwise check if the scheduled end time has passed
     const date = fd.date;
     const timeZoneTime = fd.timeZoneTime;
 
@@ -122,12 +129,8 @@ export default function SmartDashboardWeeklySnapshot() {
     }
   };
 
-  const computeWeeklyStats = (records) => {
-    const { start, end } = getStartAndEndOfWeek();
-
-    const format = (d) =>
-      `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
-
+  // start/end passed in so we don't recompute them inside the loop
+  const computeWeeklyStats = (records, start, end) => {
     let totalScheduled = 0;
     let completedCount = 0;
 
@@ -135,6 +138,7 @@ export default function SmartDashboardWeeklySnapshot() {
       const date = getRecordDate(rec);
       if (!date) continue;
 
+      // DB already filtered by date range, but guard against edge cases
       if (date >= start && date <= end) {
         totalScheduled++;
         if (isCompleted(rec)) completedCount++;
@@ -142,7 +146,7 @@ export default function SmartDashboardWeeklySnapshot() {
     }
 
     return {
-      weekLabel: `${format(start)} - ${format(end)}`,
+      weekLabel: `${formatLabel(start)} - ${formatLabel(end)}`,
       totalScheduled,
       completedCount,
       outstandingCount: totalScheduled - completedCount,
@@ -185,13 +189,19 @@ export default function SmartDashboardWeeklySnapshot() {
     <View style={styles.container}>
       {/* Week Range */}
       <View style={styles.headerContainer}>
-        <Text variant="labelLarge" style={[styles.weekLabel, { color: theme.colors.onSurfaceVariant }]}>
+        <Text
+          variant="labelLarge"
+          style={[styles.weekLabel, { color: theme.colors.onSurfaceVariant }]}
+        >
           Week of {weekLabel}
         </Text>
       </View>
 
       <View style={styles.row}>
-        <Card style={[styles.card, { backgroundColor: theme.colors.surface }]} elevation={1}>
+        <Card
+          style={[styles.card, { backgroundColor: theme.colors.surface }]}
+          elevation={1}
+        >
           <Card.Content style={styles.cardContent}>
             <Text
               variant={isSmallScreen ? "headlineLarge" : "displaySmall"}
@@ -199,13 +209,19 @@ export default function SmartDashboardWeeklySnapshot() {
             >
               {totalScheduled}
             </Text>
-            <Text variant="labelMedium" style={[styles.label, { color: theme.colors.onSurfaceVariant }]}>
+            <Text
+              variant="labelMedium"
+              style={[styles.label, { color: theme.colors.onSurfaceVariant }]}
+            >
               Scheduled
             </Text>
           </Card.Content>
         </Card>
 
-        <Card style={[styles.card, { backgroundColor: theme.colors.surface }]} elevation={1}>
+        <Card
+          style={[styles.card, { backgroundColor: theme.colors.surface }]}
+          elevation={1}
+        >
           <Card.Content style={styles.cardContent}>
             <Text
               variant={isSmallScreen ? "headlineLarge" : "displaySmall"}
@@ -213,13 +229,19 @@ export default function SmartDashboardWeeklySnapshot() {
             >
               {completedCount}
             </Text>
-            <Text variant="labelMedium" style={[styles.label, { color: theme.colors.onSurfaceVariant }]}>
+            <Text
+              variant="labelMedium"
+              style={[styles.label, { color: theme.colors.onSurfaceVariant }]}
+            >
               Completed
             </Text>
           </Card.Content>
         </Card>
 
-        <Card style={[styles.card, { backgroundColor: theme.colors.surface }]} elevation={1}>
+        <Card
+          style={[styles.card, { backgroundColor: theme.colors.surface }]}
+          elevation={1}
+        >
           <Card.Content style={styles.cardContent}>
             <Text
               variant={isSmallScreen ? "headlineLarge" : "displaySmall"}
@@ -227,7 +249,10 @@ export default function SmartDashboardWeeklySnapshot() {
             >
               {outstandingCount}
             </Text>
-            <Text variant="labelMedium" style={[styles.label, { color: theme.colors.onSurfaceVariant }]}>
+            <Text
+              variant="labelMedium"
+              style={[styles.label, { color: theme.colors.onSurfaceVariant }]}
+            >
               Upcoming
             </Text>
           </Card.Content>
@@ -255,9 +280,6 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
-  weekText: {
-    fontWeight: "600",
-  },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -271,7 +293,7 @@ const styles = StyleSheet.create({
   cardContent: {
     alignItems: "center",
     justifyContent: "center",
-    height: '100%',
+    height: "100%",
   },
   count: {
     textAlign: "center",

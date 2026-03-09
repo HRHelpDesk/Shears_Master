@@ -563,7 +563,7 @@ export default function SelectableListView({
    STYLES
 --------------------------------------------------------- */
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 10 },
+  container: { flex: 1, padding: 10, paddingBottom:80 },
   searchInput: {
     borderWidth: 1,
     borderRadius: 10,

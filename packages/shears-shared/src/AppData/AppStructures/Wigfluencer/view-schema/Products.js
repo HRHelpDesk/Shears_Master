@@ -1,8 +1,8 @@
 export const ProductsView = {
        name: 'Products',
     displayName: 'Products',
-    component: 'BaseUI/ListView',
+    component: 'BaseUI/SmartLists/AdminListView',
     actionsMenu: ['bc-products'],
-    mobileComponent:'ListView',
+    mobileComponent:'AdminListView',
     display:3
 }

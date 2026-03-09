@@ -1,5 +1,5 @@
 // src/components/CalendarView.js
-import React, { useState, useMemo, useCallback, useEffect, useContext } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useContext, useRef, memo } from 'react';
 import {
   View,
   Text,
@@ -36,6 +36,7 @@ import { canSeeCalendarEvent, getRecords } from 'shears-shared/src/Services/Auth
 import { AuthContext } from '../../context/AuthContext';
 
 const WINDOW_WIDTH = Dimensions.get('window').width;
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const parseYMD = (value) => {
   if (!value) return null;
@@ -45,6 +46,46 @@ const parseYMD = (value) => {
   return new Date(Number(y), Number(m) - 1, Number(d), 0, 0, 0, 0);
 };
 
+const getMonthKey = (date) => format(date, 'yyyy-MM');
+const toDateKey  = (date) => format(date, 'yyyy-MM-dd');
+
+/* -------------------------------------------------------
+   Memoized day cell
+------------------------------------------------------- */
+const DayCell = memo(({
+  day, daySize, dayHeight, today, inMonth, eventCount, onPress,
+  primaryContainer, onPrimaryContainer, onSurface, onSurfaceVariant, primary, onPrimary,
+}) => {
+  const circleSize = Math.min(36, Math.floor(daySize * 0.72));
+  return (
+    <TouchableOpacity
+      style={[styles.dayCell, { width: daySize, height: dayHeight }]}
+      onPress={onPress}
+      activeOpacity={eventCount > 0 ? 0.7 : 1}
+    >
+      <View style={[
+        styles.dayCircle,
+        today && { backgroundColor: primaryContainer, width: circleSize, height: circleSize, borderRadius: circleSize / 2 },
+      ]}>
+        <Text style={[styles.dayText, {
+          color: today ? onPrimaryContainer : inMonth ? onSurface : onSurfaceVariant,
+          fontWeight: today ? '700' : '400',
+        }]}>
+          {format(day, 'd')}
+        </Text>
+      </View>
+      {eventCount > 0 && (
+        <View style={[styles.eventBadge, { backgroundColor: primary }]}>
+          <Text style={[styles.eventBadgeText, { color: onPrimary }]}>{eventCount}</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+});
+
+/* -------------------------------------------------------
+   Main component
+------------------------------------------------------- */
 export default function CalendarView({
   data = [],
   appConfig,
@@ -62,128 +103,182 @@ export default function CalendarView({
   const [localData, setLocalData] = useState(data);
   const [refreshing, setRefreshing] = useState(false);
 
-  const daySize = Math.floor(containerWidth / 7);
-  const leftover = containerWidth - daySize * 7;
+  const monthCache = useRef({});
+
+  const daySize         = Math.floor(containerWidth / 7);
+  const leftover        = containerWidth - daySize * 7;
   const gridPaddingLeft = Math.round(leftover / 2);
+  const dayHeight       = Math.floor(daySize * 1.15);
 
   const { token, user } = useContext(AuthContext);
 
-  const loadCalendarData = useCallback(async () => {
+  const { primaryContainer, onPrimaryContainer, onSurface, onSurfaceVariant, primary, onPrimary } = theme.colors;
+
+  /* -------------------------------------------------------
+     FETCH — scoped to a single month, with cache
+  ------------------------------------------------------- */
+  const loadCalendarData = useCallback(async (date, force = false) => {
     if (!token || !user?.subscriberId) return;
+
+    const key = getMonthKey(date);
+
+    if (!force && monthCache.current[key]) {
+      setLocalData(monthCache.current[key]);
+      return;
+    }
+
+    const startDate = format(startOfMonth(date), 'yyyy-MM-dd');
+    const endDate   = format(endOfMonth(date),   'yyyy-MM-dd');
 
     try {
       const res = await getRecords({
         recordType: recordType || 'calendar',
         token,
         subscriberId: user.subscriberId,
+        startDate,
+        endDate,
+        limit: 200,
       });
-      if (res) setLocalData(res);
+
+      if (res) {
+        monthCache.current[key] = res;
+        setLocalData(res);
+      }
     } catch (err) {
-      console.error("Failed to load calendar:", err);
+      console.error('Failed to load calendar:', err);
     }
-  }, [token, user?.subscriberId]);
+  }, [token, user?.subscriberId, recordType]);
 
   useEffect(() => {
-    loadCalendarData();
-  }, [loadCalendarData]);
+    loadCalendarData(currentDate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
+  /* -------------------------------------------------------
+     PULL-TO-REFRESH
+  ------------------------------------------------------- */
   const onPullRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await loadCalendarData();
+      await loadCalendarData(currentDate, true);
       if (onRefresh) onRefresh();
     } finally {
       setRefreshing(false);
     }
-  }, [loadCalendarData, onRefresh]);
+  }, [currentDate, loadCalendarData, onRefresh]);
 
-  const getEventsForDay = useCallback(
-    (day) =>
-      localData.filter((event) => {
-          if (!canSeeCalendarEvent(event, user)) {
-          return false;
-        }
-        const raw = event.fieldsData?.date;
-        if (!raw) return false;
-        const eventDate = parseYMD(raw);
-        return isSameDay(eventDate, day);
-      }),
-    [localData]
-  );
+  /* -------------------------------------------------------
+     RECORD DELETED
+     Called by HourlyView/AppointmentsHourlyView when a
+     record is deleted inside ListItemDetail.
+     - Instantly removes from localData (no spinner)
+     - Updates the month cache so nav away+back stays correct
+  ------------------------------------------------------- */
+  const handleRecordDeleted = useCallback((deletedId) => {
+    setLocalData(prev => {
+      const updated = prev.filter(r => r._id !== deletedId);
+      const key = getMonthKey(currentDate);
+      monthCache.current[key] = updated;
+      return updated;
+    });
+  }, [currentDate]);
 
-  const generateMonthDays = (date) => {
-    const start = startOfWeek(startOfMonth(date), { weekStartsOn: 0 });
-    const end = endOfWeek(endOfMonth(date), { weekStartsOn: 0 });
-    const days = [];
+  /* -------------------------------------------------------
+     PRE-COMPUTED EVENT MAP  { "yyyy-MM-dd": count }
+  ------------------------------------------------------- */
+  const eventCountMap = useMemo(() => {
+    const map = {};
+    for (const event of localData) {
+      if (!canSeeCalendarEvent(event, user)) continue;
+      const raw = event.fieldsData?.date;
+      if (!raw) continue;
+      const parsed = parseYMD(raw);
+      if (!parsed) continue;
+      const key = toDateKey(parsed);
+      map[key] = (map[key] || 0) + 1;
+    }
+    return map;
+  }, [localData, user]);
+
+  /* -------------------------------------------------------
+     MONTH GRID
+  ------------------------------------------------------- */
+  const days = useMemo(() => {
+    const start = startOfWeek(startOfMonth(currentDate), { weekStartsOn: 0 });
+    const end   = endOfWeek(endOfMonth(currentDate),     { weekStartsOn: 0 });
+    const result = [];
     let cur = start;
-    while (cur <= end) {
-      days.push(cur);
-      cur = addDays(cur, 1);
-    }
-    while (days.length < 42) {
-      days.push(addDays(days[days.length - 1], 1));
-    }
-    return days;
-  };
+    while (cur <= end) { result.push(cur); cur = addDays(cur, 1); }
+    while (result.length < 42) result.push(addDays(result[result.length - 1], 1));
+    return result;
+  }, [currentDate]);
 
-  const days = useMemo(() => generateMonthDays(currentDate), [currentDate]);
-  const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-  const handlePrevMonth = () => animateMonthChange(subMonths(currentDate, 1), 1);
-  const handleNextMonth = () => animateMonthChange(addMonths(currentDate, 1), -1);
-const dayHeight = Math.floor(daySize * 1.15);
-  const animateMonthChange = (newDate, direction) => {
+  /* -------------------------------------------------------
+     MONTH NAVIGATION
+  ------------------------------------------------------- */
+  const animateMonthChange = useCallback((newDate, direction) => {
     Animated.timing(translateX, {
-      toValue: direction * containerWidth,
-      duration: 200,
-      useNativeDriver: true,
+      toValue: direction * containerWidth, duration: 200, useNativeDriver: true,
     }).start(() => {
       setCurrentDate(newDate);
       translateX.setValue(-direction * containerWidth);
-
-      Animated.timing(translateX, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
+      Animated.timing(translateX, { toValue: 0, duration: 200, useNativeDriver: true }).start();
     });
-  };
+  }, [translateX, containerWidth]);
 
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dx) > 20,
-        onPanResponderRelease: (_, gesture) => {
-          if (gesture.dx > 50) handlePrevMonth();
-          else if (gesture.dx < -50) handleNextMonth();
-        },
-      }),
-    [currentDate, containerWidth]
-  );
+  const handlePrevMonth = useCallback(() => {
+    const newDate = subMonths(currentDate, 1);
+    animateMonthChange(newDate, 1);
+    loadCalendarData(newDate);
+  }, [currentDate, animateMonthChange, loadCalendarData]);
 
-  const openDayModal = (day) => {
-    const dayEvents = getEventsForDay(day);
-    if (dayEvents.length === 0) return;
+  const handleNextMonth = useCallback(() => {
+    const newDate = addMonths(currentDate, 1);
+    animateMonthChange(newDate, -1);
+    loadCalendarData(newDate);
+  }, [currentDate, animateMonthChange, loadCalendarData]);
+
+  /* -------------------------------------------------------
+     MODAL
+  ------------------------------------------------------- */
+  const openDayModal = useCallback((day) => {
+    if (!eventCountMap[toDateKey(day)]) return;
     setSelectedDay(day);
     setModalVisible(true);
-  };
+  }, [eventCountMap]);
 
-  const closeModal = () => {
+  const closeModal = useCallback(() => {
     setModalVisible(false);
     setSelectedDay(null);
-  };
+  }, []);
 
+  /* -------------------------------------------------------
+     PAN RESPONDER
+  ------------------------------------------------------- */
+  const panResponder = useMemo(
+    () => PanResponder.create({
+      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 20,
+      onPanResponderRelease: (_, g) => {
+        if (g.dx > 50) handlePrevMonth();
+        else if (g.dx < -50) handleNextMonth();
+      },
+    }),
+    [handlePrevMonth, handleNextMonth]
+  );
+
+  /* -------------------------------------------------------
+     VIEW CONFIG
+  ------------------------------------------------------- */
   const viewData = useMemo(() => {
     if (!appConfig?.mainNavigation) return null;
-    return (
-      appConfig.mainNavigation.find(
-        (r) =>
-          r.name?.toLowerCase() === 'calendar' ||
-          r.displayName?.toLowerCase() === 'calendar'
-      ) || null
-    );
+    return appConfig.mainNavigation.find(
+      r => r.name?.toLowerCase() === 'calendar' || r.displayName?.toLowerCase() === 'calendar'
+    ) || null;
   }, [appConfig]);
 
+  /* -------------------------------------------------------
+     RENDER
+  ------------------------------------------------------- */
   return (
     <Surface
       style={[styles.surface, { backgroundColor: theme.colors.surface }]}
@@ -195,294 +290,133 @@ const dayHeight = Math.floor(daySize * 1.15);
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onPullRefresh}
-            colors={[theme.colors.primary]}
-            tintColor={theme.colors.primary}
+            colors={[primary]}
+            tintColor={primary}
             title="Refreshing calendar..."
-            titleColor={theme.colors.onSurfaceVariant}
+            titleColor={onSurfaceVariant}
           />
         }
       >
         {/* Header */}
         <View style={styles.header}>
-          <IconButton
-            icon="chevron-left"
-            onPress={handlePrevMonth}
-            size={24}
-            iconColor={theme.colors.primary}
-          />
-          <Text style={[styles.headerTitle, { color: theme.colors.onSurface }]}>
+          <IconButton icon="chevron-left" onPress={handlePrevMonth} size={24} iconColor={primary} />
+          <Text style={[styles.headerTitle, { color: onSurface }]}>
             {format(currentDate, 'MMMM yyyy')}
           </Text>
-          <IconButton
-            icon="chevron-right"
-            onPress={handleNextMonth}
-            size={24}
-            iconColor={theme.colors.primary}
-          />
+          <IconButton icon="chevron-right" onPress={handleNextMonth} size={24} iconColor={primary} />
         </View>
 
         {/* Weekday Labels */}
         <View style={[styles.weekdays, { paddingLeft: gridPaddingLeft }]}>
-          {weekdays.map((day) => (
-            <Text
-              key={day}
-              style={[
-                styles.weekdayText,
-                { width: daySize, color: theme.colors.onSurfaceVariant },
-              ]}
-            >
+          {WEEKDAYS.map(day => (
+            <Text key={day} style={[styles.weekdayText, { width: daySize, color: onSurfaceVariant }]}>
               {day}
             </Text>
           ))}
         </View>
 
         {/* Month Grid */}
-        <Animated.View
-          style={[
-            styles.grid,
-            {
-              paddingLeft: gridPaddingLeft,
-              transform: [{ translateX }],
-              width: containerWidth,
-            },
-          ]}
-        >
-          {days.map((day) => {
-            const today = isToday(day);
-            const inMonth = isSameMonth(day, currentDate);
-            const eventCount = getEventsForDay(day).length;
-
+        <Animated.View style={[styles.grid, { paddingLeft: gridPaddingLeft, transform: [{ translateX }], width: containerWidth }]}>
+          {days.map(day => {
+            const key = toDateKey(day);
             return (
-              <TouchableOpacity
-                key={day.toISOString()}
-                style={[styles.dayCell, { width: daySize, height: dayHeight }]}
-
+              <DayCell
+                key={key}
+                day={day}
+                daySize={daySize}
+                dayHeight={dayHeight}
+                today={isToday(day)}
+                inMonth={isSameMonth(day, currentDate)}
+                eventCount={eventCountMap[key] || 0}
                 onPress={() => openDayModal(day)}
-                activeOpacity={eventCount > 0 ? 0.7 : 1}
-              >
-                <View
-                  style={[
-                    styles.dayCircle,
-                    today && {
-                      backgroundColor: theme.colors.primaryContainer,
-                      width: Math.min(36, Math.floor(daySize * 0.72)),
-                      height: Math.min(36, Math.floor(daySize * 0.72)),
-                      borderRadius: Math.min(36, Math.floor(daySize * 0.72)) / 2,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.dayText,
-                      {
-                        color: today
-                          ? theme.colors.onPrimaryContainer
-                          : inMonth
-                          ? theme.colors.onSurface
-                          : theme.colors.onSurfaceVariant,
-                        fontWeight: today ? '700' : '400',
-                      },
-                    ]}
-                  >
-                    {format(day, 'd')}
-                  </Text>
-                </View>
-
-                {eventCount > 0 && (
-                  <View style={[
-                    styles.eventBadge,
-                    { backgroundColor: theme.colors.primary }
-                  ]}>
-                    <Text style={[
-                      styles.eventBadgeText,
-                      { color: theme.colors.onPrimary }
-                    ]}>
-                      {eventCount}
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
+                primaryContainer={primaryContainer}
+                onPrimaryContainer={onPrimaryContainer}
+                onSurface={onSurface}
+                onSurfaceVariant={onSurfaceVariant}
+                primary={primary}
+                onPrimary={onPrimary}
+              />
             );
           })}
         </Animated.View>
       </ScrollView>
 
       {/* FAB */}
-         {modes.includes('add') && (
-      <FAB
-        icon="plus"
-        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
-        color={theme.colors.onPrimary}
-        onPress={() =>
-          navigation.navigate('ListItemDetail', {
+      {modes.includes('add') && (
+        <FAB
+          icon="plus"
+          style={[styles.fab, { backgroundColor: primary }]}
+          color={onPrimary}
+          onPress={() => navigation.navigate('ListItemDetail', {
             item: {},
             name: recordType ? recordType.charAt(0).toUpperCase() + recordType.slice(1) : 'Calendar',
             appConfig,
             mode: 'add',
             fields: mapFields(viewData?.fields || []),
-            recordType
-          })
-        }
-      />
-         )}
-      {/* Modal - now fully theme-aware */}
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        onRequestClose={closeModal}
-        transparent={true} 
-      >
-        <View style={[
-          styles.modalContainer, 
-          { backgroundColor: theme.colors.background }
-        ]}>
-          {/* Modal Header */}
-          <View style={[
-            styles.modalHeader,
-            { 
-              backgroundColor: theme.colors.surface,
-              borderBottomColor: theme.colors.border 
-            }
-          ]}>
-            <TouchableOpacity 
-              onPress={closeModal}
-              style={styles.closeButton}
-            >
-              <Icon 
-                name="close" 
-                size={28} 
-                color={theme.colors.primary} 
-              />
+            recordType,
+          })}
+        />
+      )}
+
+      {/* Day Detail Modal */}
+      <Modal visible={modalVisible} animationType="slide" onRequestClose={closeModal} transparent={true}>
+        <View style={[styles.modalContainer, { backgroundColor: theme.colors.background }]}>
+          <View style={[styles.modalHeader, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
+            <TouchableOpacity onPress={closeModal} style={styles.closeButton}>
+              <Icon name="close" size={28} color={primary} />
             </TouchableOpacity>
           </View>
 
-          {/* Hourly View */}
-          {selectedDay && (
-      <>
-        {(() => {
-          const effectiveRecordType = recordType || 'calendar'; // fallback
-
-          if (effectiveRecordType === 'appointments') {
+          {selectedDay && (() => {
+            const effectiveRecordType = recordType || 'calendar';
+            if (effectiveRecordType === 'appointments') {
+              return (
+                <AppointmentsHourlyView
+                  data={localData}
+                  selectedDate={selectedDay}
+                  appConfig={appConfig}
+                  name="Appointments"
+                  modes={modes}
+                  user={user}
+                  onRecordDeleted={handleRecordDeleted}
+                />
+              );
+            }
             return (
-              <AppointmentsHourlyView
+              <HourlyView
                 data={localData}
                 selectedDate={selectedDay}
                 appConfig={appConfig}
-                name="Appointments"
+                name="Calendar"
                 modes={modes}
                 user={user}
+                onRecordDeleted={handleRecordDeleted}
               />
             );
-          } 
-          
-          // default / fallback → calendar / influencer / scheduling events
-          return (
-            <HourlyView
-              data={localData}
-              selectedDate={selectedDay}
-              appConfig={appConfig}
-              name="Calendar"
-              modes={modes}
-              user={user}
-            />
-          );
-        })()}
-      </>
-    )}
-
-          
+          })()}
         </View>
       </Modal>
     </Surface>
   );
 }
 
-/* --------------------------------------------------------------
-     Styles
--------------------------------------------------------------- */
+/* -------------------------------------------------------
+   Styles
+------------------------------------------------------- */
 const styles = StyleSheet.create({
-  surface: {
-    paddingVertical: 8,
-    elevation: 2,
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginHorizontal: 8,
-    marginBottom: 6,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  weekdays: {
-    flexDirection: 'row',
-    marginVertical: 4,
-  },
-  weekdayText: {
-    textAlign: 'center',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  dayCell: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dayCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dayText: {
-    fontSize: 15,
-  },
-  eventBadge: {
-  minWidth: 18,
-  height: 18,
-  borderRadius: 9,
-  justifyContent: 'center',
-  alignItems: 'center',
-  marginTop: 2,
-  paddingHorizontal: 5,
-},
-eventBadgeText: {
-  fontSize: 10,
-  fontWeight: '600',
-},
-  fab: {
-    position: 'absolute',
-    right: 20,
-    bottom: Platform.OS === 'ios' ? 100 : 20,
-    borderRadius: 30,
-    elevation: 5,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContainer: {
-    flex: 1,
-    marginTop: 50, // Adjust this to control how much of the calendar shows behind
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    overflow: 'hidden',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    padding: 12,
-    borderBottomWidth: 1,
-  },
-  closeButton: {
-    padding: 8,
-  },
+  surface:      { paddingVertical: 8, elevation: 2, flex: 1 },
+  header:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: 8, marginBottom: 6 },
+  headerTitle:  { fontSize: 20, fontWeight: '600' },
+  weekdays:     { flexDirection: 'row', marginVertical: 4 },
+  weekdayText:  { textAlign: 'center', fontWeight: '600', fontSize: 13 },
+  grid:         { flexDirection: 'row', flexWrap: 'wrap' },
+  dayCell:      { justifyContent: 'center', alignItems: 'center' },
+  dayCircle:    { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  dayText:      { fontSize: 15 },
+  eventBadge:   { minWidth: 18, height: 18, borderRadius: 9, justifyContent: 'center', alignItems: 'center', marginTop: 2, paddingHorizontal: 5 },
+  eventBadgeText: { fontSize: 10, fontWeight: '600' },
+  fab:          { position: 'absolute', right: 20, bottom: Platform.OS === 'ios' ? 100 : 20, borderRadius: 30, elevation: 5 },
+  modalContainer: { flex: 1, marginTop: 50, borderTopLeftRadius: 20, borderTopRightRadius: 20, overflow: 'hidden' },
+  modalHeader:  { flexDirection: 'row', justifyContent: 'flex-end', padding: 12, borderBottomWidth: 1 },
+  closeButton:  { padding: 8 },
 });

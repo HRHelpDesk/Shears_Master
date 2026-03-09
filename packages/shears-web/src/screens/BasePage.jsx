@@ -254,7 +254,7 @@ const isAdmin = user.role === "admin";
           display: 'flex',
           flexDirection: 'column',
           width: '100%',
-          backgroundColor: '#fff',
+          bgcolor: 'background.paper',
           borderRadius: 2,
           boxShadow: 1,
           position: 'relative',

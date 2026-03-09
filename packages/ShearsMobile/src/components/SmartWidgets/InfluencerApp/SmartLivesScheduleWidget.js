@@ -144,10 +144,12 @@ const dateToShow = useMemo(() => {
 
       try {
         const res = await getRecords({
-          recordType: 'calendar',
+          recordType:   'calendar',
           subscriberId: user.subscriberId,
+          startDate:    dateToShow,
+          endDate:      dateToShow,
           token,
-          limit: 500,
+          limit: 200,          // was 500
         });
 
         setData(res || []);
@@ -163,21 +165,14 @@ const dateToShow = useMemo(() => {
   }, [user?.subscriberId, token, refreshVersion]);
 
   const filteredLives = useMemo(() => {
-    return data
-      .filter((item) => {
-        const itemDate = item.fieldsData?.date || item.date;
-        return itemDate === dateToShow;
-      })
-      .sort((a, b) => {
-        const fd_a = a.fieldsData || a;
-        const fd_b = b.fieldsData || b;
-
-        const timeA = fd_a.timeZoneTime?.start || fd_a.startTimeWithZone?.time || '';
-        const timeB = fd_b.timeZoneTime?.start || fd_b.startTimeWithZone?.time || '';
-
-        return timeA.localeCompare(timeB);
-      });
-  }, [data, dateToShow]);
+  return [...data].sort((a, b) => {
+    const fd_a = a.fieldsData || a;
+    const fd_b = b.fieldsData || b;
+    const timeA = fd_a.timeZoneTime?.start || fd_a.startTimeWithZone?.time || '';
+    const timeB = fd_b.timeZoneTime?.start || fd_b.startTimeWithZone?.time || '';
+    return timeA.localeCompare(timeB);
+  });
+}, [data]);
 
   const handlePresentModal = useCallback(() => {
     bottomSheetModalRef.current?.present();

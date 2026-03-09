@@ -9,6 +9,7 @@ import {
   Button as MuiButton,
   Stack,
   Alert,
+  capitalize,
 } from "@mui/material";
 import { v4 as uuidv4 } from 'uuid';
 
@@ -33,7 +34,8 @@ import {
   currencyToNumber,
   formatCurrency,
   buildTransactionFromAppointment,
-  getDisplayTitle
+  getDisplayTitle,
+  toTitleCase
 } from "shears-shared/src/utils/stringHelpers";
 
 import {
@@ -258,7 +260,7 @@ function RenderField({
                 }}
               >
                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  {singularize(fieldDef.label)} #{idx + 1}
+                  {toTitleCase(capitalize(singularize(fieldDef.name || fieldDef.field)))} #{idx + 1}
                 </Typography>
 
                 {mode === "read" ? (
@@ -456,6 +458,8 @@ export default function ListItemDetail({
   const isModeAllowed = (modeToCheck) => modes.includes(modeToCheck);
 
   const validatedInitialMode = useMemo(() => {
+      console.log('validatedInitialMode calc:', { initialMode, modes });
+
     if (isModeAllowed(initialMode)) return initialMode;
     if (isModeAllowed('read')) return 'read';
     return modes[0] || 'read';
@@ -750,11 +754,21 @@ export default function ListItemDetail({
     }
   };
 
-  useEffect(() => {
+// In ListItemDetail.jsx — change this:
+useEffect(() => {
+  setLocalItem(initialData);
+  setMode(validatedInitialMode);
+  originalItemRef.current = JSON.parse(JSON.stringify(initialData));
+}, [initialData, validatedInitialMode]);
+
+// To this:
+useEffect(() => {
+  if (open) {
     setLocalItem(initialData);
     setMode(validatedInitialMode);
     originalItemRef.current = JSON.parse(JSON.stringify(initialData));
-  }, [initialData, validatedInitialMode]);
+  }
+}, [open]);
 
   return (
     <Modal

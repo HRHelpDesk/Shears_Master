@@ -1,11 +1,12 @@
 // src/components/CalendarView.jsx
+
 import React, { useState, useMemo, useContext } from 'react';
-import { 
-  Box, 
-  Typography, 
-  IconButton, 
-  Paper, 
-  Dialog, 
+import {
+  Box,
+  Typography,
+  IconButton,
+  Paper,
+  Dialog,
   DialogContent,
   DialogTitle,
   Fab,
@@ -23,6 +24,7 @@ import {
   addMonths,
   subMonths,
 } from 'date-fns';
+
 import HourlyView from './InfluencerApp/HourlyView';
 import AppointmentsHourlyView from './Shear/AppointmentsHourlyView';
 import { AuthContext } from '../../context/AuthContext';
@@ -30,10 +32,15 @@ import { canSeeCalendarEvent } from 'shears-shared/src/Services/Authentication';
 import { mapFields } from 'shears-shared/src/config/fieldMapper';
 import ListItemDetail from '../BaseUI/ListItemDetail';
 
+/* ---------------------------------- */
+/* Utilities                          */
+/* ---------------------------------- */
+
 const parseYMD = (value) => {
   if (!value) return null;
 
   let dateString = value;
+
   if (typeof value === 'string' && value.includes('T')) {
     dateString = value.split('T')[0];
   } else if (value instanceof Date) {
@@ -46,9 +53,13 @@ const parseYMD = (value) => {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateString);
   if (!match) return null;
 
-  const [_, y, m, d] = match;
+  const [, y, m, d] = match;
   return new Date(Number(y), Number(m) - 1, Number(d), 0, 0, 0, 0);
 };
+
+/* ---------------------------------- */
+/* Styled Components                  */
+/* ---------------------------------- */
 
 const CalendarContainer = styled(Paper)(({ theme }) => ({
   flex: 1,
@@ -102,29 +113,43 @@ const DialogHeader = styled(DialogTitle)(({ theme }) => ({
   padding: theme.spacing(1.5, 2),
 }));
 
-export default function CalendarView({ 
-  events = [], 
-  onEventClick, 
-  appConfig, 
-  modes, 
-  recordType = 'calendar' 
+/* ---------------------------------- */
+/* Main Component                     */
+/* ---------------------------------- */
+
+export default function CalendarView({
+  events = [],
+  appConfig,
+  modes,
+  recordType = 'calendar',
+  currentMonth,
+  setCurrentMonth,
+  onRefreshMonth
 }) {
   const { user } = useContext(AuthContext);
   const theme = useTheme();
+
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
 
-  const [currentDate, setCurrentDate] = useState(new Date());
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailMode, setDetailMode] = useState('add');
   const [selectedAppointment, setSelectedAppointment] = useState(null);
 
+  /* ---------------------------------- */
+  /* Filter Visible Events              */
+  /* ---------------------------------- */
+
   const visibleEvents = useMemo(() => {
     if (!user) return [];
-    return events.filter(event => canSeeCalendarEvent(event, user));
+    return events.filter((event) => canSeeCalendarEvent(event, user));
   }, [events, user]);
+
+  /* ---------------------------------- */
+  /* Field Mapping                      */
+  /* ---------------------------------- */
 
   const calendarFields = useMemo(() => {
     const calendarNav = appConfig?.mainNavigation?.find(
@@ -133,27 +158,44 @@ export default function CalendarView({
     return mapFields(calendarNav?.fields || []);
   }, [appConfig, recordType]);
 
-  const start = startOfMonth(currentDate);
-  const end = endOfMonth(currentDate);
+  /* ---------------------------------- */
+  /* Month Calculations                 */
+  /* ---------------------------------- */
+
+  const start = startOfMonth(currentMonth);
+  const end = endOfMonth(currentMonth);
   const days = eachDayOfInterval({ start, end });
   const firstDayOfMonth = start.getDay();
 
-  const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1));
-  const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
+  const handlePrevMonth = () =>
+    setCurrentMonth(subMonths(currentMonth, 1));
+
+  const handleNextMonth = () =>
+    setCurrentMonth(addMonths(currentMonth, 1));
 
   const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+  /* ---------------------------------- */
+  /* Event Counting                     */
+  /* ---------------------------------- */
+
   const getEventCountForDay = useMemo(() => {
     const countMap = new Map();
-    visibleEvents.forEach(ev => {
+
+    visibleEvents.forEach((ev) => {
       const eventDate = parseYMD(ev.fieldsData?.date);
       if (eventDate) {
         const key = eventDate.toDateString();
         countMap.set(key, (countMap.get(key) || 0) + 1);
       }
     });
+
     return (day) => countMap.get(day.toDateString()) || 0;
   }, [visibleEvents]);
+
+  /* ---------------------------------- */
+  /* Day Click                          */
+  /* ---------------------------------- */
 
   const handleDayClick = (day) => {
     if (getEventCountForDay(day) === 0) return;
@@ -162,12 +204,22 @@ export default function CalendarView({
   };
 
   const handleCloseModal = () => {
-    setModalOpen(false);
-    setSelectedDay(null);
-  };
+  setModalOpen(false);
+  setSelectedDay(null);
+
+  if (onRefreshMonth) {
+    onRefreshMonth();   // 👈 triggers parent refetch
+  }
+};
+
+  /* ---------------------------------- */
+  /* Add New                            */
+  /* ---------------------------------- */
 
   const handleAddNew = () => {
-    setSelectedAppointment({ date: format(currentDate, 'yyyy-MM-dd') });
+    setSelectedAppointment({
+      date: format(currentMonth, 'yyyy-MM-dd'),
+    });
     setDetailMode('add');
     setDetailModalOpen(true);
   };
@@ -179,47 +231,38 @@ export default function CalendarView({
 
   const cellMinHeight = isMobile ? 52 : isTablet ? 70 : 90;
 
+  /* ---------------------------------- */
+  /* Render                             */
+  /* ---------------------------------- */
+
   return (
     <>
       <CalendarContainer>
         <CalendarHeader>
-          <IconButton onClick={handlePrevMonth} size={isMobile ? 'small' : 'medium'}>
+          <IconButton onClick={handlePrevMonth}>
             <i className="fa fa-chevron-left" />
           </IconButton>
 
           <Typography variant={isMobile ? 'subtitle1' : 'h6'} fontWeight={600}>
-            {format(currentDate, isMobile ? 'MMM yyyy' : 'MMMM yyyy')}
+            {format(currentMonth, isMobile ? 'MMM yyyy' : 'MMMM yyyy')}
           </Typography>
 
-          <IconButton onClick={handleNextMonth} size={isMobile ? 'small' : 'medium'}>
+          <IconButton onClick={handleNextMonth}>
             <i className="fa fa-chevron-right" />
           </IconButton>
         </CalendarHeader>
 
-        {/* Single grid: weekday headers + empty offset cells + day cells */}
         <DayGrid>
-          {/* Weekday headers */}
           {WEEKDAYS.map((day) => (
-            <Box
-              key={day}
-              sx={{
-                textAlign: 'center',
-                py: 1,
-                fontSize: { xs: '0.7rem', sm: '0.875rem' },
-                fontWeight: 600,
-                color: 'text.secondary',
-              }}
-            >
+            <Box key={day} sx={{ textAlign: 'center', py: 1, fontWeight: 600 }}>
               {isMobile ? day[0] : day}
             </Box>
           ))}
 
-          {/* Empty offset cells */}
           {Array.from({ length: firstDayOfMonth }).map((_, i) => (
             <Box key={`empty-${i}`} />
           ))}
 
-          {/* Day cells */}
           {days.map((day) => {
             const today = isToday(day);
             const eventCount = getEventCountForDay(day);
@@ -230,7 +273,7 @@ export default function CalendarView({
                 key={day.toString()}
                 onClick={() => handleDayClick(day)}
                 sx={{
-                  padding: isMobile ? 0.5 : 1,
+                  padding: 1,
                   textAlign: 'center',
                   borderRadius: 1,
                   backgroundColor: today ? 'primary.main' : 'background.default',
@@ -241,41 +284,20 @@ export default function CalendarView({
                   flexDirection: 'column',
                   justifyContent: 'center',
                   alignItems: 'center',
-                  transition: 'background-color 0.15s ease',
-                  '&:hover': hasEvents ? {
-                    backgroundColor: today ? 'primary.dark' : 'action.hover',
-                  } : {},
                 }}
               >
-                <Typography
-                  sx={{
-                    fontWeight: today ? 700 : 500,
-                    fontSize: isMobile ? '0.8rem' : '1rem',
-                    lineHeight: 1,
-                  }}
-                >
+                <Typography fontWeight={today ? 700 : 500}>
                   {format(day, 'd')}
                 </Typography>
 
                 {hasEvents && (
-                  <Box sx={{ mt: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {isMobile ? (
-                      <Box sx={{
-                        width: 6,
-                        height: 6,
-                        borderRadius: '50%',
-                        backgroundColor: today ? 'primary.contrastText' : 'primary.main',
-                      }} />
-                    ) : (
-                      <Typography variant="button" sx={{
+                  <Typography variant="button" sx={{
                         color: today ? 'inherit' : 'primary.main',
                         fontSize: '0.65rem',
                         fontWeight: 500,
                       }}>
-                        {eventCount} {eventCount === 1 ? 'Event' : 'Events'}
-                      </Typography>
-                    )}
-                  </Box>
+                    {eventCount} {eventCount === 1 ? 'Event' : 'Events'}
+                  </Typography>
                 )}
               </Box>
             );
@@ -283,67 +305,55 @@ export default function CalendarView({
         </DayGrid>
       </CalendarContainer>
 
-      {/* FAB */}
       {modes?.includes('add') && (
         <Fab
           color="primary"
-          aria-label="add"
-          size={isMobile ? 'medium' : 'large'}
-          sx={{
-            position: 'fixed',
-            bottom: { xs: 16, sm: 24, md: 40 },
-            right: { xs: 16, sm: 24, md: 40 },
-            zIndex: 1200,
-          }}
+          sx={{ position: 'fixed', bottom: 24, right: 24 }}
           onClick={handleAddNew}
         >
           <AddIcon />
         </Fab>
       )}
 
-      {/* Hourly View Modal */}
       <StyledDialog
         open={modalOpen}
         onClose={handleCloseModal}
-        maxWidth="lg"
-        fullWidth
         fullScreen={isMobile}
       >
         <DialogHeader>
-          <Typography variant={isMobile ? 'body1' : 'h6'} fontWeight={600}>
-            {recordType === 'appointments' ? 'Appointments' : 'Schedule'}
-            {selectedDay && ` – ${format(selectedDay, isMobile ? 'MMM d, yyyy' : 'EEEE, MMMM d, yyyy')}`}
+          <Typography fontWeight={600}>
+            {selectedDay &&
+              format(selectedDay, 'EEEE, MMMM d, yyyy')}
           </Typography>
-          <IconButton edge="end" color="inherit" onClick={handleCloseModal}>
+          <IconButton onClick={handleCloseModal}>
             <CloseIcon />
           </IconButton>
         </DialogHeader>
-        <DialogContent sx={{ p: 0, height: '100%', overflow: 'hidden' }}>
-          {selectedDay && (
-            recordType === 'appointments' ? (
+
+        <DialogContent sx={{ p: 0 }}>
+          {selectedDay &&
+            (recordType === 'appointments' ? (
               <AppointmentsHourlyView
                 data={visibleEvents}
                 selectedDate={selectedDay}
                 appConfig={appConfig}
+                onDataRefresh={onRefreshMonth}
                 name="Appointments"
                 modes={modes}
-                onDataRefresh={() => window.location.reload()}
               />
             ) : (
               <HourlyView
                 data={visibleEvents}
                 selectedDate={selectedDay}
                 appConfig={appConfig}
+                onDataRefresh={onRefreshMonth}
                 name="Calendar"
                 modes={modes}
-                onDataRefresh={() => window.location.reload()}
               />
-            )
-          )}
+            ))}
         </DialogContent>
       </StyledDialog>
 
-      {/* Add New Detail Modal */}
       <ListItemDetail
         open={detailModalOpen}
         onClose={handleCloseDetail}

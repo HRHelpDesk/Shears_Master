@@ -26,7 +26,7 @@ import {
   sendRejectionNotification,
   updateRecord,
 } from "shears-shared/src/Services/Authentication";
-import { formatDateValue } from "shears-shared/src/utils/stringHelpers";
+import { formatDateRange, formatDateValue } from "shears-shared/src/utils/stringHelpers";
 
 const STATUS_OPTIONS = ["Pending", "Approved", "Rejected", "Completed"];
 
@@ -85,9 +85,7 @@ export default function SmartStatusWidget({
       if (onChangeText) onChangeText(selectedStatus);
 
       if (selectedStatus === "Approved") {
-        const message = `Your request for ${item.date
-          .map((d) => formatDateValue(d))
-          .join(", ")} has been approved. Please check your calendar for the details.`;
+        const message = `Your request for ${formatDateRange(item.date)} has been approved. Please check your calendar for the details.`;
 
         await saveCalendarAndNotification(item, user, token, notify, message);
       }

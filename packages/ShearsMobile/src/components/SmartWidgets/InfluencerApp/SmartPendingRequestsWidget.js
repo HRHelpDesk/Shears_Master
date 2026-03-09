@@ -14,7 +14,7 @@ import { AuthContext } from '../../../context/AuthContext';
 import { getRecords, updateRecord, saveCalendarAndNotification, sendRejectionNotification } from 'shears-shared/src/Services/Authentication';
 import { DateTime } from 'luxon';
 import { GlassActionButton } from '../../UI/GlassActionButton';
-import { formatDateValue } from 'shears-shared/src/utils/stringHelpers';
+import { formatDateRange, formatDateValue } from 'shears-shared/src/utils/stringHelpers';
 
 import {
   BottomSheetModal,
@@ -61,15 +61,7 @@ function formatDuration(duration) {
 /* ============================================================
    Date Formatting
 ============================================================ */
-function formatDate(dateString) {
-  if (!dateString) return '';
-  
-  return new Date(`${dateString}T00:00:00`).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
+
 
 /* ============================================================
    Status Colors
@@ -286,9 +278,7 @@ export default function SmartPendingRequestsWidget({
 
       // If approved, create calendar entry and send notification
       if (selectedStatus === "Approved" && dates.length > 0) {
-        const message = `Your request for ${dates
-          .map((d) => formatDateValue(d))
-          .join(", ")} has been approved. Please check your calendar for the details.`;
+        const message = `Your request for ${formatDateRange(dates)} has been approved. Please check your calendar for the details.`;
 console.log("selectedItem for calendar:", selectedItem);
         await saveCalendarAndNotification(
           updatedFieldsData,
@@ -440,14 +430,16 @@ console.log("selectedItem for calendar:", selectedItem);
                           >
                             {influencerName}
                           </Text>
-                          <Text
-                            style={[
-                              styles.dateText,
-                              { color: theme.colors.onSurfaceVariant },
-                            ]}
-                          >
-                            {dates.map((d) => formatDate(d)).join(', ')}
-                          </Text>
+                        <Text
+                          style={[
+                            styles.dateText,
+                            { color: theme.colors.onSurfaceVariant },
+                          ]}
+                        >
+                          {formatDateRange(dates)}
+                        </Text>
+
+
                         </View>
                       </View>
                     </View>

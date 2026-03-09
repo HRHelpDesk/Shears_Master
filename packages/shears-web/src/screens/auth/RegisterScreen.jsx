@@ -8,6 +8,7 @@ import {
   Paper,
   Button,
   CircularProgress,
+  Link,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
@@ -18,25 +19,21 @@ import { registerUser } from "../../../../shears-shared/src/Services/Authenticat
 import { BASE_URL } from "../../../../shears-shared/src/config/api";
 import { getAppHeaders } from "../../../../shears-shared/src/config/appHeaders";
 
-// Dynamic Components
 import DynamicField from "./components/DynamicField";
 import PasswordField from "./components/PasswordField";
 import AddressField from "./components/AddressField";
 import { buildUserPayload } from "shears-shared/src/utils/stringHelpers";
 
-const stripePromise = loadStripe(
-  "pk_test_51SPNqR1OAQam7tPgFryvj6gCkIICX1ptrBIRX2ni67VXIYOrWr61l4dG2hTBILCVnNEtebdzxVnmLrbkFHQW4bYb002vB3Y8Mp"
-);
+const stripePromise = loadStripe("pk_test_XXXX"); // keep yours
 
 export default function Register({ appConfig, logo }) {
   const navigate = useNavigate();
   const theme = useTheme();
-
   const userFields = appConfig?.user?.fields || [];
 
-  /* ---------------------------------------------------------
-     BUILD INITIAL FORM STATE FROM SCHEMA
-  --------------------------------------------------------- */
+  /* -----------------------------
+     INITIAL FORM STATE
+  ----------------------------- */
   const initialState = {};
   userFields.forEach((f) => {
     if (!f.displayInRegistration) return;
@@ -52,13 +49,12 @@ export default function Register({ appConfig, logo }) {
   });
 
   const [formData, setFormData] = useState(initialState);
-
   const updateField = (field, value) =>
     setFormData((prev) => ({ ...prev, [field]: value }));
 
-  /* ---------------------------------------------------------
-     DETERMINE STRIPE CONFIG FROM SCHEMA
-  --------------------------------------------------------- */
+  /* -----------------------------
+     STRIPE CONFIG
+  ----------------------------- */
   const stripeField = userFields.find(
     (f) => f.field === "stripe" && f.displayInRegistration
   );
@@ -72,9 +68,6 @@ export default function Register({ appConfig, logo }) {
     ? formData.stripe.description
     : "Registration Payment";
 
-  /* ---------------------------------------------------------
-     STRIPE PAYMENT INTENT
-  --------------------------------------------------------- */
   const [clientSecret, setClientSecret] = useState("");
   const [paymentLoading, setPaymentLoading] = useState(!!stripeEnabled);
 
@@ -83,25 +76,27 @@ export default function Register({ appConfig, logo }) {
 
     const createPaymentIntent = async () => {
       try {
-        const response = await fetch(`${BASE_URL}/v1/stripe/create-payment-intent`, {
-          method: "POST",
-          headers: {
-            ...getAppHeaders(),
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            amount: Number(stripeAmount) || 1000,
-            currency: stripeCurrency,
-            description: stripeDescription,
-          }),
-        });
+        const response = await fetch(
+          `${BASE_URL}/v1/stripe/create-payment-intent`,
+          {
+            method: "POST",
+            headers: {
+              ...getAppHeaders(),
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              amount: Number(stripeAmount) || 1000,
+              currency: stripeCurrency,
+              description: stripeDescription,
+            }),
+          }
+        );
 
-        if (!response.ok) throw new Error("Failed to create payment intent");
+        if (!response.ok) throw new Error();
 
         const data = await response.json();
-
         setClientSecret(data.clientSecret);
-      } catch (err) {
+      } catch {
         alert("Payment initialization failed.");
       }
 
@@ -111,32 +106,12 @@ export default function Register({ appConfig, logo }) {
     createPaymentIntent();
   }, [stripeEnabled, stripeAmount, stripeCurrency]);
 
-  /* ---------------------------------------------------------
-     BUILD PAYLOAD BASED ON SCHEMA
-  --------------------------------------------------------- */
-  const buildPayload = () => {
-    const payload = {};
-
-    userFields.forEach((f) => {
-      if (!f.displayInRegistration) return;
-
-      if (f.type === "object") {
-        payload[f.field] = { ...formData[f.field] };
-      } else {
-        payload[f.field] = formData[f.field];
-      }
-    });
-
-    return payload;
-  };
-
-  /* ---------------------------------------------------------
-     FINAL REGISTRATION (CALLED AFTER PAYMENT SUCCESS)
-  --------------------------------------------------------- */
+  /* -----------------------------
+     REGISTRATION
+  ----------------------------- */
   const submitRegistration = async () => {
-    console.log(userFields, formData);
-  const payload = buildUserPayload(userFields, formData);
-console.log("Registration Payload:", payload);  
+    const payload = buildUserPayload(userFields, formData);
+
     try {
       await registerUser(payload);
       alert("Registration successful!");
@@ -146,15 +121,11 @@ console.log("Registration Payload:", payload);
     }
   };
 
-  /* ---------------------------------------------------------
-     STRIPE CHECKOUT FORM
-  --------------------------------------------------------- */
-  const CheckoutForm = ({ onSuccess }) => (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-      }}
-    >
+  /* -----------------------------
+     STRIPE FORM
+  ----------------------------- */
+  const CheckoutForm = () => (
+    <form onSubmit={(e) => e.preventDefault()}>
       <PaymentElement />
 
       <Button
@@ -164,11 +135,12 @@ console.log("Registration Payload:", payload);
           mt: 2,
           py: 1.4,
           textTransform: "none",
+          fontWeight: 600,
           background: `linear-gradient(
-              to right,
-              ${theme.palette.primary.main},
-              ${theme.palette.secondary.main}
-            )`,
+            to right,
+            ${theme.palette.primary.main},
+            ${theme.palette.secondary.main}
+          )`,
         }}
       >
         Pay & Register
@@ -176,9 +148,9 @@ console.log("Registration Payload:", payload);
     </form>
   );
 
-  /* ---------------------------------------------------------
-     UI (STYLES PRESERVED)
-  --------------------------------------------------------- */
+  /* ==========================================================
+     UI
+  ========================================================== */
   return (
     <Box
       sx={{
@@ -188,20 +160,36 @@ console.log("Registration Payload:", payload);
         alignItems: "center",
         background: `linear-gradient(
           to bottom right,
-          ${theme.palette.primary.main},
-          ${theme.palette.secondary.main}
+          ${
+            theme.palette.mode === "dark"
+              ? theme.palette.primary.dark
+              : theme.palette.primary.main
+          },
+          ${
+            theme.palette.mode === "dark"
+              ? theme.palette.secondary.dark
+              : theme.palette.secondary.main
+          }
         )`,
         p: 2,
       }}
     >
       <Paper
-        elevation={theme.palette.mode === "light" ? 6 : 3}
+        elevation={theme.palette.mode === "dark" ? 0 : 6}
         sx={{
           p: 4,
           width: "100%",
           maxWidth: 760,
           borderRadius: 3,
           backgroundColor: theme.palette.background.paper,
+          border:
+            theme.palette.mode === "dark"
+              ? `1px solid ${theme.palette.divider}`
+              : "none",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 10px 40px rgba(0,0,0,0.6)"
+              : theme.shadows[6],
           backdropFilter: "blur(12px)",
         }}
       >
@@ -220,19 +208,19 @@ console.log("Registration Payload:", payload);
           Create Your Account
         </Typography>
 
-        {/* ==============================
-            SECTION: USER INFORMATION
-        =============================== */}
+        {/* USER SECTION */}
         <Typography variant="h6" fontWeight={600}>
           User Information
         </Typography>
         <Divider sx={{ mb: 3 }} />
 
-        {/* GRID LAYOUT */}
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: "repeat(2, 1fr)",
+            gridTemplateColumns: {
+              xs: "1fr",
+              sm: "repeat(2, 1fr)",
+            },
             gap: 3,
           }}
         >
@@ -245,7 +233,7 @@ console.log("Registration Payload:", payload);
 
               if (isAddress)
                 return (
-                  <Box key={field.field} sx={{ gridColumn: "span 2" }}>
+                  <Box key={field.field} sx={{ gridColumn: "1 / -1" }}>
                     <AddressField
                       field={field}
                       value={formData[field.field]}
@@ -256,7 +244,7 @@ console.log("Registration Payload:", payload);
 
               if (isPassword)
                 return (
-                  <Box key={field.field} sx={{ gridColumn: "span 2" }}>
+                  <Box key={field.field} sx={{ gridColumn: "1 / -1" }}>
                     <PasswordField
                       field={field}
                       value={formData[field.field]}
@@ -266,23 +254,17 @@ console.log("Registration Payload:", payload);
                 );
 
               return (
-                <Box
+                <DynamicField
                   key={field.field}
-                  sx={{ gridColumn: field.fullWidth ? "span 2" : "span 1" }}
-                >
-                  <DynamicField
-                    field={field}
-                    value={formData[field.field]}
-                    onChange={(v) => updateField(field.field, v)}
-                  />
-                </Box>
+                  field={field}
+                  value={formData[field.field]}
+                  onChange={(v) => updateField(field.field, v)}
+                />
               );
             })}
         </Box>
 
-        {/* ==============================
-            SECTION: COMPANY INFORMATION
-        =============================== */}
+        {/* COMPANY SECTION */}
         <Typography variant="h6" fontWeight={600} sx={{ mt: 5 }}>
           Company Information
         </Typography>
@@ -291,7 +273,10 @@ console.log("Registration Payload:", payload);
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: "repeat(2, 1fr)",
+            gridTemplateColumns: {
+              xs: "1fr",
+              sm: "repeat(2, 1fr)",
+            },
             gap: 3,
           }}
         >
@@ -303,38 +288,17 @@ console.log("Registration Payload:", payload);
                 f.display?.order < 20
             )
             .sort((a, b) => (a.display?.order || 0) - (b.display?.order || 0))
-            .map((field) => {
-              const isAddress = field.field.toLowerCase().includes("address");
-
-              if (isAddress)
-                return (
-                  <Box key={field.field} sx={{ gridColumn: "span 2" }}>
-                    <AddressField
-                      field={field}
-                      value={formData[field.field]}
-                      onChange={(v) => updateField(field.field, v)}
-                    />
-                  </Box>
-                );
-
-              return (
-                <Box
-                  key={field.field}
-                  sx={{ gridColumn: field.fullWidth ? "span 2" : "span 1" }}
-                >
-                  <DynamicField
-                    field={field}
-                    value={formData[field.field]}
-                    onChange={(v) => updateField(field.field, v)}
-                  />
-                </Box>
-              );
-            })}
+            .map((field) => (
+              <DynamicField
+                key={field.field}
+                field={field}
+                value={formData[field.field]}
+                onChange={(v) => updateField(field.field, v)}
+              />
+            ))}
         </Box>
 
-        {/* ==============================
-            STRIPE PAYMENT SECTION (Dynamic!)
-        =============================== */}
+        {/* STRIPE */}
         {stripeEnabled && (
           <>
             <Typography variant="h6" fontWeight={600} sx={{ mt: 5 }}>
@@ -351,23 +315,27 @@ console.log("Registration Payload:", payload);
                 stripe={stripePromise}
                 options={{
                   clientSecret,
-                  appearance: { theme: theme.palette.mode }
+                  appearance: {
+                    theme:
+                      theme.palette.mode === "dark" ? "night" : "stripe",
+                  },
                 }}
               >
-                <CheckoutForm onSuccess={submitRegistration} />
+                <CheckoutForm />
               </Elements>
             ) : (
-              <Typography color="error">Payment could not be initialized.</Typography>
+              <Typography color="error">
+                Payment could not be initialized.
+              </Typography>
             )}
           </>
         )}
 
-        {/* NO PAYMENT REQUIRED */}
         {!stripeEnabled && (
           <Button
             fullWidth
             variant="contained"
-            sx={{ mt: 3, py: 1.4 }}
+            sx={{ mt: 3, py: 1.4, fontWeight: 600 }}
             onClick={submitRegistration}
           >
             Register
@@ -380,9 +348,13 @@ console.log("Registration Payload:", payload);
           sx={{ color: theme.palette.text.secondary }}
         >
           Already have an account?{" "}
-          <a href="/login" style={{ color: theme.palette.primary.main }}>
+          <Link
+            href="/login"
+            underline="hover"
+            sx={{ color: theme.palette.primary.main }}
+          >
             Login here
-          </a>
+          </Link>
         </Typography>
       </Paper>
     </Box>

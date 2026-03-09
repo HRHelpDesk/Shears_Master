@@ -196,9 +196,9 @@ const handleSelect = (record) => {
 
     return (
       <View style={{ marginBottom: 12 }}>
-        <Text style={{ marginBottom: 6, color: theme.colors.primary, fontSize: 16 }}>
+        {/* <Text style={{ marginBottom: 6, color: theme.colors.primary, fontSize: 16 }}>
           {recordTypeName.charAt(0).toUpperCase() + recordTypeName.slice(1)}
-        </Text>
+        </Text> */}
 
         <TouchableOpacity
           onPress={() => {

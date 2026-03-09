@@ -9,6 +9,8 @@ import {
   ScrollView,
   ActivityIndicator,
   Keyboard,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useTheme, Avatar, Divider, IconButton } from 'react-native-paper';
 import { AuthContext } from '../../context/AuthContext';
@@ -39,9 +41,8 @@ export default function SmartCommentWidget({
   const [error, setError] = useState(null);
 
   const bottomSheetModalRef = useRef(null);
-  const insets = useSafeAreaInsets(); // Add this
+  const insets = useSafeAreaInsets();
 
-  // Snap points – adjust percentages if needed (e.g. ['50%', '85%'])
   const snapPoints = useMemo(() => ['60%', '100%'], []);
 
   // Sync local comments when prop changes
@@ -177,14 +178,10 @@ export default function SmartCommentWidget({
         enableContentPanningGesture={true}
         enableHandlePanningGesture={true}
         enableDynamicSizing={false}
-
-
         stackBehavior="push"
-        style={{ zIndex: 9999 }} // Add high z-index
-        topInset={insets.top} // Add this - respects safe area
-
+        style={{ zIndex: 9999 }}
+        topInset={insets.top}
         modalProps={{ presentationStyle: 'overFullScreen' }}
-
         backgroundStyle={{
           backgroundColor: theme.colors.surface,
           borderTopLeftRadius: 20,
@@ -296,46 +293,52 @@ export default function SmartCommentWidget({
           )}
         </BottomSheetScrollView>
 
-        {/* Input form – fixed at bottom */}
-        <View style={[styles.addForm, { backgroundColor: theme.colors.surface }]}>
-          <TextInput
-            style={[
-              styles.input,
-              {
-                borderColor: theme.colors.outline,
-                color: theme.colors.onSurface,
-                backgroundColor: theme.colors.background,
-              },
-            ]}
-            placeholder="Write your comment..."
-            placeholderTextColor={theme.colors.onSurfaceVariant}
-            multiline
-            numberOfLines={3}
-            value={newCommentText}
-            onChangeText={setNewCommentText}
-            editable={!saving}
-          />
+        {/* Input form – fixed at bottom with keyboard avoidance */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={insets.top + insets.bottom + 60}
+          style={{ marginBottom: 30 }}
+        >
+          <View style={[styles.addForm, { backgroundColor: theme.colors.surface }]}>
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  borderColor: theme.colors.outline,
+                  color: theme.colors.onSurface,
+                  backgroundColor: theme.colors.background,
+                },
+              ]}
+              placeholder="Write your comment..."
+              placeholderTextColor={theme.colors.onSurfaceVariant}
+              multiline
+              numberOfLines={3}
+              value={newCommentText}
+              onChangeText={setNewCommentText}
+              editable={!saving}
+            />
 
-          <TouchableOpacity
-            style={[
-              styles.postButton,
-              {
-                backgroundColor: theme.colors.primary,
-                opacity: !newCommentText.trim() || saving ? 0.6 : 1,
-              },
-            ]}
-            onPress={handleAddComment}
-            disabled={
-              !newCommentText.trim() || saving || (mode !== 'add' && !item?._id)
-            }
-          >
-            {saving ? (
-              <ActivityIndicator size="small" color="white" />
-            ) : (
-              <Text style={styles.postButtonText}>Post</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity
+              style={[
+                styles.postButton,
+                {
+                  backgroundColor: theme.colors.primary,
+                  opacity: !newCommentText.trim() || saving ? 0.6 : 1,
+                },
+              ]}
+              onPress={handleAddComment}
+              disabled={
+                !newCommentText.trim() || saving || (mode !== 'add' && !item?._id)
+              }
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <Text style={styles.postButtonText}>Post</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
       </BottomSheetModal>
     </>
   );
@@ -375,7 +378,7 @@ const styles = StyleSheet.create({
   commentsContent: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 100, // extra padding so input doesn't cover last comment
+    paddingBottom: 100,
   },
   emptyText: {
     textAlign: 'center',
@@ -419,11 +422,10 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   addForm: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 16,
     borderTopWidth: 1,
     borderTopColor: 'rgba(0, 0, 0, 0.1)',
+    paddingTop: 12,
+    paddingHorizontal: 16,
   },
   input: {
     borderWidth: 1,
@@ -434,11 +436,11 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   postButton: {
-    alignSelf: 'flex-end',
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    borderRadius: 20,
     marginTop: 12,
+    paddingVertical: 14,
+    borderRadius: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   postButtonText: {
     color: 'white',

@@ -18,6 +18,7 @@ import SmartReadOnlyField from "../../components/BaseUI/SmartInputs/SmartReadOnl
 import SmartTimeTimeZone from "../../components/BaseUI/SmartInputs/SmartTimeTimeZone";
 import CalendarTimeZoneInput from "../../components/BaseUI/SmartInputs/CalendarTimeZoneInput";
 import SmartReadOnlyBool from "../../components/BaseUI/SmartInputs/SmartReadOnlyBoolField";
+import AutoDateTime from "../../components/BaseUI/SmartInputs/AutoDateTime";
 
 export const FieldMap = {
    text: PlainTextInput,
@@ -40,6 +41,7 @@ export const FieldMap = {
   timeTimeZone: SmartTimeTimeZone,
   dateRange:SmartDateRangeInput,
   readOnlyBool: SmartReadOnlyBool,
+  autoDateTime: AutoDateTime,
 
   ...WidgetMap
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext, useCallback } from "react";
-import { Box, CircularProgress } from "@mui/material";
+import { Box, CircularProgress, useTheme } from "@mui/material";
 import { AuthContext } from "../../../context/AuthContext";
 import { getRecords } from "shears-shared/src/Services/Authentication";
 import CardListViewReadOnly from "./CardListView";
@@ -18,6 +18,7 @@ export default function AnnouncementListView({
   appConfig,
 }) {
   const { token, user } = useContext(AuthContext);
+  const theme = useTheme();
 
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -54,6 +55,8 @@ export default function AnnouncementListView({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
+          backgroundColor: theme.palette.background.default,
+
         }}
       >
         <CircularProgress />

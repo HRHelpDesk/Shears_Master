@@ -1,8 +1,8 @@
 export const AnnouncementsAdmin = {
        name: 'Announcements',
     displayName: 'Announcements',
-    component: 'BaseUI/ListView',
-    mobileComponent:'ListView',
+    component: 'BaseUI/SmartLists/AdminListView',
+    mobileComponent:'AdminListView',
     display:3
 }
 
@@ -17,7 +17,8 @@ export const AnnouncementsInfluencer = {
 export const MessageBoard = {
        name: 'message-board',
     displayName: 'Message',
-    component: 'BaseUI/ListView',
+    modes:['read', 'add'],
+    component: 'BaseUI/SmartViews/InfluencerApp/MessageBoardView',
     mobileComponent:'MessageBoardView',
     display:3
 }

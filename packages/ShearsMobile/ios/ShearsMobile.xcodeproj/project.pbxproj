@@ -14,6 +14,16 @@
 		3A89872D2F33D03D00EDBE91 /* LaunchScreen-BCIA.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 3AA255782F1B044100DA08B6 /* LaunchScreen-BCIA.storyboard */; };
 		3A89872E2F33D03D00EDBE91 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		3A89872F2F33D03D00EDBE91 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
+		3AE4242D2F5CEFCE00FAE507 /* LaunchScreen-firstline.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 3AE4242C2F5CEFCE00FAE507 /* LaunchScreen-firstline.storyboard */; };
+		3AE424312F5CF03100FAE507 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
+		3AE424332F5CF03100FAE507 /* libPods-ShearsMobile.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 673D2823894EF73D5395F326 /* libPods-ShearsMobile.a */; };
+		3AE424342F5CF03100FAE507 /* libPods-ShearsMobile.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 673D2823894EF73D5395F326 /* libPods-ShearsMobile.a */; };
+		3AE424352F5CF03100FAE507 /* libPods-ShearsMobile.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 673D2823894EF73D5395F326 /* libPods-ShearsMobile.a */; };
+		3AE424362F5CF03100FAE507 /* libPods-ShearsMobile.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 673D2823894EF73D5395F326 /* libPods-ShearsMobile.a */; };
+		3AE424382F5CF03100FAE507 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
+		3AE424392F5CF03100FAE507 /* LaunchScreen-firstline.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 3AE4242C2F5CEFCE00FAE507 /* LaunchScreen-firstline.storyboard */; };
+		3AE4243A2F5CF03100FAE507 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		3AE4243B2F5CF03100FAE507 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		88EF2B01A65F5B9422C954F9 /* libPods-ShearsMobile.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 673D2823894EF73D5395F326 /* libPods-ShearsMobile.a */; };
@@ -39,6 +49,9 @@
 		3AA255782F1B044100DA08B6 /* LaunchScreen-BCIA.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "LaunchScreen-BCIA.storyboard"; sourceTree = "<group>"; };
 		3AB0D5772ED5C66B00C1D1B5 /* Shear.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Shear.entitlements; sourceTree = "<group>"; };
 		3AB0D5782ED5C66F00C1D1B5 /* Purpose.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Purpose.entitlements; sourceTree = "<group>"; };
+		3AE4242C2F5CEFCE00FAE507 /* LaunchScreen-firstline.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "LaunchScreen-firstline.storyboard"; sourceTree = "<group>"; };
+		3AE424422F5CF03100FAE507 /* 1st Line Services.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "1st Line Services.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		3AE424432F5CF03300FAE507 /* ShearsMobile copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "ShearsMobile copy-Info.plist"; path = "/Users/masonmerrell/Documents/CurentProjects/Shears_Master/packages/ShearsMobile/ios/ShearsMobile copy-Info.plist"; sourceTree = "<absolute>"; };
 		3AE9A27C2ED4A79B00A464FE /* ShearsMobile.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = ShearsMobile.entitlements; path = ShearsMobile/ShearsMobile.entitlements; sourceTree = "<group>"; };
 		40BA0DAA88E44102BA307535 /* FontAwesome6_Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = FontAwesome6_Regular.ttf; path = "../node_modules/react-native-vector-icons/Fonts/FontAwesome6_Regular.ttf"; sourceTree = "<group>"; };
 		4A11D65D14414C34AFDE65E4 /* EvilIcons.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = EvilIcons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/EvilIcons.ttf"; sourceTree = "<group>"; };
@@ -84,6 +97,17 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		3AE424322F5CF03100FAE507 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3AE424332F5CF03100FAE507 /* libPods-ShearsMobile.a in Frameworks */,
+				3AE424342F5CF03100FAE507 /* libPods-ShearsMobile.a in Frameworks */,
+				3AE424352F5CF03100FAE507 /* libPods-ShearsMobile.a in Frameworks */,
+				3AE424362F5CF03100FAE507 /* libPods-ShearsMobile.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -95,6 +119,7 @@
 				761780EC2CA45674006654EE /* AppDelegate.swift */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
+				3AE4242C2F5CEFCE00FAE507 /* LaunchScreen-firstline.storyboard */,
 				3AA255782F1B044100DA08B6 /* LaunchScreen-BCIA.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
 			);
@@ -155,6 +180,7 @@
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
 				BBD78D7AC51CEA395F1C20DB /* Pods */,
 				3DB3800E07A84BEDB2C6DC75 /* Resources */,
+				3AE424432F5CF03300FAE507 /* ShearsMobile copy-Info.plist */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -166,6 +192,7 @@
 			children = (
 				13B07F961A680F5B00A75B9A /* ShearsMobile.app */,
 				3A8987362F33D03D00EDBE91 /* Boss Crowns Influencer App.app */,
+				3AE424422F5CF03100FAE507 /* 1st Line Services.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -228,6 +255,27 @@
 			productReference = 3A8987362F33D03D00EDBE91 /* Boss Crowns Influencer App.app */;
 			productType = "com.apple.product-type.application";
 		};
+		3AE4242E2F5CF03100FAE507 /* 1st Line Services */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3AE4243F2F5CF03100FAE507 /* Build configuration list for PBXNativeTarget "1st Line Services" */;
+			buildPhases = (
+				3AE4242F2F5CF03100FAE507 /* [CP] Check Pods Manifest.lock */,
+				3AE424302F5CF03100FAE507 /* Sources */,
+				3AE424322F5CF03100FAE507 /* Frameworks */,
+				3AE424372F5CF03100FAE507 /* Resources */,
+				3AE4243C2F5CF03100FAE507 /* Bundle React Native code and images */,
+				3AE4243D2F5CF03100FAE507 /* [CP] Embed Pods Frameworks */,
+				3AE4243E2F5CF03100FAE507 /* [CP] Copy Pods Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "1st Line Services";
+			productName = ShearsMobile;
+			productReference = 3AE424422F5CF03100FAE507 /* 1st Line Services.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -257,6 +305,7 @@
 			targets = (
 				13B07F861A680F5B00A75B9A /* ShearsMobile */,
 				3A8987232F33D03D00EDBE91 /* Boss Crowns Influencer App */,
+				3AE4242E2F5CF03100FAE507 /* 1st Line Services */,
 			);
 		};
 /* End PBXProject section */
@@ -267,6 +316,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
+				3AE4242D2F5CEFCE00FAE507 /* LaunchScreen-firstline.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				AB25B2C6EC3CFC00231F1A56 /* PrivacyInfo.xcprivacy in Resources */,
 			);
@@ -279,6 +329,17 @@
 				3A89872D2F33D03D00EDBE91 /* LaunchScreen-BCIA.storyboard in Resources */,
 				3A89872E2F33D03D00EDBE91 /* Images.xcassets in Resources */,
 				3A89872F2F33D03D00EDBE91 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3AE424372F5CF03100FAE507 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3AE424382F5CF03100FAE507 /* LaunchScreen.storyboard in Resources */,
+				3AE424392F5CF03100FAE507 /* LaunchScreen-firstline.storyboard in Resources */,
+				3AE4243A2F5CF03100FAE507 /* Images.xcassets in Resources */,
+				3AE4243B2F5CF03100FAE507 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -316,6 +377,86 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "set -e\n\nWITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n/bin/sh -c \"$WITH_ENVIRONMENT $REACT_NATIVE_XCODE\"\n";
+		};
+		3AE4242F2F5CF03100FAE507 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-ShearsMobile-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		3AE4243C2F5CF03100FAE507 /* Bundle React Native code and images */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/.xcode.env.local",
+				"$(SRCROOT)/.xcode.env",
+			);
+			name = "Bundle React Native code and images";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\n\nWITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n/bin/sh -c \"$WITH_ENVIRONMENT $REACT_NATIVE_XCODE\"\n";
+		};
+		3AE4243D2F5CF03100FAE507 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			inputPaths = (
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		3AE4243E2F5CF03100FAE507 /* [CP] Copy Pods Resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-resources-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			inputPaths = (
+			);
+			name = "[CP] Copy Pods Resources";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-ShearsMobile/Pods-ShearsMobile-resources.sh\"\n";
+			showEnvVarsInLog = 0;
 		};
 		40362A8CEA455BF6A803C421 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -464,6 +605,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		3AE424302F5CF03100FAE507 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3AE424312F5CF03100FAE507 /* AppDelegate.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
@@ -487,7 +636,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.019;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -523,7 +672,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.019;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -547,7 +696,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = BossCrownsIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = ShearsMobile/ShearsMobile.entitlements;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 22;
 				DEVELOPMENT_TEAM = 2USCSV8NZ9;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = ShearsMobile/Info.plist;
@@ -560,7 +709,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.0013;
+				MARKETING_VERSION = 0.0022;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -585,7 +734,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = BossCrownsIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = ShearsMobile/ShearsMobile.entitlements;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 22;
 				DEVELOPMENT_TEAM = 2USCSV8NZ9;
 				INFOPLIST_FILE = ShearsMobile/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Boss Crowns Influencer App";
@@ -597,13 +746,87 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.0013;
+				MARKETING_VERSION = 0.0022;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
 					"-lc++",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.shear.bcia;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Release;
+		};
+		3AE424402F5CF03100FAE507 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 2455865E70D7AAE9DD98A6AA /* Pods-ShearsMobile.debug.xcconfig */;
+			buildSettings = {
+				APP_DISPLAY_NAME = "1st Line Services";
+				ASSETCATALOG_COMPILER_APPICON_NAME = FirstLine;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = ShearsMobile/ShearsMobile.entitlements;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 2USCSV8NZ9;
+				ENABLE_BITCODE = NO;
+				INFOPLIST_FILE = ShearsMobile/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "1st Line Services";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				LAUNCH_SCREEN_NAME = "LaunchScreen-firstline";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.001;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+					"-lc++",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.shear.1stline;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Debug;
+		};
+		3AE424412F5CF03100FAE507 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 1EA7DB412974B107AA48FF65 /* Pods-ShearsMobile.release.xcconfig */;
+			buildSettings = {
+				APP_DISPLAY_NAME = "1st Line Services";
+				ASSETCATALOG_COMPILER_APPICON_NAME = FirstLine;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = ShearsMobile/ShearsMobile.entitlements;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 2USCSV8NZ9;
+				INFOPLIST_FILE = ShearsMobile/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "1st Line Services";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				LAUNCH_SCREEN_NAME = "LaunchScreen-firstline";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.001;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+					"-lc++",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.shear.1stline;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -774,6 +997,15 @@
 			buildConfigurations = (
 				3A8987342F33D03D00EDBE91 /* Debug */,
 				3A8987352F33D03D00EDBE91 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		3AE4243F2F5CF03100FAE507 /* Build configuration list for PBXNativeTarget "1st Line Services" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3AE424402F5CF03100FAE507 /* Debug */,
+				3AE424412F5CF03100FAE507 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

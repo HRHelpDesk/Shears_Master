@@ -475,3 +475,71 @@ export function buildUserPayload(userFields, formData) {
   return payload;
 }
 
+
+// utils/stringUtils.js
+// or just put it directly in your component file
+
+export function toTitleCase(str) {
+  if (!str) return '';
+
+  // Insert space before each uppercase letter (handles camelCase/PascalCase)
+  const spaced = str.replace(/([A-Z])/g, ' $1').trim();
+
+  // Capitalize first letter of each word
+  return spaced
+    .split(/\s+/)
+    .map(function(word) {
+      if (!word) return '';
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(' ');
+}
+
+function formatDate(dateString) {
+  if (!dateString) return '';
+  
+  return new Date(`${dateString}T00:00:00`).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+
+
+export function formatDateRange(dates) {
+  if (!dates || dates.length === 0) return '—';
+  if (dates.length === 1) return formatDate(dates[0]);
+
+  // Sort dates just in case they're not already in order
+  const sorted = [...dates].sort((a, b) => new Date(a) - new Date(b));
+
+  const first = sorted[0];
+  const last = sorted[sorted.length - 1];
+
+  // Check if it's actually a consecutive range
+  // (we convert to timestamps to compare easily)
+  const startDate = new Date(first);
+  const endDate = new Date(last);
+
+  // Calculate expected number of days in a full range
+  const diffDays = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+
+  // If number of dates matches the range length → it's consecutive
+  if (sorted.length === diffDays) {
+    // Full consecutive range → show start – end
+    const startStr = formatDate(first);
+    const endStr = formatDate(last);
+
+    // Optional: shorten if same month/year
+    if (startDate.getFullYear() === endDate.getFullYear() &&
+        startDate.getMonth() === endDate.getMonth()) {
+      return `${startStr.split(',')[0]} – ${endStr.split(',')[0]}, ${endDate.getFullYear()}`;
+    }
+
+    return `${startStr} – ${endStr}`;
+  }
+
+  // Not fully consecutive → fall back to comma-separated list (or you could group into multiple ranges)
+  return sorted.map(d => formatDate(d)).join(', ');
+}

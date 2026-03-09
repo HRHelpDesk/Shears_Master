@@ -95,7 +95,7 @@ const requestFields = {
   },
   isPrivate: {
     field: "isPrivate",
-    label: "Make this calendar Booking Private (Only visible to your account and Admins)",
+    label: "Make this calendar booking private (Only visible to your account and Admins)",
     type: "string",
     input: "boolean",
    displayInList: false,
@@ -548,8 +548,8 @@ export const InfluencerApp = [
 
 {
   name: "MessageBoard",
-  permissions: ["admin"],   // admin posts, both can view & reply
-  recordType: "messageBoard",
+  permissions: ["admin","influencer"],   // admin posts, both can view & reply
+  recordType: "messageboard",
   displayName: "Message Board",
   icon: { ios: "bubble.left.and.bubble.right.fill", android: "forum", web: "fa fa-comments" },
   views: [MessageBoard],             // 👈 you'll need to create this view schema
@@ -583,16 +583,7 @@ export const InfluencerApp = [
 
 
     // ── Title ───────────────────────────────────────────────────
-    {
-      field: "name",
-      override: {
-        field: "messageName",
-        label: "Title",
-      },
-      input: "text",
-      required: true,
-      display: { order: 1 }
-    },
+  
 
     // ── Category / Tag ──────────────────────────────────────────
     {
@@ -637,11 +628,13 @@ export const InfluencerApp = [
 
     // ── Posted Date ──────────────────────────────────────────────
     {
-      field: "date",
-      label: "Date Posted",
-      type: "string",
-      input: "date",
-      required: true,
+      field: "autoDateTime",
+      override: {
+        field: "date",
+        label: "Date Posted",
+          required: false,
+      },
+    
       display: { order: 5 }
     },
 
@@ -650,7 +643,7 @@ export const InfluencerApp = [
       field: "postedBy",
       label: "Posted By",
       input: "autoUser",
-      required: true,
+      required: false,
       displayInList: true,
       display: { order: 6 }
     },

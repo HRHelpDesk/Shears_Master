@@ -1,32 +1,39 @@
-import React, { useState, useContext } from 'react';
-import { Box, TextField, Button, Typography, Paper, Link } from '@mui/material';
-import { useNavigate } from 'react-router';
-import { useTheme } from '@mui/material/styles';
-import { AuthContext } from '../../context/AuthContext';
-import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import InputAdornment from '@mui/material/InputAdornment';
+import React, { useState, useContext } from "react";
+import {
+  Box,
+  TextField,
+  Button,
+  Typography,
+  Paper,
+  Link,
+  InputAdornment,
+} from "@mui/material";
+import { useNavigate } from "react-router";
+import { useTheme } from "@mui/material/styles";
+import { AuthContext } from "../../context/AuthContext";
+import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
+import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 
 export default function LoginPage({ appConfig, logo }) {
   const theme = useTheme();
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const { login } = useContext(AuthContext);
 
   const handleLogin = async () => {
     if (!email || !password) {
-      alert('Please enter email and password');
+      alert("Please enter email and password");
       return;
     }
 
     setLoading(true);
     try {
       await login(email, password, appConfig);
-      navigate('/dashboard', { replace: true });
+      navigate("/dashboard", { replace: true });
     } catch (err) {
       alert(err.message);
     } finally {
@@ -35,7 +42,7 @@ export default function LoginPage({ appConfig, logo }) {
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleLogin();
     }
   };
@@ -43,69 +50,86 @@ export default function LoginPage({ appConfig, logo }) {
   return (
     <Box
       sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
         background: `linear-gradient(
           to bottom right,
-          ${theme.palette.primary.main},
-          ${theme.palette.secondary.main}
+          ${
+            theme.palette.mode === "dark"
+              ? theme.palette.primary.dark
+              : theme.palette.primary.main
+          },
+          ${
+            theme.palette.mode === "dark"
+              ? theme.palette.secondary.dark
+              : theme.palette.secondary.main
+          }
         )`,
         p: 2.5,
       }}
     >
-      {/* Card wrapper with max width */}
+      {/* Card wrapper */}
       <Paper
-        elevation={8}
+        elevation={theme.palette.mode === "dark" ? 0 : 8}
         sx={{
           p: 4,
-          width: '100%',
+          width: "100%",
           maxWidth: 420,
           borderRadius: 3,
-          backgroundColor: 'rgba(255, 255, 255, 0.98)',
-          boxShadow: '0px 8px 32px rgba(0, 0, 0, 0.15)',
+          backgroundColor: theme.palette.background.paper,
+          border:
+            theme.palette.mode === "dark"
+              ? `1px solid ${theme.palette.divider}`
+              : "none",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? "0 8px 32px rgba(0,0,0,0.6)"
+              : "0px 8px 32px rgba(0, 0, 0, 0.15)",
+          transition: "all 0.2s ease",
         }}
       >
-        {/* Logo inside card */}
-        <Box 
-          sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center',
+        {/* Logo */}
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
             mb: 3,
           }}
         >
           <img
             src={logo}
             alt="App Logo"
-            style={{ 
-              width: 300, 
-              height: 120, 
-              objectFit: 'contain' 
+            style={{
+              width: 300,
+              height: 120,
+              objectFit: "contain",
             }}
           />
         </Box>
 
-        {/* Title and subtitle matching mobile */}
+        {/* Title */}
         <Typography
           variant="h4"
           fontWeight={700}
           textAlign="center"
-          sx={{ 
-            color: '#1a1a1a',
+          sx={{
+            color: theme.palette.text.primary,
             mb: 1,
           }}
         >
           Welcome Back
         </Typography>
-        
+
+        {/* Subtitle */}
         <Typography
           variant="body1"
           textAlign="center"
-          sx={{ 
-            color: '#666',
+          sx={{
+            color: theme.palette.text.secondary,
             mb: 4,
             fontSize: 15,
           }}
@@ -113,13 +137,13 @@ export default function LoginPage({ appConfig, logo }) {
           Sign in to continue
         </Typography>
 
-        {/* Email input with icon */}
+        {/* Email */}
         <TextField
           fullWidth
           label="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          onKeyPress={handleKeyPress}
+          onKeyDown={handleKeyPress}
           variant="outlined"
           margin="normal"
           type="email"
@@ -127,29 +151,38 @@ export default function LoginPage({ appConfig, logo }) {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <EmailOutlinedIcon sx={{ color: '#666' }} />
+                <EmailOutlinedIcon
+                  sx={{ color: theme.palette.text.secondary }}
+                />
               </InputAdornment>
             ),
           }}
           sx={{
             mb: 2,
-            '& .MuiOutlinedInput-root': {
+            "& .MuiOutlinedInput-root": {
               borderRadius: 1.5,
-              backgroundColor: '#fff',
-              '& fieldset': {
+              backgroundColor: theme.palette.background.default,
+              "& fieldset": {
                 borderWidth: 1.5,
+                borderColor: theme.palette.divider,
               },
+              "&:hover fieldset": {
+                borderColor: theme.palette.primary.main,
+              },
+            },
+            "& .MuiInputLabel-root": {
+              color: theme.palette.text.secondary,
             },
           }}
         />
 
-        {/* Password input with icon */}
+        {/* Password */}
         <TextField
           fullWidth
           label="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          onKeyPress={handleKeyPress}
+          onKeyDown={handleKeyPress}
           type="password"
           variant="outlined"
           margin="normal"
@@ -157,32 +190,41 @@ export default function LoginPage({ appConfig, logo }) {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <LockOutlinedIcon sx={{ color: '#666' }} />
+                <LockOutlinedIcon
+                  sx={{ color: theme.palette.text.secondary }}
+                />
               </InputAdornment>
             ),
           }}
           sx={{
             mb: 1,
-            '& .MuiOutlinedInput-root': {
+            "& .MuiOutlinedInput-root": {
               borderRadius: 1.5,
-              backgroundColor: '#fff',
-              '& fieldset': {
+              backgroundColor: theme.palette.background.default,
+              "& fieldset": {
                 borderWidth: 1.5,
+                borderColor: theme.palette.divider,
               },
+              "&:hover fieldset": {
+                borderColor: theme.palette.primary.main,
+              },
+            },
+            "& .MuiInputLabel-root": {
+              color: theme.palette.text.secondary,
             },
           }}
         />
 
-        {/* Forgot password link */}
-        <Box sx={{ textAlign: 'right', mb: 3, mt: -1 }}>
+        {/* Forgot password */}
+        <Box sx={{ textAlign: "right", mb: 3, mt: -1 }}>
           <Link
             href="/reset-password"
             underline="none"
             sx={{
-              color: '#666',
+              color: theme.palette.text.secondary,
               fontSize: 14,
               fontWeight: 600,
-              '&:hover': {
+              "&:hover": {
                 color: theme.palette.primary.main,
               },
             }}
@@ -191,7 +233,7 @@ export default function LoginPage({ appConfig, logo }) {
           </Link>
         </Box>
 
-        {/* Sign in button */}
+        {/* Button */}
         <Button
           fullWidth
           variant="contained"
@@ -203,26 +245,24 @@ export default function LoginPage({ appConfig, logo }) {
             fontWeight: 600,
             fontSize: 16,
             borderRadius: 1.5,
-            textTransform: 'none',
+            textTransform: "none",
             letterSpacing: 0.5,
-            boxShadow: 2,
-            backgroundColor: theme.palette.primary.main,
-            '&:hover': {
-              backgroundColor: theme.palette.primary.dark,
-              boxShadow: 4,
+            boxShadow: theme.palette.mode === "dark" ? 0 : 2,
+            "&:hover": {
+              boxShadow: theme.palette.mode === "dark" ? 0 : 4,
             },
           }}
         >
-          {loading ? 'Signing In...' : 'Sign In'}
+          {loading ? "Signing In..." : "Sign In"}
         </Button>
       </Paper>
 
-      {/* Footer text */}
-      <Box sx={{ mt: 4, textAlign: 'center' }}>
+      {/* Footer */}
+      <Box sx={{ mt: 4, textAlign: "center" }}>
         <Typography
           variant="caption"
           sx={{
-            color: 'rgba(255, 255, 255, 0.8)',
+            color: "rgba(255, 255, 255, 0.8)",
             fontSize: 12,
             fontWeight: 500,
           }}

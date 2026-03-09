@@ -10,6 +10,7 @@ import {
   Chip,
   IconButton,
   Badge,
+  useTheme,
 } from "@mui/material";
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 
@@ -73,7 +74,7 @@ export default function CardListViewReadOnly({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState("read");
   const [selectedItem, setSelectedItem] = useState(null);
-
+const theme = useTheme();
   const mappedFields = useMemo(() => mapFields(fields || []), [fields]);
 
   const handleCardClick = (item) => {
@@ -91,12 +92,13 @@ export default function CardListViewReadOnly({
 
   return (
     <>
-      <Box sx={{ width: "100%" }}>
+      <Box sx={{ width: "100%", backgroundColor: theme.palette.background.default }}>
         <Box
           sx={{
             display: "block",
-            height: "calc(100vh - 120px)",
+            height: "100vh",
             overflowY: "auto",
+            backgroundColor: theme.palette.background.default,
           }}
         >
           <Box
@@ -110,6 +112,8 @@ export default function CardListViewReadOnly({
               justifyContent: "flex-start",
               alignContent: "flex-start",
               gap: 3,
+              backgroundColor: theme.palette.background.default,
+
             }}
           >
             {data.map((item) => {

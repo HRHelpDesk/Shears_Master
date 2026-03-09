@@ -25,7 +25,7 @@ import {
 } from "shears-shared/src/Services/Authentication";
 
 import { AuthContext } from "../../../context/AuthContext";
-import { formatDateValue } from "shears-shared/src/utils/stringHelpers";
+import { formatDateRange, formatDateValue } from "shears-shared/src/utils/stringHelpers";
 
 /* ============================================================
    Status Helpers
@@ -91,7 +91,7 @@ export default function SmartStatusWidgetWeb({
 
       if (status === "Approved") {
         const formattedDates = Array.isArray(item.date)
-          ? item.date.map((d) => formatDateValue(d)).join(", ")
+          ? formatDateRange(item.date)
           : formatDateValue(item.date);
 
         const message = `Your request for ${formattedDates} has been approved. Please check your calendar for the details.`;

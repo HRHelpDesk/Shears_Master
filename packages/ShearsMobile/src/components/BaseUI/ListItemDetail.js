@@ -20,6 +20,7 @@ import {
   currencyToNumber,
   formatCurrency,
   singularize,
+  toTitleCase,
 } from "shears-shared/src/utils/stringHelpers";
 import { FieldMap } from "../../config/component-mapping/FieldMap";
 import {
@@ -159,20 +160,17 @@ const RenderField = ({
 
   /* ARRAY FIELD */
   if (Array.isArray(value) && inputType !== 'dateRange') {
-
-     if (fieldDef.field === "comments") {
-    return (
-      <SmartCommentWidget
-        comments={value || []}
-        mode={mode}
-        item={item}                    // full item with _id
-        // onCommentAdded={(updated) => {
-        //   // Optional: refresh full item if needed
-        // }}
-      />
-    );
-  }
-
+console.log("mode", mode)
+   if (fieldDef.field === "comments") {
+  if (mode !== "read") return null; // ← add this
+  return (
+    <SmartCommentWidget
+      comments={value || []}
+      mode={mode}
+      item={item}
+    />
+  );
+}
     const handleAddArrayItem = () => {
       const newItem =
         fieldDef.input === "linkSelect"
@@ -249,8 +247,8 @@ const RenderField = ({
                 variant="labelLarge"
                 style={{ color: theme.colors.text, marginRight: 8 }}
               >
-                {(singularize(fieldDef.name || fieldDef.field)).charAt(0).toUpperCase() + 
-                (singularize(fieldDef.name || fieldDef.field)).slice(1)} #{idx + 1}
+                {toTitleCase((singularize(fieldDef.name || fieldDef.field)).charAt(0).toUpperCase() + 
+                (singularize(fieldDef.name || fieldDef.field)).slice(1))} #{idx + 1}
               </Text>
 
                   {mode === "read" && <FieldActionsForEntry entry={entry} />}
@@ -445,7 +443,7 @@ export default function ListItemDetailScreen({ route, navigation }) {
     recordType,
     modes = ['read', 'add', 'edit', 'delete'],
     actionsMenu = [],
-    
+    displayName,
   } = route.params;
   console.log('recordType', recordType)
   console.log('actionsMenu', actionsMenu)
@@ -795,7 +793,8 @@ export default function ListItemDetailScreen({ route, navigation }) {
           user.subscriberId,
           user
         );
-
+        
+        route.params?.onRecordAdded?.();
         // NEW RECORD → CLOSE SCREEN
         return navigation.goBack();
       }
@@ -839,6 +838,7 @@ export default function ListItemDetailScreen({ route, navigation }) {
 
     try {
       await deleteRecord(idToDelete, token, isUser);
+      route.params?.onRecordDeleted?.(item._id);
       navigation.goBack({ shouldRefresh: true });
     } catch (err) {
       console.error("Delete failed:", err);
@@ -878,7 +878,7 @@ export default function ListItemDetailScreen({ route, navigation }) {
                   variant="headlineMedium"
                   style={{ color: theme.colors.text, fontWeight: "600" }}
                 >
-                  {getDisplayTitle(localItem, name, mode)}
+                  {displayName ? displayName : getDisplayTitle(localItem, name, mode)}
                 </Text>
 
                 <SubtitleText name={name} item={localItem} />

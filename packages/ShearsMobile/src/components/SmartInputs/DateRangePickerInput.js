@@ -4,7 +4,6 @@ import {
   TouchableOpacity,
   Platform,
   StyleSheet,
-  ScrollView,
 } from 'react-native';
 import {
   Button,
@@ -15,12 +14,13 @@ import {
   SegmentedButtons,
   Divider,
 } from 'react-native-paper';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker, {
+  DateTimePickerAndroid,
+} from '@react-native-community/datetimepicker';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function DateRangePickerInput({
@@ -36,7 +36,7 @@ export default function DateRangePickerInput({
   const theme = useTheme();
   const bottomSheetRef = useRef(null);
   const snapPoints = useMemo(() => ['75%'], []);
-const insets = useSafeAreaInsets();
+  const insets = useSafeAreaInsets();
 
   const [rangeMode, setRangeMode] = useState('single');
   const [tempStartDate, setTempStartDate] = useState(new Date());
@@ -77,6 +77,27 @@ const insets = useSafeAreaInsets();
 
     return dates;
   }
+
+  /* -------------------------------------------------------------------------- */
+  /*                          ANDROID PICKER HANDLER                            */
+  /* -------------------------------------------------------------------------- */
+
+  const openAndroidPicker = (currentValue, onSelect) => {
+    DateTimePickerAndroid.open({
+      value: currentValue,
+      mode: 'date',
+      is24Hour: true,
+      onChange: (event, selectedDate) => {
+        if (event.type === 'set' && selectedDate) {
+          onSelect(selectedDate);
+        }
+      },
+    });
+  };
+
+  /* -------------------------------------------------------------------------- */
+  /*                               DISPLAY VALUE                                */
+  /* -------------------------------------------------------------------------- */
 
   const displayValue = (() => {
     if (!value || value.length === 0) return 'Not set';
@@ -121,7 +142,7 @@ const insets = useSafeAreaInsets();
   }, [value]);
 
   /* -------------------------------------------------------------------------- */
-  /*                              ACTIONS                                       */
+  /*                                ACTIONS                                     */
   /* -------------------------------------------------------------------------- */
 
   const handleConfirm = () => {
@@ -146,10 +167,7 @@ const insets = useSafeAreaInsets();
   if (mode === 'read') {
     return (
       <View style={styles.readContainer}>
-        <Text
-          variant="titleMedium"
-          style={[styles.label, { color: theme.colors.primary }]}
-        >
+        <Text variant="titleMedium" style={[styles.label, { color: theme.colors.primary }]}>
           {label}
         </Text>
 
@@ -159,18 +177,7 @@ const insets = useSafeAreaInsets();
             size={26}
             color={theme.colors.onSurfaceVariant}
           />
-          <Text
-            variant="bodyLarge"
-            style={[
-              styles.readValue,
-              {
-                color:
-                  value && value.length > 0
-                    ? theme.colors.onSurface
-                    : theme.colors.onSurfaceVariant,
-              },
-            ]}
-          >
+          <Text variant="bodyLarge" style={styles.readValue}>
             {displayValue}
           </Text>
         </View>
@@ -188,10 +195,7 @@ const insets = useSafeAreaInsets();
 
   return (
     <View style={styles.editContainer}>
-      <Text
-        variant="titleMedium"
-        style={[styles.label, { color: theme.colors.primary }]}
-      >
+      <Text variant="titleMedium" style={[styles.label, { color: theme.colors.primary }]}>
         {label}
       </Text>
 
@@ -200,10 +204,7 @@ const insets = useSafeAreaInsets();
         onPress={() => bottomSheetRef.current?.present()}
         style={[
           styles.selectorContainer,
-          {
-            backgroundColor: theme.colors.surface,
-            borderColor,
-          },
+          { backgroundColor: theme.colors.surface, borderColor },
         ]}
       >
         <View style={styles.inlineContent}>
@@ -234,11 +235,7 @@ const insets = useSafeAreaInsets();
           </Text>
         </View>
 
-        <IconButton
-          icon="chevron-down"
-          size={20}
-          iconColor={theme.colors.onSurfaceVariant}
-        />
+        <IconButton icon="chevron-down" size={20} />
       </TouchableOpacity>
 
       {(helperText || error) && (
@@ -258,26 +255,19 @@ const insets = useSafeAreaInsets();
       {/* ---------------------------------------------------------------------- */}
 
       <BottomSheetModal
-            ref={bottomSheetRef}
-            snapPoints={snapPoints}
-            index={0}
-            enablePanDownToClose
-            stackBehavior="push"
-            topInset={insets.top}
-            modalProps={{ presentationStyle: 'overFullScreen' }}
-            backgroundStyle={{
-                backgroundColor: theme.colors.surface,
-            }}
-            handleIndicatorStyle={{
-                backgroundColor: theme.colors.outline,
-            }}
-            >
+        ref={bottomSheetRef}
+        snapPoints={snapPoints}
+        index={0}
+        enablePanDownToClose
+        stackBehavior="push"
+        topInset={insets.top}
+        backgroundStyle={{ backgroundColor: theme.colors.surface }}
+      >
         <View style={styles.sheetContainer}>
           <Text style={styles.sheetTitle}>Select {label}</Text>
-
           <Divider style={{ marginVertical: 16 }} />
 
-        <BottomSheetScrollView contentContainerStyle={{ paddingBottom: 120 }}>
+          <BottomSheetScrollView contentContainerStyle={{ paddingBottom: 120 }}>
             {allowSingleDay && allowMultiDay && (
               <SegmentedButtons
                 value={rangeMode}
@@ -296,41 +286,71 @@ const insets = useSafeAreaInsets();
                 {rangeMode === 'single' ? 'Date' : 'Start Date'}
               </Text>
 
-              <DateTimePicker
-                value={tempStartDate}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                onChange={(event, selectedDate) => {
-                  if (selectedDate) {
-                    setTempStartDate(selectedDate);
-                    if (
-                      rangeMode === 'range' &&
-                      selectedDate > tempEndDate
-                    ) {
-                      setTempEndDate(selectedDate);
-                    }
-                  }
-                }}
-              />
-            </View>
-
-            {rangeMode === 'range' && (
-              <View style={styles.dateSection}>
-                <Text style={styles.sectionTitle}>End Date</Text>
-
+              {Platform.OS === 'ios' ? (
                 <DateTimePicker
-                  value={tempEndDate}
+                  value={tempStartDate}
                   mode="date"
-                  display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                  display="inline"
                   onChange={(event, selectedDate) => {
                     if (selectedDate) {
-                      setTempEndDate(selectedDate);
-                      if (selectedDate < tempStartDate) {
-                        setTempStartDate(selectedDate);
+                      setTempStartDate(selectedDate);
+                      if (rangeMode === 'range' && selectedDate > tempEndDate) {
+                        setTempEndDate(selectedDate);
                       }
                     }
                   }}
                 />
+              ) : (
+                <Button
+                  mode="outlined"
+                  onPress={() =>
+                    openAndroidPicker(tempStartDate, (selectedDate) => {
+                      setTempStartDate(selectedDate);
+                      if (rangeMode === 'range' && selectedDate > tempEndDate) {
+                        setTempEndDate(selectedDate);
+                      }
+                    })
+                  }
+                >
+                  {tempStartDate.toLocaleDateString()}
+                </Button>
+              )}
+            </View>
+
+            {/* END DATE */}
+            {rangeMode === 'range' && (
+              <View style={styles.dateSection}>
+                <Text style={styles.sectionTitle}>End Date</Text>
+
+                {Platform.OS === 'ios' ? (
+                  <DateTimePicker
+                    value={tempEndDate}
+                    mode="date"
+                    display="inline"
+                    onChange={(event, selectedDate) => {
+                      if (selectedDate) {
+                        setTempEndDate(selectedDate);
+                        if (selectedDate < tempStartDate) {
+                          setTempStartDate(selectedDate);
+                        }
+                      }
+                    }}
+                  />
+                ) : (
+                  <Button
+                    mode="outlined"
+                    onPress={() =>
+                      openAndroidPicker(tempEndDate, (selectedDate) => {
+                        setTempEndDate(selectedDate);
+                        if (selectedDate < tempStartDate) {
+                          setTempStartDate(selectedDate);
+                        }
+                      })
+                    }
+                  >
+                    {tempEndDate.toLocaleDateString()}
+                  </Button>
+                )}
 
                 <View style={styles.summaryContainer}>
                   <Text variant="bodySmall">
@@ -341,57 +361,41 @@ const insets = useSafeAreaInsets();
             )}
           </BottomSheetScrollView>
 
-          {/* Sticky Actions */}
-          <View
-            style={[
-                styles.sheetActions,
-                { paddingBottom: insets.bottom + 20 },
-            ]}
-            >
+          {/* ACTIONS */}
+          <View style={[styles.sheetActions, { paddingBottom: insets.bottom + 20 }]}>
             <Button
-                mode="outlined"
-                style={styles.actionButton}
-                contentStyle={styles.actionContent}
-                onPress={() => bottomSheetRef.current?.dismiss()}
+              mode="outlined"
+              style={styles.actionButton}
+              contentStyle={styles.actionContent}
+              onPress={() => bottomSheetRef.current?.dismiss()}
             >
-                Cancel
+              Cancel
             </Button>
 
             <Button
-                mode="contained"
-                style={styles.actionButton}
-                contentStyle={styles.actionContent}
-                onPress={() => {
+              mode="contained"
+              style={styles.actionButton}
+              contentStyle={styles.actionContent}
+              onPress={() => {
                 handleConfirm();
                 bottomSheetRef.current?.dismiss();
-                }}
+              }}
             >
-                Confirm
+              Confirm
             </Button>
-            </View>
-
+          </View>
         </View>
       </BottomSheetModal>
     </View>
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/*                                   STYLES                                   */
-/* -------------------------------------------------------------------------- */
-
 const styles = StyleSheet.create({
   readContainer: { marginBottom: 12 },
-  inlineRead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
+  inlineRead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   readValue: { fontSize: 16 },
   label: { marginBottom: 8, fontWeight: '600' },
-
   editContainer: { marginBottom: 12 },
-
   selectorContainer: {
     borderRadius: 10,
     borderWidth: 1,
@@ -401,67 +405,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-
-  inlineContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-
-  selectorText: {
-    fontSize: 16,
-  },
-
-  sheetContainer: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-
-  sheetTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-
+  inlineContent: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  selectorText: { fontSize: 16 },
+  sheetContainer: { flex: 1, paddingHorizontal: 20 },
+  sheetTitle: { fontSize: 18, fontWeight: '600', textAlign: 'center' },
   dateSection: {
     marginBottom: 24,
     padding: 14,
     borderRadius: 14,
     backgroundColor: 'rgba(0,0,0,0.04)',
   },
-
-  sectionTitle: {
-    marginBottom: 8,
-    fontWeight: '600',
-  },
-
-  summaryContainer: {
-    marginTop: 12,
-    alignItems: 'center',
-  },
-
+  sectionTitle: { marginBottom: 8, fontWeight: '600' },
+  summaryContainer: { marginTop: 12, alignItems: 'center' },
   sheetActions: {
-  position: 'absolute',
-  bottom: 0,
-  left: 0,
-  right: 0,
-  flexDirection: 'row',
-  paddingHorizontal: 20,
-  paddingTop: 12,
-  backgroundColor: 'white',
-  borderTopWidth: 1,
-  borderColor: 'rgba(0,0,0,0.08)',
-  gap: 12,
-},
-
-actionButton: {
-  flex: 1,
-  borderRadius: 5,
-},
-
-actionContent: {
-  height: 50,
-},
-
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
+    gap: 12,
+  },
+  actionButton: { flex: 1, borderRadius: 5 },
+  actionContent: { height: 50 },
 });

@@ -30,7 +30,7 @@ import {
   saveCalendarAndNotification,
   sendRejectionNotification,
 } from 'shears-shared/src/Services/Authentication';
-import { formatDateValue } from 'shears-shared/src/utils/stringHelpers';
+import { formatDateRange, formatDateValue } from 'shears-shared/src/utils/stringHelpers';
 import { useRefreshVersion } from '../../../../context/RefreshContext';
 
 /* ============================================================
@@ -58,15 +58,7 @@ function formatDuration(duration) {
   return [h, m].filter(Boolean).join(' ') || '—';
 }
 
-/* ============================================================
-   Date Formatting
-============================================================ */
-function formatDate(dateString) {
-  if (!dateString) return '';
-  return new Date(`${dateString}T00:00:00`).toLocaleDateString(undefined, {
-    month: 'short', day: 'numeric', year: 'numeric',
-  });
-}
+
 
 /* ============================================================
    Status Helpers
@@ -241,7 +233,7 @@ export default function SmartPendingRequestsWidget({ title = 'Pending Requests' 
       await updateRecord(selectedItem._id, updatedFieldsData, token);
 
       if (selectedStatus === 'Approved' && dates.length > 0) {
-        const message = `Your request for ${dates.map((d) => formatDateValue(d)).join(', ')} has been approved. Please check your calendar for the details.`;
+        const message = `Your request for ${formatDateRange(dates)} has been approved. Please check your calendar for the details.`;
         await saveCalendarAndNotification(updatedFieldsData, user, token, notify, message);
       }
 
@@ -384,7 +376,7 @@ export default function SmartPendingRequestsWidget({ title = 'Pending Requests' 
                               {influencerName}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                              {dates.map((d) => formatDate(d)).join(', ')}
+                              {formatDateRange(dates)}
                             </Typography>
                           </Box>
                         </Box>
