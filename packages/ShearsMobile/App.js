@@ -1,6 +1,6 @@
 // App.js
 import React, { useEffect, useMemo, useState, useContext, useCallback } from 'react';
-import { Appearance, useColorScheme } from 'react-native';
+import { Appearance, useColorScheme, StatusBar, Platform } from 'react-native'; 
 import { Provider as PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -69,6 +69,12 @@ export default function App() {
     const sub = Appearance.addChangeListener(({ colorScheme }) => {
       setThemeMode(colorScheme || "light");
     });
+
+      if (Platform.OS === 'android') {
+      StatusBar.setTranslucent(true);
+      StatusBar.setBackgroundColor('transparent');
+    }
+
     return () => sub.remove();
   }, []);
 
@@ -78,7 +84,12 @@ export default function App() {
   );
 
   return (
+                <SafeAreaProvider>
+
     <GestureHandlerRootView style={{ flex: 1 }}>
+       {Platform.OS === 'android' && (
+          <StatusBar translucent backgroundColor="transparent" />
+        )}
       <StripeProvider
         publishableKey="pk_test_51SPNqR1OAQam7tPgFryvj6gCkIICX1ptrBIRX2ni67VXIYOrWr61l4dG2hTBILCVnNEtebdzxVnmLrbkFHQW4bYb002vB3Y8Mp"
         merchantIdentifier="merchant.com.shears"
@@ -87,7 +98,6 @@ export default function App() {
         <AuthProvider>
               <RefreshProvider>
           <TerminalProviderWrapper>
-            <SafeAreaProvider>
               <PaperProvider theme={theme}>
                 <Host>
                   <BottomSheetModalProvider>
@@ -95,11 +105,12 @@ export default function App() {
                   </BottomSheetModalProvider>
                 </Host>
               </PaperProvider>
-            </SafeAreaProvider>
           </TerminalProviderWrapper>
           </RefreshProvider>
         </AuthProvider>
       </StripeProvider>
     </GestureHandlerRootView>
+                </SafeAreaProvider>
+
   );
 }

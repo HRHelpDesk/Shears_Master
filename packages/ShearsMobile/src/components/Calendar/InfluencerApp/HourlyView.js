@@ -56,7 +56,10 @@ const layoutOverlaps = (events) => {
     let placed = false;
     for (const col of columns) {
       const last = col[col.length - 1];
-      if (timeToMinutes(evt.startTime) >= timeToMinutes(last.endTime)) {
+      const lastEnd = last.endTime
+        ? timeToMinutes(last.endTime)
+        : timeToMinutes(last.startTime) + 30;
+      if (timeToMinutes(evt.startTime) >= lastEnd) {
         col.push(evt);
         evt._col = columns.indexOf(col);
         placed = true;
@@ -194,54 +197,63 @@ export default function HourlyView({
      Normalize all records — Luxon tz work done once on data change
   ------------------------------------------------------------ */
   const allNormalized = useMemo(() => {
-    const out = [];
-    data.forEach((item) => {
-      const fd = item.fieldsData || {};
-      if (!canSeeCalendarEvent(item, user)) return;
-      if (!fd.date || !fd.timeZoneTime?.start) return;
+  const seen = new Set();
+  const out = [];
 
-      const rawStart  = fd.timeZoneTime.start;
-      const rawEnd    = fd.timeZoneTime.end;
-      const tz        = fd.timeZoneTime.timezone || 'UTC';
-      const localZone = DateTime.local().zoneName;
+  data.forEach((item) => {
+    if (seen.has(item._id)) return;
+    seen.add(item._id);
 
-      const startLocal = DateTime.fromISO(`${fd.date}T${rawStart}`, { zone: tz }).setZone(localZone);
+    const fd = item.fieldsData || {};
+    if (!canSeeCalendarEvent(item, user)) return;
+    if (!fd.date || !fd.timeZoneTime?.start) return;
 
-      let endLocal;
-      if (rawEnd) {
-        const crossesMidnight = timeToMinutes(rawEnd) <= timeToMinutes(rawStart);
-        endLocal = DateTime.fromISO(`${fd.date}T${rawEnd}`, { zone: tz });
-        if (crossesMidnight) endLocal = endLocal.plus({ days: 1 });
-        endLocal = endLocal.setZone(localZone);
-      } else {
-        endLocal = startLocal.plus({ minutes: 30 });
-      }
+    const rawStart  = fd.timeZoneTime.start;
+    const rawEnd    = fd.timeZoneTime.end;
+    const tz        = fd.timeZoneTime.timezone || 'UTC';
+    const localZone = DateTime.local().zoneName;
 
-      const startISO    = startLocal.toISODate();
-      const startTime   = startLocal.toFormat('HH:mm');
-      const endTime     = endLocal.toFormat('HH:mm');
-      const isOvernight = endLocal.toISODate() !== startLocal.toISODate();
+    const startLocal = DateTime.fromISO(`${fd.date}T${rawStart}`, { zone: tz }).setZone(localZone);
 
-      const base = {
-        _id:         item._id,
-        startDay:    startISO,
-        startTime,
-        endTime,
-        contactName: fd.assignedInfluencer?.fullName ?? fd.influencerName?.name ?? '—',
-        serviceName: fd.platforms?.map(p => p.platform).join(', ') ?? '—',
-        flatItem:    { ...fd, _id: item._id, recordType: item.recordType, subscriberId: item.subscriberId },
-        flashSales:  fd.flashSales || '',
-      };
+    let endLocal;
+    if (rawEnd) {
+      const crossesMidnight = timeToMinutes(rawEnd) <= timeToMinutes(rawStart);
+      endLocal = DateTime.fromISO(`${fd.date}T${rawEnd}`, { zone: tz });
+      if (crossesMidnight) endLocal = endLocal.plus({ days: 1 });
+      endLocal = endLocal.setZone(localZone);
+    } else {
+      endLocal = startLocal.plus({ minutes: 30 });
+    }
 
-      if (isOvernight) {
-        out.push({ ...base, endTime: '23:59', isContinuation: false, continuesNextDay: true, originalStartTime: startTime, originalEndTime: endTime });
+    const startISO    = startLocal.toISODate();
+    const startTime   = startLocal.toFormat('HH:mm');
+    const endTime     = endLocal.toFormat('HH:mm');
+    const isOvernight = endLocal.toISODate() !== startLocal.toISODate();
+
+    const base = {
+      _id:         item._id,
+      startDay:    startISO,
+      startTime,
+      endTime,
+      contactName: fd.assignedInfluencer?.fullName ?? fd.influencerName?.name ?? '—',
+      serviceName: fd.platforms?.map(p => p.platform).join(', ') ?? '—',
+      flatItem:    { ...fd, _id: item._id, recordType: item.recordType, subscriberId: item.subscriberId },
+      flashSales:  fd.flashSales || '',
+    };
+
+    if (isOvernight) {
+      out.push({ ...base, _id: `${item._id}_start`, endTime: '23:59', isContinuation: false, continuesNextDay: true, originalStartTime: startTime, originalEndTime: endTime });
+
+      if (endTime !== '00:00') {
         out.push({ ...base, _id: `${item._id}_cont`, startDay: startLocal.plus({ days: 1 }).toISODate(), startTime: '00:00', isContinuation: true, continuesNextDay: false, originalStartTime: startTime, originalEndTime: endTime });
-      } else {
-        out.push(base);
       }
-    });
-    return out;
-  }, [data, user]);
+    } else {
+      out.push(base);
+    }
+  });
+
+  return out;
+}, [data, user]);
 
   /* ------------------------------------------------------------
      Filter to selected day + layout

@@ -27,5 +27,14 @@ export const SharedLinkField = [
     inputConfig: { recordType: 'users' },
     display: { placeholder: 'Select a User', order: 32 },
   },
+
+  //Hyperlink Field
+  {
+    field: 'hyperlinkField',
+    type: 'array',
+    label: 'Hyperlink',
+    input: 'hyperlink',
+    display: { placeholder: 'Enter a URL', order: 32 },
+  },
   
 ];

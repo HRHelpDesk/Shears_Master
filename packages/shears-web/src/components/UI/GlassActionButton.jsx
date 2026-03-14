@@ -1,6 +1,6 @@
 // src/components/UI/GlassActionButton.jsx
 import React from "react";
-import { IconButton } from "@mui/material";
+import { IconButton, CircularProgress } from "@mui/material";
 
 export default function GlassActionButtonWeb({
   icon,
@@ -8,6 +8,7 @@ export default function GlassActionButtonWeb({
   color,
   theme,
   size = 40,
+  disabled = false,
 }) {
   return (
     <IconButton
@@ -51,7 +52,15 @@ export default function GlassActionButtonWeb({
         },
       }}
     >
-      {icon}
+     {disabled ? (
+        <CircularProgress
+          size={20}
+          thickness={4}
+          sx={{ color: color || theme.palette.text.primary }}
+        />
+      ) : (
+        icon
+      )}
     </IconButton>
   );
 }

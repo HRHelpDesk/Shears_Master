@@ -1,6 +1,6 @@
 // src/components/BaseUI/SettingsBasePage.js
 import React, { useState, useEffect, useContext, useCallback } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, KeyboardAvoidingView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, KeyboardAvoidingView, TouchableOpacity, Platform } from 'react-native';
 import { useTheme, Divider, Icon, Portal } from 'react-native-paper';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { useIsFocused } from '@react-navigation/native';
@@ -154,7 +154,7 @@ console.log("SettingsBasePage mappedFields:", mappedFields);
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, paddingTop:Platform.OS === "ios" ? 0 : 20 },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   fallback: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
   headerRow: {

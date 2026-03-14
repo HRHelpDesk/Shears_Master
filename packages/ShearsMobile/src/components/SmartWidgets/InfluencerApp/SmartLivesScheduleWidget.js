@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useTheme, Divider, Chip, Switch } from 'react-native-paper';
 import { AuthContext } from '../../../context/AuthContext';
-import { getRecords, updateRecord } from 'shears-shared/src/Services/Authentication';
+import { getRecords, sendFlashSalesNotification, updateRecord } from 'shears-shared/src/Services/Authentication';
 import { DateTime } from 'luxon';
 import { GlassActionButton } from '../../UI/GlassActionButton';
 
@@ -213,6 +213,26 @@ const dateToShow = useMemo(() => {
             : dataItem
         )
       );
+
+      if (newValue) {
+      const influencerUserId =
+        item.fieldsData?.influencerName?.raw?.userId;
+
+      if (influencerUserId) {
+        const notification = {
+          notificationName: `Flash Sales Enabled for ${formatDate(item.fieldsData?.date)}`,
+          message:
+            "Flash sales have been enabled for your scheduled live on " + formatDate(item.fieldsData?.date) + ". Prepare your products!",
+        };
+
+        await sendFlashSalesNotification(
+          user.subscriberId,
+          influencerUserId,
+          notification,
+          token
+        );
+      }
+    }
     } catch (err) {
       console.error('Failed to update flashSales:', err);
       setError('Failed to update flash sales status.');

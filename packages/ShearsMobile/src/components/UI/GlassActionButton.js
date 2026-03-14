@@ -1,13 +1,13 @@
 import { LiquidGlassView, isLiquidGlassSupported } from '@callstack/liquid-glass';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { IconButton } from 'react-native-paper';
 
 
-export const GlassActionButton = ({ icon, onPress, color, theme }) => {
+export const GlassActionButton = ({ icon, onPress, color, theme, disabled }) => {
   const buttonSize = 44;
   
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.7} disabled={disabled}>
       <LiquidGlassView
         style={[
           styles.glassButton,
@@ -25,12 +25,19 @@ export const GlassActionButton = ({ icon, onPress, color, theme }) => {
         effect="clear"
         interactive
       >
-        <IconButton
-          icon={icon}
-          size={20}
-          iconColor={color || theme.colors.text}
-          style={styles.iconButton}
-        />
+       {disabled ? (
+          <ActivityIndicator
+            size="small"
+            color={color || theme.colors.text}
+          />
+        ) : (
+          <IconButton
+            icon={icon}
+            size={20}
+            iconColor={color || theme.colors.text}
+            style={styles.iconButton}
+          />
+        )}
       </LiquidGlassView>
     </TouchableOpacity>
   );

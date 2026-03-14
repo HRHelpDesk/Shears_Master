@@ -444,7 +444,7 @@ export default function ListView({
 }
 
 const styles = StyleSheet.create({
-  container:    { flex: 1, padding: 10, paddingBottom: Platform.OS === "ios" ? 100 : 0 },
+  container:    { flex: 1, padding: 10, paddingBottom: Platform.OS === "ios" ? 90 : 0 },
   searchInput:  { borderWidth: 1, borderRadius: 10, padding: 10, marginBottom: 12, fontSize: 16 },
   card: {
     flexDirection: "row", padding: 14, borderRadius: 12, marginBottom: 8,

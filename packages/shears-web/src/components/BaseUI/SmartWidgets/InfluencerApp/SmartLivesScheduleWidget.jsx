@@ -22,7 +22,7 @@ import { useTheme } from '@mui/material/styles';
 import { ExpandMore, ExpandLess, EventNote } from '@mui/icons-material';
 import { DateTime } from 'luxon';
 import { AuthContext } from '../../../../context/AuthContext';
-import { getRecords, updateRecord } from 'shears-shared/src/Services/Authentication';
+import { getRecords, updateRecord, sendFlashSalesNotification } from 'shears-shared/src/Services/Authentication';
 import { useRefreshVersion } from '../../../../context/RefreshContext';
 
 /* ============================================================
@@ -108,11 +108,13 @@ export default function SmartLivesScheduleWidget({
       setError(null);
       try {
         const res = await getRecords({
-          recordType: 'calendar',
-          subscriberId: user.subscriberId,
-          token,
-          limit: 500,
-        });
+      recordType: 'calendar',
+      subscriberId: user.subscriberId,
+      startDate: dateToShow,
+      endDate: dateToShow,
+      token,
+      limit: 200,
+    });
         setData(res || []);
       } catch (err) {
         console.error('Failed to fetch calendar records:', err);
@@ -153,6 +155,33 @@ export default function SmartLivesScheduleWidget({
             : d
         )
       );
+
+          /* --------------------------------------------------
+       SEND FLASH SALES NOTIFICATION (same as mobile)
+    -------------------------------------------------- */
+
+    if (newValue) {
+      const influencerUserId =
+        item.fieldsData?.influencerName?.raw?.userId;
+
+      if (influencerUserId) {
+        const notification = {
+          notificationName: `Flash Sales Enabled for ${formatDate(item.fieldsData?.date)}`,
+          message:
+            "Flash sales have been enabled for your scheduled live on " +
+            formatDate(item.fieldsData?.date) +
+            ". Prepare your products!",
+        };
+
+        await sendFlashSalesNotification(
+          user.subscriberId,
+          influencerUserId,
+          notification,
+          token
+        );
+      }
+    }
+
     } catch (err) {
       console.error('Failed to update flashSales:', err);
       setError('Failed to update flash sales status.');

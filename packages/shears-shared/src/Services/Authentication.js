@@ -749,6 +749,32 @@ export async function saveCalendarAndNotification(
   }
 }
 
+//FLASH SALES NOTIFICATION
+
+export async function sendFlashSalesNotification(
+  subscriberId,
+  forUserId,
+  notification,
+  token
+) {
+  try {
+    const res = await axios.post(
+      `${BASE_URL}/v1/notification/send`,
+      {
+        subscriberId,
+        forUserId,
+        notification,
+      },
+       { headers: getAppHeaders(token) }
+    );
+
+    return res.data;
+  } catch (err) {
+    console.error("Flash sales notification failed:", err?.response?.data || err);
+    throw err;
+  }
+}
+
 
 
 // src/utils/normalizeCalendarRecord.js

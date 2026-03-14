@@ -12,6 +12,7 @@ import {
   Platform,
   Modal,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { IconButton, useTheme, Surface, FAB } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
@@ -22,7 +23,6 @@ import {
   addMonths,
   subMonths,
   isToday,
-  isSameDay,
   startOfWeek,
   endOfWeek,
   addDays,
@@ -34,6 +34,7 @@ import AppointmentsHourlyView from './Shear/AppointmentsHourlyView';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { canSeeCalendarEvent, getRecords } from 'shears-shared/src/Services/Authentication';
 import { AuthContext } from '../../context/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const WINDOW_WIDTH = Dimensions.get('window').width;
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -87,7 +88,6 @@ const DayCell = memo(({
    Main component
 ------------------------------------------------------- */
 export default function CalendarView({
-  data = [],
   appConfig,
   onRefresh,
   recordType = null,
@@ -100,10 +100,13 @@ export default function CalendarView({
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedDay, setSelectedDay] = useState(null);
   const translateX = useMemo(() => new Animated.Value(0), []);
-  const [localData, setLocalData] = useState(data);
+  const [localData, setLocalData] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   const monthCache = useRef({});
+  const hasFetched = useRef(false);
 
   const daySize         = Math.floor(containerWidth / 7);
   const leftover        = containerWidth - daySize * 7;
@@ -115,16 +118,60 @@ export default function CalendarView({
   const { primaryContainer, onPrimaryContainer, onSurface, onSurfaceVariant, primary, onPrimary } = theme.colors;
 
   /* -------------------------------------------------------
-     FETCH — scoped to a single month, with cache
+     FETCH
   ------------------------------------------------------- */
-  const loadCalendarData = useCallback(async (date, force = false) => {
+  const loadCalendarData = useCallback(async (date, force = false, showTransition = false) => {
     if (!token || !user?.subscriberId) return;
 
     const key = getMonthKey(date);
+    const storageKey = `calendar_${recordType || 'calendar'}_${key}`;
 
+    // 1. In-memory cache — instant, no loader
     if (!force && monthCache.current[key]) {
       setLocalData(monthCache.current[key]);
+      setIsLoading(false);
+      setIsTransitioning(false);
       return;
+    }
+
+    // 2. AsyncStorage cache — show immediately, refresh in background
+    if (!force) {
+      try {
+        const cached = await AsyncStorage.getItem(storageKey);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          monthCache.current[key] = parsed;
+          setLocalData(parsed);
+          setIsLoading(false);
+          setIsTransitioning(false);
+
+          // Silent background refresh
+          getRecords({
+            recordType: recordType || 'calendar',
+            token,
+            subscriberId: user.subscriberId,
+            startDate: format(startOfMonth(date), 'yyyy-MM-dd'),
+            endDate:   format(endOfMonth(date),   'yyyy-MM-dd'),
+            limit: 200,
+          }).then(res => {
+            if (res) {
+              monthCache.current[key] = res;
+              setLocalData(res);
+              AsyncStorage.setItem(storageKey, JSON.stringify(res)).catch(() => {});
+            }
+          }).catch(() => {});
+          return;
+        }
+      } catch (e) {
+        console.warn('AsyncStorage read failed:', e);
+      }
+    }
+
+    // 3. No cache — show loader and fetch from network
+    if (showTransition) {
+      setIsTransitioning(true);
+    } else {
+      setIsLoading(true);
     }
 
     const startDate = format(startOfMonth(date), 'yyyy-MM-dd');
@@ -143,16 +190,26 @@ export default function CalendarView({
       if (res) {
         monthCache.current[key] = res;
         setLocalData(res);
+        AsyncStorage.setItem(storageKey, JSON.stringify(res)).catch(() => {});
       }
     } catch (err) {
       console.error('Failed to load calendar:', err);
+    } finally {
+      setIsLoading(false);
+      setIsTransitioning(false);
     }
   }, [token, user?.subscriberId, recordType]);
 
+  /* -------------------------------------------------------
+     Initial fetch — runs once when token + user are ready
+  ------------------------------------------------------- */
   useEffect(() => {
-    loadCalendarData(currentDate);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (token && user?.subscriberId && !hasFetched.current) {
+      hasFetched.current = true;
+      loadCalendarData(currentDate);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, user?.subscriberId]);
 
   /* -------------------------------------------------------
      PULL-TO-REFRESH
@@ -169,10 +226,6 @@ export default function CalendarView({
 
   /* -------------------------------------------------------
      RECORD DELETED
-     Called by HourlyView/AppointmentsHourlyView when a
-     record is deleted inside ListItemDetail.
-     - Instantly removes from localData (no spinner)
-     - Updates the month cache so nav away+back stays correct
   ------------------------------------------------------- */
   const handleRecordDeleted = useCallback((deletedId) => {
     setLocalData(prev => {
@@ -184,7 +237,7 @@ export default function CalendarView({
   }, [currentDate]);
 
   /* -------------------------------------------------------
-     PRE-COMPUTED EVENT MAP  { "yyyy-MM-dd": count }
+     PRE-COMPUTED EVENT MAP
   ------------------------------------------------------- */
   const eventCountMap = useMemo(() => {
     const map = {};
@@ -201,7 +254,7 @@ export default function CalendarView({
   }, [localData, user]);
 
   /* -------------------------------------------------------
-     MONTH GRID
+     MONTH GRID DAYS
   ------------------------------------------------------- */
   const days = useMemo(() => {
     const start = startOfWeek(startOfMonth(currentDate), { weekStartsOn: 0 });
@@ -218,7 +271,9 @@ export default function CalendarView({
   ------------------------------------------------------- */
   const animateMonthChange = useCallback((newDate, direction) => {
     Animated.timing(translateX, {
-      toValue: direction * containerWidth, duration: 200, useNativeDriver: true,
+      toValue: direction * containerWidth,
+      duration: 200,
+      useNativeDriver: true,
     }).start(() => {
       setCurrentDate(newDate);
       translateX.setValue(-direction * containerWidth);
@@ -229,13 +284,13 @@ export default function CalendarView({
   const handlePrevMonth = useCallback(() => {
     const newDate = subMonths(currentDate, 1);
     animateMonthChange(newDate, 1);
-    loadCalendarData(newDate);
+    loadCalendarData(newDate, false, true);
   }, [currentDate, animateMonthChange, loadCalendarData]);
 
   const handleNextMonth = useCallback(() => {
     const newDate = addMonths(currentDate, 1);
     animateMonthChange(newDate, -1);
-    loadCalendarData(newDate);
+    loadCalendarData(newDate, false, true);
   }, [currentDate, animateMonthChange, loadCalendarData]);
 
   /* -------------------------------------------------------
@@ -257,13 +312,16 @@ export default function CalendarView({
   ------------------------------------------------------- */
   const panResponder = useMemo(
     () => PanResponder.create({
-      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 20,
+      onMoveShouldSetPanResponder: (_, g) => {
+        if (modalVisible) return false;
+        return Math.abs(g.dx) > 20;
+      },
       onPanResponderRelease: (_, g) => {
         if (g.dx > 50) handlePrevMonth();
         else if (g.dx < -50) handleNextMonth();
       },
     }),
-    [handlePrevMonth, handleNextMonth]
+    [handlePrevMonth, handleNextMonth, modalVisible]
   );
 
   /* -------------------------------------------------------
@@ -285,61 +343,93 @@ export default function CalendarView({
       onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
       {...panResponder.panHandlers}
     >
-      <ScrollView
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onPullRefresh}
-            colors={[primary]}
-            tintColor={primary}
-            title="Refreshing calendar..."
-            titleColor={onSurfaceVariant}
-          />
-        }
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <IconButton icon="chevron-left" onPress={handlePrevMonth} size={24} iconColor={primary} />
-          <Text style={[styles.headerTitle, { color: onSurface }]}>
-            {format(currentDate, 'MMMM yyyy')}
+      {/* Full screen loader — only on very first load with no cache */}
+      {isLoading ? (
+        <View style={styles.fullLoader}>
+          <ActivityIndicator size="large" color={primary} />
+          <Text style={[styles.loadingText, { color: onSurfaceVariant }]}>
+            Loading {format(currentDate, 'MMMM yyyy')}...
           </Text>
-          <IconButton icon="chevron-right" onPress={handleNextMonth} size={24} iconColor={primary} />
         </View>
-
-        {/* Weekday Labels */}
-        <View style={[styles.weekdays, { paddingLeft: gridPaddingLeft }]}>
-          {WEEKDAYS.map(day => (
-            <Text key={day} style={[styles.weekdayText, { width: daySize, color: onSurfaceVariant }]}>
-              {day}
+      ) : (
+        <ScrollView
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onPullRefresh}
+              colors={[primary]}
+              tintColor={primary}
+              title="Refreshing calendar..."
+              titleColor={onSurfaceVariant}
+            />
+          }
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <IconButton icon="chevron-left" onPress={handlePrevMonth} size={24} iconColor={primary} />
+            <Text style={[styles.headerTitle, { color: onSurface }]}>
+              {format(currentDate, 'MMMM yyyy')}
             </Text>
-          ))}
-        </View>
+            <IconButton icon="chevron-right" onPress={handleNextMonth} size={24} iconColor={primary} />
+          </View>
 
-        {/* Month Grid */}
-        <Animated.View style={[styles.grid, { paddingLeft: gridPaddingLeft, transform: [{ translateX }], width: containerWidth }]}>
-          {days.map(day => {
-            const key = toDateKey(day);
-            return (
-              <DayCell
-                key={key}
-                day={day}
-                daySize={daySize}
-                dayHeight={dayHeight}
-                today={isToday(day)}
-                inMonth={isSameMonth(day, currentDate)}
-                eventCount={eventCountMap[key] || 0}
-                onPress={() => openDayModal(day)}
-                primaryContainer={primaryContainer}
-                onPrimaryContainer={onPrimaryContainer}
-                onSurface={onSurface}
-                onSurfaceVariant={onSurfaceVariant}
-                primary={primary}
-                onPrimary={onPrimary}
-              />
-            );
-          })}
-        </Animated.View>
-      </ScrollView>
+          {/* Weekday Labels */}
+          <View style={[styles.weekdays, { paddingLeft: gridPaddingLeft }]}>
+            {WEEKDAYS.map(day => (
+              <Text key={day} style={[styles.weekdayText, { width: daySize, color: onSurfaceVariant }]}>
+                {day}
+              </Text>
+            ))}
+          </View>
+
+          {/* Month Grid */}
+          <View style={{ position: 'relative' }}>
+            <Animated.View
+              style={[
+                styles.grid,
+                {
+                  paddingLeft: gridPaddingLeft,
+                  transform: [{ translateX }],
+                  width: containerWidth,
+                  opacity: isTransitioning ? 0.3 : 1,
+                },
+              ]}
+            >
+              {days.map(day => {
+                const key = toDateKey(day);
+                return (
+                  <DayCell
+                    key={key}
+                    day={day}
+                    daySize={daySize}
+                    dayHeight={dayHeight}
+                    today={isToday(day)}
+                    inMonth={isSameMonth(day, currentDate)}
+                    eventCount={eventCountMap[key] || 0}
+                    onPress={() => openDayModal(day)}
+                    primaryContainer={primaryContainer}
+                    onPrimaryContainer={onPrimaryContainer}
+                    onSurface={onSurface}
+                    onSurfaceVariant={onSurfaceVariant}
+                    primary={primary}
+                    onPrimary={onPrimary}
+                  />
+                );
+              })}
+            </Animated.View>
+
+            {/* Inline spinner during month navigation when no cache exists */}
+            {isTransitioning && (
+              <View style={[styles.transitionOverlay, { height: dayHeight * 6 }]}>
+                <ActivityIndicator size="large" color={primary} />
+                <Text style={[styles.loadingText, { color: onSurfaceVariant }]}>
+                  Loading {format(currentDate, 'MMMM yyyy')}...
+                </Text>
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      )}
 
       {/* FAB */}
       {modes.includes('add') && (
@@ -404,19 +494,30 @@ export default function CalendarView({
    Styles
 ------------------------------------------------------- */
 const styles = StyleSheet.create({
-  surface:      { paddingVertical: 8, elevation: 2, flex: 1 },
-  header:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: 8, marginBottom: 6 },
-  headerTitle:  { fontSize: 20, fontWeight: '600' },
-  weekdays:     { flexDirection: 'row', marginVertical: 4 },
-  weekdayText:  { textAlign: 'center', fontWeight: '600', fontSize: 13 },
-  grid:         { flexDirection: 'row', flexWrap: 'wrap' },
-  dayCell:      { justifyContent: 'center', alignItems: 'center' },
-  dayCircle:    { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
-  dayText:      { fontSize: 15 },
-  eventBadge:   { minWidth: 18, height: 18, borderRadius: 9, justifyContent: 'center', alignItems: 'center', marginTop: 2, paddingHorizontal: 5 },
+  surface:        { paddingVertical: 8, elevation: 2, flex: 1 },
+  header:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: 8, marginBottom: 6 },
+  headerTitle:    { fontSize: 20, fontWeight: '600' },
+  weekdays:       { flexDirection: 'row', marginVertical: 4 },
+  weekdayText:    { textAlign: 'center', fontWeight: '600', fontSize: 13 },
+  grid:           { flexDirection: 'row', flexWrap: 'wrap' },
+  dayCell:        { justifyContent: 'center', alignItems: 'center' },
+  dayCircle:      { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  dayText:        { fontSize: 15 },
+  eventBadge:     { minWidth: 18, height: 18, borderRadius: 9, justifyContent: 'center', alignItems: 'center', marginTop: 2, paddingHorizontal: 5 },
   eventBadgeText: { fontSize: 10, fontWeight: '600' },
-  fab:          { position: 'absolute', right: 20, bottom: Platform.OS === 'ios' ? 100 : 20, borderRadius: 30, elevation: 5 },
+  fab:            { position: 'absolute', right: 20, bottom: Platform.OS === 'ios' ? 100 : 20, borderRadius: 30, elevation: 5 },
   modalContainer: { flex: 1, marginTop: 50, borderTopLeftRadius: 20, borderTopRightRadius: 20, overflow: 'hidden' },
-  modalHeader:  { flexDirection: 'row', justifyContent: 'flex-end', padding: 12, borderBottomWidth: 1 },
-  closeButton:  { padding: 8 },
+  modalHeader:    { flexDirection: 'row', justifyContent: 'flex-end', padding: 12, borderBottomWidth: 1 },
+  closeButton:    { padding: 8 },
+  fullLoader:     { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 16 },
+  transitionOverlay: {
+    position:       'absolute',
+    top:            0,
+    left:           0,
+    right:          0,
+    justifyContent: 'center',
+    alignItems:     'center',
+    gap:            12,
+  },
+  loadingText:    { fontSize: 14, fontStyle: 'italic' },
 });

@@ -447,7 +447,7 @@ export default function ListItemDetailScreen({ route, navigation }) {
   } = route.params;
   console.log('recordType', recordType)
   console.log('actionsMenu', actionsMenu)
-
+const [isSaving, setIsSaving] = useState(false);
   const theme = useTheme();
   const { token, user, appConfig } = useContext(AuthContext);
 
@@ -713,7 +713,10 @@ export default function ListItemDetailScreen({ route, navigation }) {
      Saving Logic
   ---------------------------------------------------------- */
   const handleSave = async () => {
-    // ⭐ Validate mode is allowed
+  if (isSaving) return;
+  setIsSaving(true);
+
+  try {
     if (mode === 'add' && !isModeAllowed('add')) {
       console.warn('Add mode not allowed');
       Alert.alert('Not Allowed', 'Creating new records is not permitted in this view.');
@@ -726,7 +729,6 @@ export default function ListItemDetailScreen({ route, navigation }) {
       return;
     }
 
-    // ✅ Validate required fields
     const missingFields = validateRequiredFields(fields, localItem);
     
     if (missingFields.length > 0) {
@@ -739,71 +741,52 @@ export default function ListItemDetailScreen({ route, navigation }) {
       return;
     }
 
-    try {
-      const isUser = name?.toLowerCase() === "users";
-      let savedId = item?._id;
+    const isUser = name?.toLowerCase() === "users";
 
-      // -----------------------------------------
-      // USERS
-      // -----------------------------------------
-      if (isUser) {
-        if (mode === "add") {
-          const created = await createRecord(
-            localItem,
-            "user",
-            token,
-            user.userId,
-            user.subscriberId,
-            user
-          );
-
-          // NEW RECORD → CLOSE SCREEN
-          return navigation.goBack();
-
-        } else {
-          const idToUpdate = item?.userId || item?._id;
-          localItem.__isUser = true;
-
-          await updateRecord(idToUpdate, localItem, token);
-
-          // EDIT EXISTING USER → STAY ON SCREEN
-          originalItemRef.current = JSON.parse(JSON.stringify(localItem));
-          return setMode("read");
-        }
-      }
-
-      // -----------------------------------------
-      // NON-USER RECORDS (appointments, transactions, etc)
-      // -----------------------------------------
-      if (mode === "edit" && item._id) {
-        // Updating existing record
-        await updateRecord(item._id, localItem, token);
-
-        // STAY ON SCREEN → SWITCH TO READ MODE
-        originalItemRef.current = JSON.parse(JSON.stringify(localItem));
-        return setMode("read");
-
-      } else {
-        // Creating new record
+    if (isUser) {
+      if (mode === "add") {
         await createRecord(
           localItem,
-          recordType,
+          "user",
           token,
           user.userId,
           user.subscriberId,
           user
         );
-        
-        route.params?.onRecordAdded?.();
-        // NEW RECORD → CLOSE SCREEN
         return navigation.goBack();
+      } else {
+        const idToUpdate = item?.userId || item?._id;
+        localItem.__isUser = true;
+        await updateRecord(idToUpdate, localItem, token);
+        originalItemRef.current = JSON.parse(JSON.stringify(localItem));
+        return setMode("read");
       }
-
-    } catch (err) {
-      console.error("Save failed:", err);
-      Alert.alert('Save Failed', 'Unable to save changes. Please try again.');
     }
-  };
+
+    if (mode === "edit" && item._id) {
+      await updateRecord(item._id, localItem, token);
+      originalItemRef.current = JSON.parse(JSON.stringify(localItem));
+      return setMode("read");
+    } else {
+      await createRecord(
+        localItem,
+        recordType,
+        token,
+        user.userId,
+        user.subscriberId,
+        user
+      );
+      route.params?.onRecordAdded?.();
+      return navigation.goBack();
+    }
+
+  } catch (err) {
+    console.error("Save failed:", err);
+    Alert.alert('Save Failed', 'Unable to save changes. Please try again.');
+  } finally {
+    setIsSaving(false);
+  }
+};
 
   /* ----------------------------------------------------------
      Delete Logic
@@ -934,9 +917,10 @@ export default function ListItemDetailScreen({ route, navigation }) {
                   <>
                     {/* Save button (visible in edit/add mode) */}
                     <GlassActionButton
-                      icon="check"
+                        icon={isSaving ? "loading" : "check"}
                       onPress={handleSave}
                       color={theme.colors.primary}
+                      disabled={isSaving}
                       theme={theme}
                     />
                     

@@ -1,5 +1,5 @@
 // src/components/ListItemDetail.jsx
-import React, { useContext, useEffect, useMemo, useRef } from "react";
+import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   Modal,
   Box,
@@ -442,6 +442,7 @@ export default function ListItemDetail({
 }) {
   const theme = useTheme();
   const { token, user } = useContext(AuthContext);
+const [isSaving, setIsSaving] = useState(false);
 
   // Debug logs
   useEffect(() => {
@@ -665,6 +666,10 @@ export default function ListItemDetail({
   };
 
   const handleSave = async () => {
+  if (isSaving) return;
+  setIsSaving(true);
+
+  try {
     if (mode === 'add' && !isModeAllowed('add')) {
       console.warn('Add mode not allowed');
       alert('Creating new records is not permitted in this view.');
@@ -685,48 +690,49 @@ export default function ListItemDetail({
       return;
     }
 
-    try {
-      const isUser = name?.toLowerCase() === "users";
+    const isUser = name?.toLowerCase() === "users";
 
-      if (isUser) {
-        if (mode === "add") {
-          await createRecord(
-            localItem,
-            "user",
-            token,
-            user.userId,
-            user.subscriberId,
-            user
-          );
-        } else {
-          const userIdToUpdate = item?.userId || item?._id;
-          localItem.__isUser = true;
-          await updateRecord(userIdToUpdate, localItem, token);
-        }
-        onClose();
-        return;
-      }
-
-      if (mode === "edit" && item._id) {
-        await updateRecord(item._id, localItem, token);
-        originalItemRef.current = JSON.parse(JSON.stringify(localItem));
-        setMode("read");
-      } else {
+    if (isUser) {
+      if (mode === "add") {
         await createRecord(
           localItem,
-          recordType || name?.toLowerCase(),
+          "user",
           token,
           user.userId,
           user.subscriberId,
           user
         );
-        onClose();
+      } else {
+        const userIdToUpdate = item?.userId || item?._id;
+        localItem.__isUser = true;
+        await updateRecord(userIdToUpdate, localItem, token);
       }
-    } catch (err) {
-      console.error("Save failed:", err);
-      alert("Save failed: " + err.message);
+      onClose();
+      return;
     }
-  };
+
+    if (mode === "edit" && item._id) {
+      await updateRecord(item._id, localItem, token);
+      originalItemRef.current = JSON.parse(JSON.stringify(localItem));
+      setMode("read");
+    } else {
+      await createRecord(
+        localItem,
+        recordType || name?.toLowerCase(),
+        token,
+        user.userId,
+        user.subscriberId,
+        user
+      );
+      onClose();
+    }
+  } catch (err) {
+    console.error("Save failed:", err);
+    alert("Save failed: " + err.message);
+  } finally {
+    setIsSaving(false);
+  }
+};
 
   const handleDelete = async () => {
     if (!isModeAllowed('delete')) {
@@ -766,6 +772,7 @@ useEffect(() => {
   if (open) {
     setLocalItem(initialData);
     setMode(validatedInitialMode);
+    setIsSaving(false);
     originalItemRef.current = JSON.parse(JSON.stringify(initialData));
   }
 }, [open]);
@@ -841,12 +848,13 @@ useEffect(() => {
                 </>
               ) : (
                 <>
-                  <GlassActionButtonWeb
-                    icon={<CheckIcon />}
-                    onClick={handleSave}
-                    color={theme.palette.primary.main}
-                    theme={theme}
-                  />
+                <GlassActionButtonWeb
+                icon={<CheckIcon />}
+                onClick={handleSave}
+                color={theme.palette.primary.main}
+                theme={theme}
+                disabled={isSaving}
+              />
 
                   <GlassActionButtonWeb
                     icon={<CloseIcon />}

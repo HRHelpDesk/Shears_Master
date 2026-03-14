@@ -3,6 +3,7 @@ import React, { useContext } from 'react';
 import { Platform } from 'react-native';
 import { useTheme } from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   createBottomTabNavigator as createStandardBottomTabs,
@@ -32,6 +33,8 @@ const getTabIcon = (iosIcon, androidIcon) => {
 };
 
 const MainNavigator = ({ appConfig }) => {
+    const insets = useSafeAreaInsets();  // ← Add this
+
   const theme = useTheme();
   const { colors } = theme;
   const { user } = useContext(AuthContext);
@@ -168,8 +171,8 @@ const MainNavigator = ({ appConfig }) => {
               borderTopWidth: 1,
               borderTopColor: colors.outlineVariant || '#e0e0e0',
               elevation: 10,
-              height: 68, // 👈 slightly taller (default is ~56)
-              paddingBottom: 8,
+              height: 68 + insets.bottom, // 👈 slightly taller (default is ~56)
+              paddingBottom: insets.bottom || 8,
               paddingTop: 6,
             },
             tabBarItemStyle: {

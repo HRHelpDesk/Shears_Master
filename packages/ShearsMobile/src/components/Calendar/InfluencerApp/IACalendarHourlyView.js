@@ -123,29 +123,35 @@ const normalizeRecord = (item, user) => {
     },
     flashSales: fd.flashSales || '',
   };
-
   if (!isOvernight) return [base];
 
-  return [
-    {
-      ...base,
-      endTime:          '23:59',
-      isContinuation:   false,
-      continuesNextDay: true,
-      originalStartTime: startTime,
-      originalEndTime:   endTime,
-    },
-    {
-      ...base,
-      _id:              `${item._id}_cont`,
-      startDay:         startLocal.plus({ days: 1 }).toISODate(),
-      startTime:        '00:00',
-      isContinuation:   true,
-      continuesNextDay: false,
-      originalStartTime: startTime,
-      originalEndTime:   endTime,
-    },
-  ];
+
+const result = [
+  {
+    ...base,
+    _id:               `${item._id}_start`,  // ← add _start suffix
+    endTime:           '23:59',
+    isContinuation:    false,
+    continuesNextDay:  true,
+    originalStartTime: startTime,
+    originalEndTime:   endTime,
+  },
+];
+
+if (endTime !== '00:00') {
+  result.push({
+    ...base,
+    _id:               `${item._id}_cont`,
+    startDay:          startLocal.plus({ days: 1 }).toISODate(),
+    startTime:         '00:00',
+    isContinuation:    true,
+    continuesNextDay:  false,
+    originalStartTime: startTime,
+    originalEndTime:   endTime,
+  });
+}
+
+return result;
 };
 
 /* ---------------------------------------------------------------
@@ -379,13 +385,16 @@ export default function IACalendarHourlyView(props) {
      Per-day filtering happens cheaply in dayAppointments below.
   ------------------------------------------------------------ */
   const allNormalized = useMemo(() => {
-    const out = [];
-    for (const item of localData) {
-      const events = normalizeRecord(item, user);
-      for (const e of events) out.push(e);
-    }
-    return out;
-  }, [localData, user]);
+  const seen = new Set();
+  const out = [];
+  for (const item of localData) {
+    if (seen.has(item._id)) continue;  // ← skip duplicates
+    seen.add(item._id);
+    const events = normalizeRecord(item, user);
+    for (const e of events) out.push(e);
+  }
+  return out;
+}, [localData, user]);
 
   /* ------------------------------------------------------------
      Filter to selected day + layout — O(n) slice, not O(n) full

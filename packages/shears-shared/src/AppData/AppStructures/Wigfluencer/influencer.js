@@ -440,6 +440,27 @@ export const InfluencerApp = [
           },
           input: "textarea",
         },
+         {
+          field: "links",
+          label: "Links",
+          type: "array",
+          input: "array",
+          required: false,
+          display: { order: 4 },
+          arrayConfig: {
+            minItems: 1,
+            object: [
+              
+              {
+                field: "link",
+                type: "string",
+                label: "Link",
+                input: "hyperlink",
+               
+              }
+            ]
+          }
+        },
        
           {
           field: "video",

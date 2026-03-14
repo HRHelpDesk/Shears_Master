@@ -5,15 +5,17 @@ import { View, StyleSheet, Platform } from 'react-native';
 import { useTheme } from 'react-native-paper';
 import { AuthContext } from '../../context/AuthContext';
 import { useNavigation, DrawerActions } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context'; // ← Add this
 
 export default function PageHeader({ title }) {
   const theme = useTheme();
   const navigation = useNavigation();
   const { logout } = useContext(AuthContext);
+  const insets = useSafeAreaInsets(); // ← Add this
 
   return (
     <Appbar.Header
-      statusBarHeight={Platform.OS === "ios" ? 30 : 0}
+      statusBarHeight={insets.top} // ← Use actual inset instead of hardcoded value
       elevated
       style={[styles.header, { backgroundColor: theme.colors.primary }]}
     >
@@ -35,7 +37,7 @@ export default function PageHeader({ title }) {
 
 const styles = StyleSheet.create({
   header: {
-    height: 56,
+    height: 40
   },
   titleContainer: {
     flex: 1,
@@ -46,8 +48,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     textAlign: 'left',
-    marginBottom: 0,
-    marginTop: 20,
     fontWeight: 'bold',
   },
 });
